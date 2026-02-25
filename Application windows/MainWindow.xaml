@@ -1,0 +1,1750 @@
+﻿<Window x:Class="GenotypeApplication.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GenotypeApplication"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        mc:Ignorable="d"
+        Title="MainWindow"
+        MinHeight="600"
+        MinWidth="800"
+        Width="1215"
+        Height="800"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Grid Margin="5">
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+
+        <TreeView x:Name="projectOverviewTreeView"
+                  Grid.Row="0"
+                  Grid.Column="0"
+                  Margin="5"
+                  MinWidth="250"
+                  MinHeight="583.9">
+            <TreeViewItem Header="Project name" />
+        </TreeView>
+
+        <TextBox x:Name="logTextBox"
+                 Grid.Column="1"
+                 Grid.Row="1"
+                 HorizontalAlignment="Stretch"
+                 VerticalAlignment="Stretch"
+                 Margin="5,10,5,0" />
+
+        <TabControl x:Name="programsInteractionTabControl"
+                    Grid.Column="1"
+                    Grid.Row="0"
+                    Margin="5"
+                    HorizontalAlignment="Stretch"
+                    MinWidth="915.2">
+            <TabItem x:Name="structureTabItem"
+                     Header="Structure"
+                     HorizontalAlignment="Stretch">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <GroupBox x:Name="loadDataFileGroupBox"
+                              Header="Load data file"
+                              Grid.Column="0"
+                              Grid.Row="0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Button x:Name="loadDataFileButton"
+                                    Content="Load"
+                                    Grid.Column="0"
+                                    Margin="5,0,10,0"
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding LoadDataFileCommand}"/>
+                            <TextBox x:Name="dataFileNameTextBox"
+                                     IsReadOnly="True"
+                                     Grid.Column="1"
+                                     FontWeight="Light"
+                                     Text="Data file name"
+                                     Margin="0,0,5,0" />
+                        </Grid>
+                    </GroupBox>
+
+                    <GroupBox x:Name="parameterSetsSelection"
+                              Header="Select parameters set"
+                              Grid.Column="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox x:Name="parameterSetsComboBox"
+                                      Grid.Column="0"
+                                      Margin="5,0,10,0" />
+                            <TextBox x:Name="parametersSetNameTextBox"
+                                     Grid.Column="1"
+                                     FontWeight="Light"
+                                     Text="Set name"
+                                     Margin="0,0,5,0" />
+                        </Grid>
+                    </GroupBox>
+
+                    <GroupBox x:Name="runLenghtGroupBox"
+                              Header="Run lenght"
+                              Grid.Column="0"
+                              Grid.Row="1">
+                        <StackPanel Orientation="Vertical">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Label x:Name="burninLengthLabel"
+                                       Content="Length of burnin period"
+                                       Grid.Column="0" />
+                                <xctk:IntegerUpDown x:Name="burninLengthIntUpDown"
+                                                    Grid.Column="1"
+                                                    Minimum="0"
+                                                    Maximum="131072"
+                                                    Increment="1"
+                                                    HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Label x:Name="mcmcRepsNumLabel"
+                                       Content="Number of MCMC reps after burnin"
+                                       Grid.Column="0" />
+                                <xctk:IntegerUpDown x:Name="mcmcRepsNumIntUpDown"
+                                                    Grid.Column="1"
+                                                    Minimum="0"
+                                                    Maximum="131072"
+                                                    Increment="1"
+                                                    HorizontalAlignment="Right" />
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox x:Name="AlleleFreqModelGroupBox"
+                              Header="Allele frequency model"
+                              Grid.Column="1"
+                              Grid.Row="1"
+                              HorizontalAlignment="Stretch">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <CheckBox x:Name="correlatedAlleleFreqsCheckBox"
+                                      Content="Allele frequencies are correlated"
+                                      Grid.Column="0"
+                                      Grid.Row="0" />
+                            <CheckBox x:Name="setLambdaCheckBox"
+                                      Content="Set lambda"
+                                      Grid.Column="1"
+                                      Grid.Row="0" />
+                            <CheckBox x:Name="inferLambdaCheckBox"
+                                      Content="Infer lambda"
+                                      Grid.Column="2"
+                                      Grid.Row="0" />
+
+                            <CheckBox x:Name="fstSameValueCheckBox"
+                                      Content="Assume same value of Fst for all subpopulations"
+                                      Grid.Column="0"
+                                      Grid.Row="1"
+                                      Margin="15,0,0,0" />
+                            <xctk:DoubleUpDown x:Name="lambdaDoubleUpDown"
+                                               Grid.Column="1"
+                                               Grid.Row="1"
+                                               Minimum="-27000"
+                                               Maximum="27000"
+                                               Increment="0.1"
+                                               Margin="15,0,10,0" />
+                            <StackPanel Orientation="Horizontal"
+                                        Grid.Column="2"
+                                        Grid.Row="1">
+                                <Label x:Name="lambdaInitLabel"
+                                       Content="Lambda initialization"
+                                       Margin="10,0,3.8,0" />
+                                <xctk:DoubleUpDown x:Name="lambdaInitDoubleUpDown"
+                                                   Minimum="-27000"
+                                                   Maximum="27000"
+                                                   Increment="0.1"
+                                                   Value="1" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"
+                                        Grid.Row="2"
+                                        Grid.Column="0">
+                                <Label x:Name="priorMeanLabel"
+                                       Content="Prior mean"
+                                       Margin="30,0,0,0" />
+                                <xctk:DoubleUpDown x:Name="priorMeanDoubleUpDown"
+                                                   Maximum="100"
+                                                   Minimum="0"
+                                                   Increment="0.01"
+                                                   FormatString="0.##"
+                                                   Value="1" />
+                                <Label x:Name="priorSdLabel"
+                                       Content="Prior sd"
+                                       Margin="10,0,0,0"
+                                       HorizontalAlignment="Right" />
+                                <xctk:DoubleUpDown x:Name="priorSdDoubleUpDown"
+                                                   Maximum="100"
+                                                   Minimum="0"
+                                                   Increment="0.01"
+                                                   FormatString="0.##"
+                                                   HorizontalAlignment="Right" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="popLambdaSeparationCheckBox"
+                                      Content="Separate lambda by population"
+                                      Grid.Row="2"
+                                      Grid.Column="2"
+                                      Margin="15,0,0,0" />
+                        </Grid>
+                    </GroupBox>
+
+                    <GroupBox x:Name="ancestryModelGroupBox"
+                              Header="Ancestry model"
+                              Grid.Row="2"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="2"
+                              HorizontalAlignment="Stretch">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <CheckBox x:Name="noneAdmixtureModelCheckBox"
+                                      Content="Assume the model without admixture"
+                                      Grid.Column="0"
+                                      Grid.Row="0"
+                                      Grid.ColumnSpan="2" />
+                            <GroupBox x:Name="linkageModelGroupBox"
+                                      Grid.Column="0"
+                                      Margin="10,0,0,0"
+                                      Grid.Row="1">
+                                <GroupBox.Header>
+                                    <CheckBox x:Name="linkageModelCheckBox"
+                                              Content="Use the linkage model" />
+                                </GroupBox.Header>
+
+                                <StackPanel Orientation="Vertical">
+                                    <CheckBox x:Name="phaseFolowsMarkovCheckBox"
+                                              Content="The phase info follows a Markov model"
+                                              Margin="12,0,0,0" />
+                                    <CheckBox x:Name="printResultsBySiteCheckBox"
+                                              Content="Print site by site results"
+                                              Margin="12,0,0,0" />
+                                    <CheckBox x:Name="correctPhaseDataCheckBox"
+                                              Content="Data are in correct phase"
+                                              Margin="12,0,0,0" />
+
+                                    <DockPanel Margin="27,0,0,0"
+                                               LastChildFill="False">
+                                        <Label x:Name="logMinLabel"
+                                               Content="Log10rmin"
+                                               Margin="0,0,10,0"
+                                               DockPanel.Dock="Left" />
+                                        <xctk:DoubleUpDown x:Name="logMinDoubleUpDown"
+                                                           DockPanel.Dock="Right"
+                                                           Maximum="1000"
+                                                           Minimum="-1000"
+                                                           Increment="0.1" />
+                                    </DockPanel>
+                                    <DockPanel Margin="27,0,0,0"
+                                               LastChildFill="False">
+                                        <Label x:Name="logMaxLabel"
+                                               Content="Log10rmax"
+                                               Margin="0,0,10,0"
+                                               DockPanel.Dock="Left" />
+                                        <xctk:DoubleUpDown x:Name="logMaxDoubleUpDown"
+                                                           HorizontalAlignment="Right"
+                                                           Maximum="1000"
+                                                           Minimum="-1000"
+                                                           Increment="0.1"
+                                                           DockPanel.Dock="Right" />
+                                    </DockPanel>
+                                    <DockPanel Margin="27,5,0,0"
+                                               LastChildFill="False">
+                                        <Label x:Name="logPropSdLabel"
+                                               Content="Log10rpropsd"
+                                               Margin="0,0,10,0"
+                                               DockPanel.Dock="Left" />
+                                        <xctk:DoubleUpDown x:Name="logPropSdDoubleUpDown"
+                                                           HorizontalAlignment="Right"
+                                                           Maximum="1000"
+                                                           Minimum="-1000"
+                                                           Increment="0.1"
+                                                           DockPanel.Dock="Right" />
+                                    </DockPanel>
+                                    <DockPanel Margin="27,0,0,0"
+                                               LastChildFill="False">
+                                        <Label x:Name="logStartLabel"
+                                               Content="Log10rstart"
+                                               Margin="0,0,10,0"
+                                               DockPanel.Dock="Left" />
+                                        <xctk:DoubleUpDown x:Name="logStartDoubleUpDown"
+                                                           HorizontalAlignment="Right"
+                                                           Maximum="1000"
+                                                           Minimum="-1000"
+                                                           Increment="0.1"
+                                                           DockPanel.Dock="Right" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </GroupBox>
+
+                            <StackPanel Orientation="Vertical"
+                                        Grid.Row="1"
+                                        Grid.Column="1">
+                                <GroupBox x:Name="useLocationInfoGroupBox"
+                                          Grid.Column="1"
+                                          Grid.Row="1"
+                                          Margin="0,0,0,0">
+                                    <GroupBox.Header>
+                                        <CheckBox x:Name="useLocationInfoCheckBox"
+                                                  Content="Use location info to improve weak data" />
+                                    </GroupBox.Header>
+
+                                    <StackPanel Orientation="Vertical">
+                                        <CheckBox x:Name="popConsiderCheckBox"
+                                                  Content="Consider the population for each locus"
+                                                  Margin="12,0,0,0" />
+                                        <DockPanel LastChildFill="False"
+                                                   Margin="27,0,0,0">
+                                            <Label x:Name="etaInitLabel"
+                                                   Content="Initial value η"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:IntegerUpDown x:Name="etaInitIntUpDown"
+                                                                DockPanel.Dock="Right"
+                                                                Minimum="0"
+                                                                Maximum="100"
+                                                                Increment="1" />
+                                        </DockPanel>
+                                        <DockPanel LastChildFill="False"
+                                                   Margin="27,0,0,0">
+                                            <Label x:Name="etaMaxLabel"
+                                                   Content="Max value η"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:IntegerUpDown x:Name="etaMaxIntUpDown"
+                                                                DockPanel.Dock="Right"
+                                                                Minimum="0"
+                                                                Maximum="100"
+                                                                Increment="1" />
+                                        </DockPanel>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <CheckBox x:Name="trainingPopFlagCheckBox"
+                                          Content="Use POPFLAG for training"
+                                          Margin="9,0,0,0" />
+
+                                <GroupBox x:Name="usePriorPopInfoGroupBox"
+                                          Margin="0,0,0,0"
+                                          HorizontalAlignment="Stretch">
+                                    <GroupBox.Header>
+                                        <CheckBox x:Name="usePriorPopInfoCheckBox"
+                                                  Content="Use prior population information" />
+                                    </GroupBox.Header>
+
+                                    <StackPanel>
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="gensbackLabel"
+                                                   Content="Gensback"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:IntegerUpDown x:Name="gensbackIntUpDown"
+                                                                DockPanel.Dock="Right"
+                                                                Minimum="0"
+                                                                Maximum="32738"
+                                                                Increment="1" />
+                                        </DockPanel>
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="migpriorLabel"
+                                                   Content="Migprior"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="migpriorDoubleUpDown"
+                                                               DockPanel.Dock="Right"
+                                                               Minimum="0"
+                                                               Maximum="1"
+                                                               Increment="0.01"
+                                                               FormatString="0.##" />
+                                        </DockPanel>
+                                    </StackPanel>
+                                </GroupBox>
+                            </StackPanel>
+
+                            <GroupBox x:Name="admixtureModelGroupBox"
+                                      Header="Admixture model"
+                                      Grid.Row="1"
+                                      Grid.Column="2"
+                                      Margin="0,0,0,0"
+                                      HorizontalAlignment="Stretch">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox x:Name="setAlphaCheckBox"
+                                                  Content="Set alpha"
+                                                  Grid.Column="0" />
+                                        <CheckBox x:Name="inferAlphaCheckBox"
+                                                  Content="Infer alpha"
+                                                  Margin="50,0,0,0"
+                                                  Grid.Column="1" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <xctk:DoubleUpDown x:Name="setAlphaDoubleUpDown"
+                                                           Minimum="-27000"
+                                                           Maximum="27000"
+                                                           Increment="0.1"
+                                                           Margin="15,0,0,0"
+                                                           Grid.Column="0" />
+
+                                        <Label x:Name="alphaInitLabel"
+                                               Content="Alpha initialization"
+                                               Margin="50,0,0,0"
+                                               Grid.Column="1"
+                                               HorizontalAlignment="Left" />
+                                        <xctk:DoubleUpDown x:Name="alphaInitDoubleUpDown"
+                                                           Minimum="-27000"
+                                                           Maximum="27000"
+                                                           Increment="0.1"
+                                                           Grid.Column="1"
+                                                           HorizontalAlignment="Right" />
+                                    </Grid>
+
+                                    <CheckBox x:Name="useUniformPriorCheckBox"
+                                              Content="Use a uniform prior for alpha"
+                                              Grid.Row="4"
+                                              Margin="0,10,0,0" />
+
+                                    <Grid Grid.Row="5"
+                                          Margin="0"
+                                          Grid.RowSpan="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <DockPanel LastChildFill="False"
+                                                   Grid.Column="0"
+                                                   Grid.Row="0"
+                                                   Margin="0">
+                                            <Label x:Name="alphaMaxLabel"
+                                                   Content="Alpha max"
+                                                   Margin="15,0,0,0"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="alphaMaxDoubleUpDown"
+                                                               DockPanel.Dock="Right"
+                                                               Minimum="0"
+                                                               Maximum="32768"
+                                                               Increment="0.1" />
+                                        </DockPanel>
+
+                                        <DockPanel LastChildFill="False"
+                                                   Grid.Column="1"
+                                                   Grid.Row="0">
+                                            <Label x:Name="alphaPriorALabel"
+                                                   Content="Alphapriora"
+                                                   Margin="25,0,0,0"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="alphaPriorADoubleUpDown"
+                                                               DockPanel.Dock="Right"
+                                                               Minimum="0"
+                                                               Maximum="100"
+                                                               Increment="0.01"
+                                                               FormatString="0.##" />
+                                        </DockPanel>
+
+                                        <DockPanel LastChildFill="False"
+                                                   Grid.Column="0"
+                                                   Grid.Row="1"
+                                                   Margin="0">
+                                            <Label x:Name="alphaPropSdLabel"
+                                                   Content="Alpha propsd"
+                                                   Margin="15,0,0,0"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="alphaPropSdDoubleUpDown"
+                                                               DockPanel.Dock="Right"
+                                                               Minimum="0"
+                                                               Maximum="100"
+                                                               Increment="0.001"
+                                                               FormatString="0.###"
+                                                               Width="70" />
+                                        </DockPanel>
+
+                                        <DockPanel LastChildFill="False"
+                                                   Grid.Column="1"
+                                                   Grid.Row="1">
+                                            <Label x:Name="alphaPriorBLabel"
+                                                   Content="Alphapriorb"
+                                                   Margin="25,0,0,0"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="alphaPriorBDoubleUpDown"
+                                                               DockPanel.Dock="Right"
+                                                               Minimum="0"
+                                                               Maximum="100"
+                                                               Increment="0.001"
+                                                               FormatString="0.###" />
+                                        </DockPanel>
+                                    </Grid>
+
+                                    <CheckBox x:Name="popAlphaSeparationCheckBox"
+                                              Content="Separate alpha by population"
+                                              Grid.Row="2"
+                                              HorizontalAlignment="Center"
+                                              Margin="79,0,0,0" />
+
+                                    <DockPanel Grid.Row="3"
+                                               LastChildFill="False">
+                                        <Label x:Name="preburninLengthLabel"
+                                               Content="Length of pre-burnin period"
+                                               DockPanel.Dock="Left" />
+                                        <xctk:IntegerUpDown x:Name="preburninLengthIntUpDown"
+                                                            DockPanel.Dock="Right"
+                                                            Minimum="0"
+                                                            Maximum="100"
+                                                            Increment="1" />
+                                    </DockPanel>
+                                </Grid>
+                            </GroupBox>
+                        </Grid>
+                    </GroupBox>
+
+                    <GroupBox x:Name="advancedGroupBox"
+                              Header="Advanced"
+                              Grid.Row="3"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="2"
+                              HorizontalAlignment="Stretch">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <CheckBox x:Name="estimateProbabilityCheckBox"
+                                      Content="Estimate the probability of the data"
+                                      Grid.Row="0"
+                                      Grid.Column="0" />
+                            <CheckBox x:Name="printLikelihoodCheckBox"
+                                      Content="Print the current value of the likelihood to screen"
+                                      Grid.Row="1"
+                                      Grid.Column="0" />
+                            <CheckBox x:Name="popinfoInitCheckBox"
+                                      Content="Initialize at POPINFO"
+                                      Grid.Row="2"
+                                      Grid.Column="0" />
+                            <CheckBox x:Name="printCredibleRegionsCheckBox"
+                                      Content="Print credible regions"
+                                      Grid.Row="3"
+                                      Grid.Column="0" />
+                            <StackPanel Orientation="Horizontal"
+                                        Grid.Row="4"
+                                        Grid.Column="0">
+
+                                <Label x:Name="numboxesLabel"
+                                       Content="Numboxes"
+                                       Margin="15,0,0,0"
+                                       DockPanel.Dock="Left" />
+                                <xctk:IntegerUpDown x:Name="numboxesIntUpDown"
+                                                    Minimum="1"
+                                                    Maximum="32768"
+                                                    Increment="1"
+                                                    DockPanel.Dock="Right" />
+
+                                <Label x:Name="ancestpintLabel"
+                                       Content="Ancestpint"
+                                       Margin="15,0,0,0"
+                                       DockPanel.Dock="Left" />
+                                <xctk:DoubleUpDown x:Name="ancestpintDoubleUpDown"
+                                                   Minimum="0"
+                                                   Maximum="1"
+                                                   Increment="0.01"
+                                                   FormatString="0.##"
+                                                   DockPanel.Dock="Right" />
+
+                            </StackPanel>
+
+                            <CheckBox x:Name="printLambdaCheckBox"
+                                      Content="Print current value of lambda"
+                                      Grid.Row="0"
+                                      Grid.Column="1"
+                                      Margin="10,0,0,0" />
+                            <CheckBox x:Name="printQEstimatesSumCheckBox"
+                                      Content="Print summary of current Q estimates to screen"
+                                      Grid.Row="1"
+                                      Grid.Column="1"
+                                      Margin="10,0,0,0" />
+                            <CheckBox x:Name="printQhatCheckBox"
+                                      Content="Print Q-hat"
+                                      Grid.Row="2"
+                                      Grid.Column="1"
+                                      Margin="10,0,0,0" />
+                            <CheckBox x:Name="printNucleotideDistCheckBox"
+                                      Content="Print the &quot;net nucleotide distance&quot;"
+                                      Grid.Row="3"
+                                      Grid.Column="1"
+                                      Margin="10,0,0,0" />
+                            <DockPanel LastChildFill="False"
+                                       Grid.Row="4"
+                                       Grid.Column="1"
+                                       Margin="10,0,0,0">
+                                <Label x:Name="printFreqLabel"
+                                       Content="Freq. of printing updates"
+                                       DockPanel.Dock="Left" />
+                                <xctk:IntegerUpDown x:Name="printFreqIntUpDown"
+                                                    Minimum="0"
+                                                    Maximum="100"
+                                                    Increment="1"
+                                                    DockPanel.Dock="Right" />
+                            </DockPanel>
+
+                            <CheckBox x:Name="saveIntermediateCheckBox"
+                                      Content="Save intermediate data"
+                                      Grid.Row="0"
+                                      Grid.Column="2"
+                                      Margin="10,0,0,0" />
+                            <CheckBox x:Name="printSetBriefSumCheckBox"
+                                      Content="Print a brief summary of the data set"
+                                      Grid.Row="1"
+                                      Grid.Column="2"
+                                      Margin="10,0,0,0" />
+                            <CheckBox x:Name="showHitRateCheckBox"
+                                      Content="Show hit rate"
+                                      Grid.Row="2"
+                                      Grid.Column="2"
+                                      Margin="10,0,0,0" />
+                            <DockPanel Grid.Row="3"
+                                       Grid.Column="2"
+                                       LastChildFill="False"
+                                       Margin="10,0,0,0">
+                                <CheckBox x:Name="randomSeedCheckBox"
+                                          Content="Use a random seed"
+                                          DockPanel.Dock="Left" />
+                                <xctk:IntegerUpDown x:Name="seedIntUpDown"
+                                                    Minimum="0"
+                                                    Maximum="32768"
+                                                    Increment="1"
+                                                    DockPanel.Dock="Right" />
+                            </DockPanel>
+                            <DockPanel LastChildFill="False"
+                                       Grid.Row="4"
+                                       Grid.Column="2"
+                                       Margin="10,0,0,0">
+                                <Label x:Name="metropolisStepFreqLabel"
+                                       Content="Freq. of metropolis step to update Q"
+                                       DockPanel.Dock="Left" />
+                                <xctk:IntegerUpDown x:Name="metropolisStepFreqIntUpDown"
+                                                    Minimum="1"
+                                                    Maximum="32768"
+                                                    Increment="1"
+                                                    DockPanel.Dock="Right" />
+                            </DockPanel>
+                        </Grid>
+                    </GroupBox>
+
+                    <StackPanel Grid.Column="0"
+                                Grid.Row="4"
+                                Orientation="Horizontal"
+                                Grid.ColumnSpan="2">
+                        <Label x:Name="structureStartKLabel"
+                               Content="'K' from"
+                               Height="23" />
+                        <xctk:IntegerUpDown x:Name="structureStartKIntUpDown" />
+                        <Label x:Name="structureToLabel"
+                               Content="to"
+                               Height="23" />
+                        <xctk:IntegerUpDown x:Name="structureEndKIntUpDown" />
+                        <Label x:Name="structureWithLabel"
+                               Content="with"
+                               Height="23" />
+                        <xctk:IntegerUpDown x:Name="structureIterationsIntUpDown" />
+                        <Label x:Name="structureIterationsLabel"
+                               Content="iterations"
+                               Height="23" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"
+                                Grid.Row="4"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <Button x:Name="saveStructureOptionsButton"
+                                Content="Save"
+                                Margin="0,0,30,0"
+                                Style="{StaticResource Rounded}" />
+                        <Button x:Name="startStructureExecutionButton"
+                                Content="Start"
+                                Margin="0,0,5,0"
+                                Style="{StaticResource Rounded}" />
+                        <Button x:Name="stopStructureExecutionButton"
+                                Content="Stop"
+                                Margin="0,0,0,0"
+                                Style="{StaticResource Rounded}" />
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem x:Name="structureHarvesterTabItem"
+                     Header="Structure Harvester">
+
+                <Grid>
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <GroupBox x:Name="structureOutputSetsSelectionGroupBox"
+                              Header="Select Structure output set"
+                              Grid.Row="0"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="2"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Bottom">
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox x:Name="structureOutputSetsComboBox"
+                                          HorizontalAlignment="Left"
+                                          VerticalAlignment="Bottom"
+                                          Grid.Column="0" />
+
+                                <StackPanel Orientation="Vertical"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Bottom"
+                                            Margin="10,0,0,0">
+                                    <CheckBox x:Name="evannoCheckBox"
+                                              Content="Use evanno method" />
+                                    <CheckBox x:Name="clumppOutputCheckBox"
+                                              Content="Generate output for CLUMPP" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Button x:Name="startStructureHarvesterExecutionButton"
+                                    Content="Start processing"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    Style="{StaticResource Rounded}" />
+                        </Grid>
+
+                    </GroupBox>
+
+                    <GroupBox x:Name="processedSetsSelectionGroupBox"
+                              Header="Select processed parameter set"
+                              Grid.Column="0"
+                              Grid.Row="1"
+                              Grid.ColumnSpan="2"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Top">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <ComboBox x:Name="processedSetsComboBox"
+                                      HorizontalAlignment="Left"
+                                      VerticalAlignment="Bottom"
+                                      Grid.Column="0"
+                                      Grid.Row="0" />
+                            <Button x:Name="loadChartsButton"
+                                    Content="Load charts"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    Grid.Row="0"
+                                    Style="{StaticResource Rounded}" />
+
+                            <TextBox Grid.Row="1"
+                                     Grid.Column="0"
+                                     Width="441.1"
+                                     Height="211.644190120697"
+                                     Margin="0,5,5,5"
+                                     HorizontalAlignment="Stretch" />
+                            <TextBox Grid.Row="1"
+                                     Grid.Column="1"
+                                     Width="441.1"
+                                     Height="211.644190120697"
+                                     Margin="0,5,0,5"
+                                     HorizontalAlignment="Stretch" />
+
+                            <TextBox Grid.Row="2"
+                                     Grid.Column="0"
+                                     Width="441.1"
+                                     Height="211.644190120697"
+                                     Margin="0,0,5,0"
+                                     HorizontalAlignment="Stretch" />
+                            <TextBox Grid.Row="2"
+                                     Grid.Column="1"
+                                     Width="441.1"
+                                     Height="211.644190120697"
+                                     Margin="0,0,0,0"
+                                     HorizontalAlignment="Stretch" />
+
+                        </Grid>
+                    </GroupBox>
+                </Grid>
+
+            </TabItem>
+
+            <TabItem x:Name="clumppTabItem"
+                     Header="CLUMPP">
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="1"
+                          Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Orientation="Vertical"
+                                    Grid.Row="0"
+                                    Grid.Column="0">
+
+                            <StackPanel Orientation="Horizontal">
+                                <GroupBox x:Name="structureHarvesterOutputSetsSelectionGroupBox"
+                                          Header="Select Structure Harvester output set">
+                                    <ComboBox x:Name="structureHarvesterOutputSetsComboBox"
+                                              HorizontalAlignment="Left" />
+                                </GroupBox>
+                                <GroupBox x:Name="operatingModeSelectionGroupBox"
+                                          Header="Select operating mode">
+                                    <StackPanel Orientation="Vertical">
+                                        <RadioButton x:Name="onlyPopsRadioButton"
+                                                     Content="Only populations" />
+                                        <RadioButton x:Name="popsAndIndividsRadioButton"
+                                                     Content="Populations and individuals" />
+                                    </StackPanel>
+                                </GroupBox>
+                            </StackPanel>
+
+                            <GroupBox x:Name="mainParametersGroupBox"
+                                      Header="Main parameters"
+                                      HorizontalAlignment="Stretch"
+                                      Height="140.84">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label x:Name="itersNumOverKLabel"
+                                           Content="Number of iterations over K"
+                                           Grid.Row="0"
+                                           Grid.Column="0" />
+                                    <xctk:IntegerUpDown x:Name="itersNumOverKIntUpDown"
+                                                        Grid.Column="1"
+                                                        Grid.Row="0"
+                                                        HorizontalAlignment="Right"
+                                                        Minimum="0"
+                                                        Maximum="1000000"
+                                                        Increment="1" />
+
+                                    <Label x:Name="individsNumLabel"
+                                           Content="Number of individuals"
+                                           Grid.Row="1"
+                                           Grid.Column="0" />
+                                    <xctk:IntegerUpDown x:Name="individsNumIntUpDown"
+                                                        Grid.Column="1"
+                                                        Grid.Row="1"
+                                                        HorizontalAlignment="Right"
+                                                        Minimum="0"
+                                                        Maximum="27000000"
+                                                        Increment="1" />
+
+                                    <Label x:Name="popsNumLabel"
+                                           Content="Number of populations"
+                                           Grid.Row="2"
+                                           Grid.Column="0" />
+                                    <xctk:IntegerUpDown x:Name="popsNumIntUpDown"
+                                                        Grid.Column="1"
+                                                        Grid.Row="2"
+                                                        HorizontalAlignment="Right"
+                                                        Minimum="0"
+                                                        Maximum="27000000"
+                                                        Increment="1" />
+
+                                    <Label x:Name="usedMethodLabel"
+                                           Content="Method to be used"
+                                           Grid.Row="3"
+                                           Grid.Column="0" />
+                                    <ComboBox x:Name="usedMethodComboBox"
+                                              Grid.Column="1"
+                                              Grid.Row="3"
+                                              HorizontalAlignment="Right" />
+                                </Grid>
+                            </GroupBox>
+
+                        </StackPanel>
+
+                        <StackPanel Orientation="Vertical"
+                                    Grid.Row="0"
+                                    Grid.Column="1">
+                            <GroupBox x:Name="clumppParameterFilesSelectionGroupBox"
+                                      Header="Select parameter file"
+                                      Height="62.88">
+                                <StackPanel Orientation="Horizontal">
+                                    <ComboBox x:Name="clumppParameterFilesComboBox" />
+                                    <TextBox x:Name="clumppParameterFileNameTextBox"
+                                             FontWeight="Light"
+                                             Text="Parameter name"
+                                             Margin="10,0,0,0" />
+                                </StackPanel>
+                            </GroupBox>
+
+                            <GroupBox x:Name="algorithmOptionsSelectionGroupBox"
+                                      Header="Options for algorithms">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Label x:Name="greedyOptionLabel"
+                                           Content="Greedy option"
+                                           Grid.Row="0"
+                                           Grid.Column="0" />
+                                    <ComboBox x:Name="greedyOptionComboBox"
+                                              Grid.Row="0"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Right" />
+
+                                    <Label x:Name="repeatsLabel"
+                                           Content="Repeats"
+                                           Grid.Row="1"
+                                           Grid.Column="0" />
+                                    <xctk:IntegerUpDown x:Name="repeatsIntUpDown"
+                                                        Grid.Row="1"
+                                                        Grid.Column="1"
+                                                        Minimum="1"
+                                                        Maximum="27000000"
+                                                        Increment="1"
+                                                        HorizontalAlignment="Right" />
+
+                                    <GroupBox x:Name="permutationFileSelectionGroupBox"
+                                              Header="Select permutation file"
+                                              Grid.Row="2"
+                                              Grid.Column="0"
+                                              Grid.ColumnSpan="2"
+                                              HorizontalAlignment="Stretch">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBox x:Name="permutationFilePathTextBox"
+                                                     FontWeight="Light"
+                                                     Text="File path"
+                                                     Grid.Column="0" />
+                                            <Button x:Name="selectPermutationFileButton"
+                                                    Content="Select"
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Right"
+                                                    Margin="10,0,0,0"
+                                                    Style="{StaticResource Rounded}" />
+                                        </Grid>
+                                    </GroupBox>
+                                </Grid>
+                            </GroupBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Vertical"
+                                    Grid.Row="1"
+                                    Grid.Column="0">
+                            <GroupBox x:Name="advancedOptionsGroupBox"
+                                      Header="Advanced options"
+                                      HorizontalAlignment="Stretch">
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <CheckBox x:Name="numIndidvidsBasedWeighingCheckBox"
+                                              Content="Weighing based on the number of individuals"
+                                              Grid.Row="0" />
+                                    <CheckBox x:Name="overrideWarningsCheckBox"
+                                              Content="Override warnings"
+                                              Grid.Row="1" />
+
+                                    <Grid Grid.Row="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Label x:Name="orderByRunLabel"
+                                               Content="Order by run"
+                                               Grid.Column="0" />
+                                        <xctk:IntegerUpDown x:Name="orderByRunIntUpDown"
+                                                            Grid.Column="1"
+                                                            Minimum="0"
+                                                            Maximum="10000"
+                                                            Increment="1"
+                                                            HorizontalAlignment="Right" />
+                                    </Grid>
+
+                                    <CheckBox x:Name="useAlterStatisticCheckBox"
+                                              Content="Use alternative similarity statistic [0, 1]"
+                                              Grid.Row="3" />
+
+                                </Grid>
+                            </GroupBox>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Orientation="Horizontal"
+                                            Grid.Column="0"
+                                            HorizontalAlignment="Left">
+                                    <Label x:Name="clumppStartKLabel"
+                                           Content="'K' from"
+                                           Height="23" />
+                                    <xctk:IntegerUpDown x:Name="clumppStartKIntUpDown" />
+                                    <Label x:Name="clumppToLabel"
+                                           Content="to"
+                                           Height="23" />
+                                    <xctk:IntegerUpDown x:Name="clumppEndKIntUpDown" />
+                                </StackPanel>
+
+                                <Button x:Name="saveClumppOptionsButton"
+                                        Content="Save"
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,0,1,0"
+                                        Style="{StaticResource Rounded}" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Vertical"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Stretch">
+                            <GroupBox x:Name="optionalOutputsGroupBox"
+                                      Header="Optional outputs"
+                                      HorizontalAlignment="Stretch"
+                                      Height="104.215020103455">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Label x:Name="printPermutedDataLabel"
+                                               Content="Print permuted data"
+                                               Grid.Column="0" />
+                                        <ComboBox x:Name="printPermutedDataComboBox"
+                                                  Grid.Column="1"
+                                                  HorizontalAlignment="Right" />
+                                    </Grid>
+
+                                    <CheckBox x:Name="printEveryPermCheckBox"
+                                              Content="Print every perm"
+                                              Grid.Row="1" />
+                                    <CheckBox x:Name="printRandomInputOrderCheckBox"
+                                              Content="Print random input order"
+                                              Grid.Row="2" />
+                                </Grid>
+                            </GroupBox>
+
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Right">
+                                <Button x:Name="startClumppExecutionButton"
+                                        Content="Start"
+                                        Style="{StaticResource Rounded}" />
+                                <Button x:Name="stopClumppExecutionButton"
+                                        Content="Stop"
+                                        Margin="5,0,0,0"
+                                        Style="{StaticResource Rounded}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem x:Name="distructTabItem"
+                     Header="Distruct">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <DockPanel LastChildFill="False"
+                               Grid.Column="0"
+                               Grid.Row="0">
+                        <GroupBox x:Name="clumppOutputSetsSelectionGroupBox"
+                                  Header="Select CLUMPP output set"
+                                  DockPanel.Dock="Left">
+                            <ComboBox />
+                        </GroupBox>
+                        <GroupBox x:Name="distructParameterFilesSelectionGroupBox"
+                                  Header="Select parameter file"
+                                  DockPanel.Dock="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <ComboBox x:Name="distructParameterFilesComboBox" />
+                                <TextBox x:Name="distructParameterFileNameTextBox"
+                                         Text="Parameter name"
+                                         FontWeight="Light"
+                                         Margin="10,0,0,0" />
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox x:Name="mainOptionsGroupBox"
+                                  Header="Main usage options"
+                                  DockPanel.Dock="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Vertical">
+                                    <CheckBox x:Name="printIndividsCheckBox"
+                                              Content="Print individuals" />
+                                    <CheckBox x:Name="printPopSeparatorsCheckBox"
+                                              Content="Print pop separators" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Vertical"
+                                            Margin="5,0,0,0">
+                                    <CheckBox x:Name="printAtopLabelsCheckBox"
+                                              Content="Print labels atop figure" />
+                                    <CheckBox x:Name="printBelowLabelsCheckBox"
+                                              Content="Print labels below figure" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </DockPanel>
+
+                    <Grid Grid.Column="0"
+                          Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <GroupBox x:Name="extraOptionsGroupBox"
+                                  Header="Extra options"
+                                  HorizontalAlignment="Left"
+                                  Grid.Column="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="0"
+                                           Grid.Row="0">
+                                    <Label x:Name="orientationLabel"
+                                           Content="Orientation"
+                                           DockPanel.Dock="Left" />
+                                    <ComboBox x:Name="orientationComboBox"
+                                              DockPanel.Dock="Right"
+                                              Height="20" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="0"
+                                           Grid.Row="1">
+                                    <Label x:Name="leftLowXCoorLabel"
+                                           Content="Lower left x-coordinate"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="leftLowXCoorDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="27000"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="0"
+                                           Grid.Row="2">
+                                    <Label x:Name="leftLowYCoorLabel"
+                                           Content="Lower left y-coordinate"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="leftLowYCoorDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="27000"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="0"
+                                           Grid.Row="3">
+                                    <Label x:Name="xDirectionScaleLabel"
+                                           Content="Scale for x direction"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="xDirectionScaleDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="27000"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="0"
+                                           Grid.Row="4">
+                                    <Label x:Name="yDirectionScaleLabel"
+                                           Content="Scale for y direction"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="yDirectionScaleDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="27000"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="1"
+                                           Grid.Row="0"
+                                           Margin="5,0,0,0">
+                                    <Label x:Name="individsPenWidthLabel"
+                                           Content="&quot;Pen&quot; width used for individuals"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="individsPenWidthDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="27000"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="1"
+                                           Grid.Row="1"
+                                           Margin="5,0,0,0">
+                                    <Label x:Name="popSeparatorsPenWidthLabel"
+                                           Content="&quot;Pen&quot; width for pop separators"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="popSeparatorsPenWidthDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="27000"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="1"
+                                           Grid.Row="2"
+                                           Margin="5,0,0,0">
+                                    <Label x:Name="boxBorderPenWidthLabel"
+                                           Content="&quot;Pen&quot; width of the box border"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="boxBorderPenWidthDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="27000"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="1"
+                                           Grid.Row="3"
+                                           Margin="5,0,0,0">
+                                    <Label x:Name="atopLabelsAngleLabel"
+                                           Content="Angle for labels atop"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="atopLabelsAngleDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="180"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <DockPanel LastChildFill="False"
+                                           Grid.Column="1"
+                                           Grid.Row="4"
+                                           Margin="5,0,0,0">
+                                    <Label x:Name="belowLabelsAngleLabel"
+                                           Content="Angle for labels below"
+                                           DockPanel.Dock="Left" />
+                                    <xctk:DoubleUpDown x:Name="belowLabelsAngleDoubleUpDown"
+                                                       Minimum="0"
+                                                       Maximum="180"
+                                                       Increment="0.1"
+                                                       DockPanel.Dock="Right" />
+                                </DockPanel>
+
+
+                                <CheckBox x:Name="printPopqNameCheckBox"
+                                          Content="Print the POPQ file name above the figure"
+                                          HorizontalAlignment="Left"
+                                          Grid.Column="2"
+                                          Grid.Row="0"
+                                          Margin="5,0,0,0" />
+                                <CheckBox x:Name="printDataAsCommentCheckBox"
+                                          Content="Print the data as a comment in the output"
+                                          HorizontalAlignment="Left"
+                                          Grid.Column="2"
+                                          Grid.Row="1"
+                                          Margin="5,0,0,0" />
+                                <CheckBox x:Name="printDataToLogAreaCheckBox"
+                                          Content="Print some of the data to the log area"
+                                          HorizontalAlignment="Left"
+                                          Grid.Column="2"
+                                          Grid.Row="2"
+                                          Margin="5,0,0,0" />
+                                <CheckBox x:Name="printColorBrewerSettingsCheckBox"
+                                          Content="Print colorBrewer settings in the output"
+                                          HorizontalAlignment="Left"
+                                          Grid.Column="2"
+                                          Grid.Row="3"
+                                          Margin="5,0,0,0" />
+                                <CheckBox x:Name="useGrayscaleCheckBox"
+                                          Content="Use grayscale instead of colors"
+                                          HorizontalAlignment="Left"
+                                          Grid.Column="2"
+                                          Grid.Row="4"
+                                          Margin="5,0,0,0" />
+
+                            </Grid>
+                        </GroupBox>
+
+                        <GroupBox x:Name="exportOptionsGroupBox"
+                                  Header="Export options"
+                                  Grid.Column="1"
+                                  HorizontalAlignment="Stretch">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <CheckBox x:Name="pdfCheckBox"
+                                          Content="PDF"
+                                          Grid.Row="0"
+                                          Grid.Column="0" />
+                                <CheckBox x:Name="pngCheckBox"
+                                          Content="PNG"
+                                          Grid.Row="1"
+                                          Grid.Column="0" />
+                                <CheckBox x:Name="jpegCheckBox"
+                                          Content="JPEG"
+                                          Grid.Row="0"
+                                          Grid.Column="1" />
+                                <CheckBox x:Name="bmpCheckBox"
+                                          Content="BMP"
+                                          Grid.Row="1"
+                                          Grid.Column="1" />
+
+                                <GroupBox x:Name="exportKNumSelectionGroupBox"
+                                          Header="Select 'K' number"
+                                          Grid.Row="2"
+                                          Grid.Column="0"
+                                          Grid.ColumnSpan="2"
+                                          VerticalAlignment="Bottom"
+                                          HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Vertical"
+                                                HorizontalAlignment="Center">
+                                        <ComboBox x:Name="exportKNumComboBox" />
+                                        <Button x:Name="exportButton"
+                                                Content="Export"
+                                                Margin="0,5,0,0"
+                                                Style="{StaticResource Rounded}" />
+                                    </StackPanel>
+                                </GroupBox>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal"
+                                Grid.Column="0"
+                                Grid.Row="2">
+                        <StackPanel Orientation="Vertical">
+                            <GroupBox x:Name="dataSettingsGroupBox"
+                                      Header="Data settings">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Orientation="Vertical"
+                                                Grid.Column="0">
+                                        <GroupBox x:Name="inputBelowLabelsFileSelectionGroupBox"
+                                                  Header="Input file of labels below the figure"
+                                                  HorizontalAlignment="Stretch">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBox x:Name="inputBelowLabelsFilePathTextBox"
+                                                         Text="File path"
+                                                         FontWeight="Light"
+                                                         Grid.Column="0"
+                                                         HorizontalAlignment="Left" />
+                                                <Button x:Name="selectInputBelowLabelsFileButton"
+                                                        Content="Select"
+                                                        Margin="10,0,0,0"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Right"
+                                                        Style="{StaticResource Rounded}" />
+                                            </Grid>
+                                        </GroupBox>
+
+                                        <GroupBox x:Name="inputAtopLabelsFileSelectionGroupBox"
+                                                  Header="Input file of labels atop the figure"
+                                                  HorizontalAlignment="Stretch">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBox x:Name="inputAtopLabelsFilePathTextBox"
+                                                         Text="File path"
+                                                         FontWeight="Light"
+                                                         Grid.Column="0"
+                                                         HorizontalAlignment="Left" />
+                                                <Button x:Name="selectInputAtopLabelsFileButton"
+                                                        Content="Select"
+                                                        Margin="10,0,0,0"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Right"
+                                                        Style="{StaticResource Rounded}" />
+                                            </Grid>
+                                        </GroupBox>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Vertical"
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Right">
+                                        <GroupBox x:Name="clustersPermutationsInputFileSelectionGroupBox"
+                                                  Header="Input file of permutation of clusters to print">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBox x:Name="clustersPermutationsInputFilePathTextBox"
+                                                         Text="File path"
+                                                         FontWeight="Light"
+                                                         Grid.Column="0"
+                                                         HorizontalAlignment="Left" />
+                                                <Button x:Name="selectClustersPermutationsInputFileButton"
+                                                        Content="Select"
+                                                        Margin="10,0,0,0"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Left"
+                                                        Style="{StaticResource Rounded}" />
+                                            </Grid>
+                                        </GroupBox>
+
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="predefinedPopsLabel"
+                                                   Content="Number of predefined pops"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:IntegerUpDown x:Name="predefinedPopsIntUpDown"
+                                                                Minimum="0"
+                                                                Maximum="27000000"
+                                                                Increment="1"
+                                                                DockPanel.Dock="Right"
+                                                                Margin="0,0,1,0" />
+                                        </DockPanel>
+
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="predefinedIndividsLabel"
+                                                   Content="Number of predefined individuals"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:IntegerUpDown x:Name="predefinedIndividsIntUpDown"
+                                                                Minimum="0"
+                                                                Maximum="27000000"
+                                                                Increment="1"
+                                                                DockPanel.Dock="Right"
+                                                                Margin="0,0,1,0" />
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox x:Name="figureAppearanceGroupBox"
+                                      Header="Figure appearance"
+                                      HorizontalAlignment="Stretch">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Orientation="Vertical"
+                                                Grid.Column="0"
+                                                VerticalAlignment="Bottom">
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="fontSizeLabel"
+                                                   Content="Size of font"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="fontSizeDoubleUpDown"
+                                                               Minimum="0"
+                                                               Maximum="100"
+                                                               Increment="0.1"
+                                                               DockPanel.Dock="Right" />
+                                        </DockPanel>
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="figureHeightLabel"
+                                                   Content="Height of the figure"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="figureHeightDoubleUpDown"
+                                                               Minimum="0"
+                                                               Maximum="1000"
+                                                               Increment="0.1"
+                                                               DockPanel.Dock="Right" />
+                                        </DockPanel>
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="textAbovePlacementDistLabel"
+                                                   Content="Distance above plot to place text"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="textAbovePlacementDistDoubleUpDown"
+                                                               Minimum="0"
+                                                               Maximum="100"
+                                                               Increment="0.1"
+                                                               DockPanel.Dock="Right" />
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Vertical"
+                                                Grid.Column="1"
+                                                VerticalAlignment="Bottom"
+                                                Margin="5,0,0,0"
+                                                HorizontalAlignment="Stretch">
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="individWidthLabel"
+                                                   Content="Width of an individual"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="individWidthDoubleUpDown"
+                                                               Minimum="0"
+                                                               Maximum="100"
+                                                               Increment="0.1"
+                                                               DockPanel.Dock="Right" />
+                                        </DockPanel>
+                                        <DockPanel LastChildFill="False">
+                                            <Label x:Name="textBelowPlacementDistLabel"
+                                                   Content="Distance below plot to place text"
+                                                   DockPanel.Dock="Left" />
+                                            <xctk:DoubleUpDown x:Name="textBelowPlacementDistDoubleUpDown"
+                                                               Minimum="-100"
+                                                               Maximum="100"
+                                                               Increment="0.1"
+                                                               DockPanel.Dock="Right" />
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </GroupBox>
+                        </StackPanel>
+
+                        <GroupBox x:Name="pregeneratedImageGroupBox"
+                                  Header="Pre-generated image">
+                            <StackPanel Orientation="Vertical"
+                                        VerticalAlignment="Stretch">
+
+                                <GroupBox x:Name="pregeneratedImageKNumSelectionGroupBox"
+                                          Header="Select 'K' number"
+                                          HorizontalAlignment="Stretch">
+                                    <DockPanel LastChildFill="False">
+                                        <ComboBox x:Name="pregeneratedImageKNumComboBox"
+                                                  DockPanel.Dock="Left" />
+                                        <Button x:Name="generateButton"
+                                                Content="Generate"
+                                                DockPanel.Dock="Right"
+                                                Style="{StaticResource Rounded}" />
+                                    </DockPanel>
+                                </GroupBox>
+
+                                <TextBox Height="161.8"
+                                         Width="341.2"
+                                         Margin="0,5,0,0" />
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+
+                    <DockPanel LastChildFill="False"
+                               Grid.Column="0"
+                               Grid.Row="3">
+                        <StackPanel Orientation="Horizontal"
+                                    DockPanel.Dock="Left">
+                            <Label x:Name="distructStartKLabel"
+                                   Content="'K' from"
+                                   Height="23" />
+                            <xctk:IntegerUpDown x:Name="distructStartKIntUpDown" />
+                            <Label x:Name="distructToLabel"
+                                   Content="to"
+                                   Height="23" />
+                            <xctk:IntegerUpDown x:Name="distructEndKIntUpDown" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    DockPanel.Dock="Right">
+                            <Button x:Name="saveDistructOptionsButton"
+                                    Content="Save"
+                                    Margin="0,0,58,0"
+                                    Style="{StaticResource Rounded}" />
+                            <Button x:Name="startDistructExecutionButton"
+                                    Content="Start"
+                                    Margin="0,0,5,0"
+                                    Style="{StaticResource Rounded}" />
+                            <Button x:Name="stopDistructExecutionButton"
+                                    Content="Stop"
+                                    Margin="0,0,0,0"
+                                    Style="{StaticResource Rounded}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+    </Grid>
+</Window>

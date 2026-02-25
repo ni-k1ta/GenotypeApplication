@@ -1,0 +1,359 @@
+﻿<Window x:Class="GenotypeApplication.Application_windows.ProjectConfigurationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GenotypeApplication.Application_windows"
+        xmlns:conv="clr-namespace:GenotypeApplication.MVVM.Converters"
+        mc:Ignorable="d"
+        Title="Project configuration"
+        Height="414"
+        Width="631"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <conv:EmptyStringToPlaceholderStringConverter x:Key="EmptyStringToPlaceholderStringConverter" />
+        <conv:DefaultDateTimeToPlaceholderStringConverter x:Key="DefaultDateTimeToPlaceholderStringConverter" />
+        <conv:DefaultIntToPlaceholderStringConverter x:Key="DefaultIntToPlaceholderStringConverter" />
+    </Window.Resources>
+
+    <Grid Margin="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Vertical"
+                    Grid.Row="0"
+                    Grid.Column="0">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="openProjectButton"
+                        Width="90"
+                        Height="45.96"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,1"
+                        Style="{StaticResource Rounded}"
+                        Command="{Binding OpenProjectCommand}">
+                    <TextBlock Text="Open project"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center" />
+                </Button>
+
+                <GroupBox x:Name="projectNameGroupBox"
+                          Header="Project name"
+                          Margin="5,0,0,0"
+                          VerticalAlignment="Bottom">
+                    <Grid Width="173">
+                        <TextBox x:Name="projectNameTextBox"
+                                 Text="{Binding ProjectName,
+                                        ValidatesOnNotifyDataErrors=True,
+                                        UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Stretch"/>
+
+                        <TextBlock Text="Project name"
+                                   Foreground="LightGray"
+                                   Margin="5,0,0,1"
+                                   VerticalAlignment="Center"
+                                   IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility"
+                                            Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=projectNameTextBox}"
+                                                     Value="">
+                                            <Setter Property="Visibility"
+                                                    Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </GroupBox>
+            </StackPanel>
+
+            <GroupBox x:Name="projectPathGroupBox"
+                      Header="Project path">
+                <StackPanel Orientation="Horizontal">
+
+                    <Grid Width="238">
+                        <TextBox x:Name="projectPathTextBox"
+                                 Width="238"
+                                 Text="{Binding ProjectPath, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Text="Folder path"
+                                   Foreground="LightGray"
+                                   Margin="5,0,0,1"
+                                   VerticalAlignment="Center"
+                                   IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility"
+                                            Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=projectPathTextBox}"
+                                                     Value="">
+                                            <Setter Property="Visibility"
+                                                    Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    
+                    <Button x:Name="changeProjectPathButton"
+                            Content="..."
+                            Margin="10,0,0,0"
+                            Style="{StaticResource Rounded}"
+                            Width="20"
+                            Command="{Binding ChangeProjectPathCommand}" />
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox x:Name="parallelExecutionGroupBox"
+                      HorizontalAlignment="Stretch">
+                <GroupBox.Header>
+                    <CheckBox x:Name="parallelExecutionCheckBox"
+                              Content="Allow parallel execution"
+                              IsChecked="{Binding ProjectIsParallelEnabled}" />
+                </GroupBox.Header>
+
+                <StackPanel Orientation="Vertical"
+                            IsEnabled="{Binding IsChecked, ElementName=parallelExecutionCheckBox}">
+                    <RadioButton x:Name="allCoresRadioButton"
+                                 Content="All available cores"
+                                 GroupName="CoresConfiguration"
+                                 IsChecked="{Binding IsAllCores}" />
+                    <RadioButton x:Name="coreSelectionRadioButton"
+                                 Content="Selected number of cores"
+                                 GroupName="CoresConfiguration"
+                                 IsChecked="{Binding IsSelectionCores}" />
+                    <Slider x:Name="coreSelectionSlider"
+                            Margin="20,0,0,0"
+                            Width="185"
+                            HorizontalAlignment="Left"
+                            Minimum="{Binding MinSelectedCores}"
+                            Maximum="{Binding MaxSelectedCores}"
+                            Value="{Binding SelectedCores}"
+                            IsEnabled="{Binding IsChecked, ElementName=coreSelectionRadioButton}"
+                            AutoToolTipPlacement="TopLeft">
+
+                        <Slider.Resources>
+                            <Style TargetType="ToolTip">
+                                <Setter Property="VerticalOffset"
+                                        Value="-2" />
+                                <Setter Property="Background"
+                                        Value="#FFDDDDDD" />
+                                <Setter Property="Foreground"
+                                        Value="#FF000000" />
+                                <Setter Property="BorderThickness"
+                                        Value="0.7" />
+                                <Setter Property="BorderBrush"
+                                        Value="SteelBlue" />
+                            </Style>
+                        </Slider.Resources>
+                    </Slider>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox x:Name="lastProjectsGroupBox"
+                      Header="Last projects"
+                      HorizontalAlignment="Stretch"
+                      Height="150"
+                      Padding="0">
+                <Grid>
+                    <ListView ItemsSource="{Binding RecentProjects}"
+                              SelectedItem="{Binding SelectedRecentProject}"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              BorderThickness="0">
+
+                        <ListView.Resources>
+                            <Style TargetType="{x:Type ScrollBar}"
+                                   BasedOn="{StaticResource ThinScrollBar}" />
+                        </ListView.Resources>
+
+                        <ListView.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Delete project"
+                                          Command="{Binding PlacementTarget.DataContext.DeleteProjectCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                </MenuItem>
+                                <MenuItem Header="Open in Explorer"
+                                          Command="{Binding PlacementTarget.DataContext.ShowInExplorerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                </MenuItem>
+                            </ContextMenu>
+                        </ListView.ContextMenu>
+
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment"
+                                        Value="Stretch" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="149" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="12" />
+                                        <TextBlock Text="{Binding Path}"
+                                                   FontSize="10"
+                                                   Foreground="Gray"
+                                                   Margin="0,2,0,0"
+                                                   TextTrimming="CharacterEllipsis">
+                                        </TextBlock>
+
+                                        <StackPanel.ToolTip>
+                                            <TextBlock>
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0}\{1}">
+                                                        <Binding Path="Path" />
+                                                        <Binding Path="Name" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </StackPanel.ToolTip>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding LastModified, StringFormat='dd.MM.yyyy HH:mm'}"
+                                               FontSize="10"
+                                               Foreground="DarkGray"
+                                               VerticalAlignment="Center"
+                                               Margin="10,0" />
+
+                                    <Button Grid.Column="2"
+                                            Content="✕"
+                                            Width="16"
+                                            Height="16"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding DataContext.RemoveRecentProjectCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Remove from recent projects"
+                                            Background="Transparent"
+                                            BorderThickness="0" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+
+                        <ListView.InputBindings>
+                            <MouseBinding MouseAction="LeftDoubleClick"
+                                          Command="{Binding OpenRecentProjectCommand}"
+                                          CommandParameter="{Binding SelectedRecentProject}" />
+                        </ListView.InputBindings>
+                    </ListView>
+                </Grid>
+            </GroupBox>
+        </StackPanel>
+
+        <Button x:Name="doneProjectOptionsButton"
+                Content="Done"
+                Grid.Column="0"
+                Grid.Row="1"
+                HorizontalAlignment="Right"
+                Style="{StaticResource Rounded}"
+                Command="{Binding SaveChangesCommand}" />
+
+        <GroupBox x:Name="projectInformationGroupBox"
+                  Header="Project information"
+                  Margin="5,0,5,0"
+                  Width="300"
+                  VerticalAlignment="Stretch"
+                  Grid.Row="0"
+                  Grid.Column="1">
+
+            <StackPanel VerticalAlignment="Top">
+                <TextBlock Text="{Binding ProjectName, ValidatesOnNotifyDataErrors=False, Converter={StaticResource EmptyStringToPlaceholderStringConverter}, ConverterParameter='New project', FallbackValue='New project', TargetNullValue='New project'}"
+                           FontSize="18"
+                           FontWeight="DemiBold"
+                           Margin="0,0,0,8" />
+
+                <Rectangle Height="1"
+                           Fill="#FFDDDDDD"
+                           Margin="0,0,0,20" />
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="0"
+                               Text="Project path:"
+                               Foreground="#666666"
+                               Margin="0,0,0,16"
+                               FontSize="13" />
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="1"
+                               Text="{Binding ProjectPath, ValidatesOnNotifyDataErrors=False, Converter={StaticResource EmptyStringToPlaceholderStringConverter}, FallbackValue='Not specified', TargetNullValue='Not specified'}"
+                               Margin="0,0,0,16"
+                               TextWrapping="Wrap"
+                               FontSize="13" />
+
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="0"
+                               Text="Number of cores:"
+                               Foreground="#666666"
+                               Margin="0,0,0,16"
+                               FontSize="13" />
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Text="{Binding ProjectCoresCount, Converter={StaticResource DefaultIntToPlaceholderStringConverter}, FallbackValue='Not specified', TargetNullValue='Not specified'}"
+                               Margin="0,0,0,16"
+                               FontSize="13" />
+
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="0"
+                               Text="Created at:"
+                               Foreground="#666666"
+                               Margin="0,0,0,16"
+                               FontSize="13" />
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="1"
+                               Text="{Binding ProjectCreatedAt, Converter={StaticResource DefaultDateTimeToPlaceholderStringConverter}, StringFormat='dd MMMM yyyy, HH:mm', FallbackValue='-', TargetNullValue='-'}"
+                               Margin="0,0,0,16"
+                               FontSize="13" />
+
+                    <TextBlock Grid.Row="3"
+                               Grid.Column="0"
+                               Text="Last modified:"
+                               Foreground="#666666"
+                               FontSize="13" />
+                    <TextBlock Grid.Row="3"
+                               Grid.Column="1"
+                               Text="{Binding ProjectLastModified, Converter={StaticResource DefaultDateTimeToPlaceholderStringConverter}, StringFormat='dd MMMM yyyy, HH:mm', FallbackValue='-', TargetNullValue='-'}"
+                               FontSize="13" />
+                </Grid>
+            </StackPanel>
+        </GroupBox>
+
+
+    </Grid>
+</Window>
