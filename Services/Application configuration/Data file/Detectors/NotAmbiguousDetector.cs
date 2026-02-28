@@ -74,11 +74,10 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
 
             foreach (var val in allValues)
             {
-                bool isNegative = val < 0;
                 bool isRepeatingDigits = IsRepeatingDigits(val);
                 bool isKnownCandidate = knownValues.Contains(val);
 
-                if (isNegative || isRepeatingDigits || isKnownCandidate)
+                if (isRepeatingDigits || isKnownCandidate)
                 {
                     if (candidates.ContainsKey(val))
                         candidates[val]++;
@@ -122,19 +121,36 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
 
         int PickBest(List<KeyValuePair<int, int>> items)
         {
-            int maxCount = items.Max(kv => kv.Value);
-            var topItems = items.Where(kv => kv.Value == maxCount).Select(kv => kv.Key).ToList();
+            bool sameSign = items.All(x => x.Key > 0) || items.All(x => x.Key <= 0);
 
-            if (topItems.Count == 1)
-                return topItems[0];
+            if (sameSign)
+            {
+                int maxCount = items.Max(kv => kv.Value);
+                var topItems = items.Where(kv => kv.Value == maxCount).Select(kv => kv.Key).ToList();
 
-            var negatives = topItems.Where(v => v < 0).ToList();
-            var positives = topItems.Where(v => v >= 0).ToList();
+                if (topItems.Count == 1)
+                    return topItems[0];
 
-            if (negatives.Count > 0)
+                var negatives = topItems.Where(v => v < 0).ToList();
+                var positives = topItems.Where(v => v >= 0).ToList();
+
+                if (negatives.Count > 0)
+                    return negatives.Max();
+
+                return positives.Min();
+            }
+            else
+            {
+                var negativesValues = items.Where(kv => kv.Key <= 0).ToList();
+                int maxCount = negativesValues.Max(kv => kv.Value);
+                var topItems = items.Where(kv => kv.Value == maxCount).Select(kv => kv.Key).ToList();
+
+                if (topItems.Count == 1)
+                    return topItems[0];
+
+                var negatives = topItems.Where(v => v < 0).ToList();
                 return negatives.Max();
-
-            return positives.Min();
+            }
         }
 
         bool IsRepeatingDigits(int value)

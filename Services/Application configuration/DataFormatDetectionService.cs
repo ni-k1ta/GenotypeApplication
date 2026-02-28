@@ -2,6 +2,7 @@
 using GenotypeApplication.Interfaces.Application_configuration;
 using GenotypeApplication.Models.Structure;
 using GenotypeApplication.Models.Structure.Data_file;
+using GenotypeApplication.Services.Application_configuration.Data_file.Detectors;
 using GenotypeApplication.Services.Application_configuration.Data_file.Detectors.Completed;
 using GenotypeApplication.Services.Application_configuration.Data_file_scanners;
 using GenotypeApplication.Services.Data_file_scanners;
@@ -17,17 +18,19 @@ namespace GenotypeApplication.Services.Application_configuration
         {
             _detectors = new List<IFormatDetector>
             {
-                new LabelDetector(),
-                new OneRowPerIndDetector(),
-                new AdditionalRowsDetector(),
-                new PopDataDetector(),
-                new PopFlagDetector(),
-                new LocDataDetector(),
-                new PhenotypeDetector(),
-                new ExtraColsDetector(),
-                //new DataDimensionsDetector(),
-                new MissingValueDetector(),
-                new NotAmbiguousDetector()
+                new PhaseInfoDetector(), //10
+                new AdditionalRowsDetector(), //20
+                new OneRowPerIndDetector(), //30
+                new PloidyDetector(), //40
+                new LabelDetector(),  //100
+                new PopDataDetector(), //110
+                new PopFlagDetector(), //120
+                new LocDataDetector(), //130
+                new PhenotypeDetector(), //140
+                new MissingValueDetector(), //150
+                new ExtraColsDetector(), //160
+                new NotAmbiguousDetector(), //210
+                new GenotypeDataDetector(), //220
             };
 
             _detectors = _detectors.OrderBy(d => d.Order).ToList();
@@ -48,7 +51,7 @@ namespace GenotypeApplication.Services.Application_configuration
                     detector.Detect(dataDetectionModel);
                 }
 
-                if (!IsDetectionResultValid(dataDetectionModel)) throw new FormatException(); //количество параметров формата данных, определённых детекторами, <= минимального требуемого количества даже для минимальных возможных данных в файле (учитывая default значения)
+                //if (!IsDetectionResultValid(dataDetectionModel)) throw new FormatException(); //количество параметров формата данных, определённых детекторами, <= минимального требуемого количества даже для минимальных возможных данных в файле (учитывая default значения)
 
                 return dataDetectionModel.Format;
             }

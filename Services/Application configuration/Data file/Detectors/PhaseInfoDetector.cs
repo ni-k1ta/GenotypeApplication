@@ -24,7 +24,7 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
                 format.PHASEINFO = true;
                 //УБРАТЬ ОТСЮДА И ДОБАВИТЬ В ОПРЕДЕЛЕНИЕ
                 //format.Ploidy = 2; //phaseinfo только для диплоидных данных (оф. документация)
-                format.NumLoci = lastRowValues.Length; //количество значений в дополнительных строках всегда = количество локусов
+                //format.NumLoci = lastRowValues.Length; //количество значений в дополнительных строках всегда = количество локусов
                 return;
             }
 
@@ -46,7 +46,7 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
             format.PHASEINFO = true;
             //УБРАТЬ ОТСЮДА И ДОБАВИТЬ В ОПРЕДЕЛЕНИЕ
             //format.Ploidy = 2; //phaseinfo только для диплоидных данных (оф. документация) УБРАТЬ ОТСЮДА И ДОБАВИТЬ В ОПРЕДЕЛЕНИЕ
-            format.NumLoci = lastRowValues.Length; //количество значений в дополнительных строках всегда = количество локусов УБРАТЬ ОТСЮДА И ДОБАВИТЬ В ОПРЕДЕЛЕНИЕ
+            //format.NumLoci = lastRowValues.Length; //количество значений в дополнительных строках всегда = количество локусов УБРАТЬ ОТСЮДА И ДОБАВИТЬ В ОПРЕДЕЛЕНИЕ
         }
     }
 }

@@ -46,13 +46,16 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
             groupSizes.Add(currentSize);
 
             // убираем последнюю группу если она неполная
-            if (groupSizes.Count > 1 && groupSizes[^1] < groupSizes[0])
+            if (groupSizes.Count > 1 && groupSizes[^1] < groupSizes[0]) //если в данных есть phaseinfo, это прокатит и отсечёт размерность phaseinfo
                 groupSizes.RemoveAt(groupSizes.Count - 1);
 
             var distinctSizes = groupSizes.Distinct().ToList();
 
             if (distinctSizes.Count == 1 && distinctSizes[0] > 1)
                 return (true, distinctSizes[0]);
+
+            //if (distinctSizes.Count == 2 && distinctSizes[0] > 1 && distinctSizes[1] == 1)
+            //    return (true, distinctSizes[0]);
 
             return (false, 0);
         }

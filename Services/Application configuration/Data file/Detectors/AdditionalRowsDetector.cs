@@ -43,7 +43,7 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
                 {
                     var rowValues = GetNonEmptyRowValues(data, 0);
                     //УБРАТЬ ОТСЮДА И ДОБАВИТЬ В ОПРЕДЕЛЕНИЕ
-                    format.NumLoci = rowValues.Length;//количество значений в дополнительных строках всегда = количество локусов
+                    //format.NumLoci = rowValues.Length;//количество значений в дополнительных строках всегда = количество локусов
                 }
             }
             else

@@ -5,7 +5,7 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file.Detec
 {
     public class PloidyDetector : FormatDetectorBase
     {
-        private const int _order = 30;
+        private const int _order = 40;
         public override int Order => _order;
 
         public override void Detect(DataDetectionModel dataDetectionModel)
@@ -23,15 +23,15 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file.Detec
                 return;
             }
 
-            var (IsSuccess, Values) = PrepareData(dataDetectionModel);
-
-            if (!IsSuccess) throw new Exception(); //TODO изменить Exception
-
-            var (HasPattern, RepeatCount) = FormatDetectorsHelper.HasRepeatPattern(Values);
-
-            if (HasPattern && RepeatCount > 1)
+            if (format.OneRowPerInd == false)
             {
-                format.Ploidy = RepeatCount;
+                var (IsSuccess, Values) = PrepareData(dataDetectionModel);
+
+                if (!IsSuccess) throw new Exception(); //TODO изменить Exception
+
+                var (_, RepeatCount) = FormatDetectorsHelper.HasRepeatPattern(Values);
+
+                format.Ploidy = RepeatCount; //если OneRowPerInd == false, значит паттерн повторений был найден => достаточно просто взять количество повторений
                 return;
             }
         }

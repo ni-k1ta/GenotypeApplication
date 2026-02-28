@@ -7,7 +7,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
 {
     public class ExtraColsDetector : FormatDetectorBase
     {
-        private const int _order = 160; // После всех метаданных (Label=100, PopData=110, ..., Phenotype=140) после определения Missing
+        private const int _order = 160;
         public override int Order => _order;
 
         public override void Detect(DataDetectionModel dataDetectionModel)

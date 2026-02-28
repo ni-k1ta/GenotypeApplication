@@ -5,7 +5,7 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file.Detec
 {
     public class OneRowPerIndDetector : FormatDetectorBase
     {
-        private const int _order = 40;
+        private const int _order = 30;
         public override int Order => _order;
 
         public override void Detect(DataDetectionModel dataDetectionModel)
@@ -20,10 +20,8 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file.Detec
 
             var (HasPattern, RepeatCount) = FormatDetectorsHelper.HasRepeatPattern(Values);
 
-            if (HasPattern && RepeatCount > 1)
-            {
-                format.OneRowPerInd = false;
-            }
+            if (HasPattern && RepeatCount > 1) format.OneRowPerInd = false;
+            else format.OneRowPerInd = true;
         }
     }
 }
