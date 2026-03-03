@@ -104,6 +104,9 @@ namespace GenotypeApplication.Services.Data_file_scanners
             double singletonRatio = (double)singletonCount / uniqueInts.Count;
             if (singletonRatio > 0.3) return false;
 
+            double maxValueRatio = (double)max / (column.Length / ((format.Ploidy != 0 && format.OneRowPerInd == false) ? format.Ploidy : 1));
+            if (maxValueRatio >= 0.25) return false;
+
             if (groupCounts.Count < 2)
                 return false;
 
@@ -114,7 +117,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 return false;
 
             double ratio = (double)minSize / maxSize;
-            if (ratio < 0.2)
+            if (ratio < 0.05)
                 return false;
 
             return true;

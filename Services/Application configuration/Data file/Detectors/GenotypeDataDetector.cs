@@ -54,6 +54,10 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file.Detec
             {
                 format.NumLoci = dataColsCount / format.Ploidy;
             }
+            else
+            {
+                format.NumLoci = dataColsCount;
+            }
 
             //NumInds
             if (format.Ploidy != 0 && format.OneRowPerInd == false)

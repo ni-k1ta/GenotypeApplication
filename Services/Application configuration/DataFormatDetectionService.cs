@@ -51,7 +51,7 @@ namespace GenotypeApplication.Services.Application_configuration
                     detector.Detect(dataDetectionModel);
                 }
 
-                //if (!IsDetectionResultValid(dataDetectionModel)) throw new FormatException(); //количество параметров формата данных, определённых детекторами, <= минимального требуемого количества даже для минимальных возможных данных в файле (учитывая default значения)
+                if (!IsDetectionResultValid(dataDetectionModel.Data, dataDetectionModel.Format)) throw new FormatException(); //количество параметров формата данных, определённых детекторами, <= минимального требуемого количества даже для минимальных возможных данных в файле (учитывая default значения)
 
                 return dataDetectionModel.Format;
             }
@@ -60,40 +60,10 @@ namespace GenotypeApplication.Services.Application_configuration
                 throw;
             }
         }
-        private bool IsDetectionResultValid(DataDetectionModel dataDetectionModel)
+        public bool IsDetectionResultValid(DataTableModel data, DataFileFormatModel format)
         {
-            ArgumentNullException.ThrowIfNull(dataDetectionModel);
-
-            var format = dataDetectionModel.Format;
-            var data = dataDetectionModel.Data;
-
-            var props = format.GetType().GetProperties();
-
-            int total = 0;
-            int filled = 0;
-
-            foreach (var prop in props)
-            {
-                if (prop.PropertyType == typeof(bool))
-                {
-                    total++;
-                    bool value = (bool)prop.GetValue(format)!;
-                    if (value) filled++;
-                }
-                else if (prop.PropertyType == typeof(int))
-                {
-                    total++;
-                    int value = (int)prop.GetValue(format)!;
-                    if (value != 0) filled++;
-                }
-            }
-
-            if (total == 0) return false;
-
-            double ratio = (double)filled / total;
-
-            if (ratio <= 0.18)
-                return false;
+            ArgumentNullException.ThrowIfNull(data);
+            ArgumentNullException.ThrowIfNull(format);
 
             // Ожидаемые строки
             int headerRows = (format.MarkerNames ? 1 : 0)

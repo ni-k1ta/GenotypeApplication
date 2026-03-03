@@ -1,4 +1,5 @@
-﻿using GenotypeApplication.Models.Structure.Data_file;
+﻿using GenotypeApplication.Models.Structure;
+using GenotypeApplication.Models.Structure.Data_file;
 using GenotypeApplication.Services.Application_configuration.Data_file_scanners;
 
 namespace GenotypeApplication.Services.Data_file_scanners
@@ -45,10 +46,10 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 return;
             }
 
-            format.Phenotype = IsPhenotype(Values);
+            format.Phenotype = IsPhenotype(Values/*, format*/);
         }
 
-        private bool IsPhenotype(string[] column)
+        private bool IsPhenotype(string[] column/*, DataFileFormatModel format*/)
         {
             if (column.Length == 0) return false;
 
@@ -86,11 +87,12 @@ namespace GenotypeApplication.Services.Data_file_scanners
 
             // Проверка 3: Уникальность — не слишком высокая и не слишком низкая
             if (uniqueRatio > _maxUniqueRatio) return false;
+            if (uniqueRatio < 0.2) return false;
             if (uniqueCount <= 1) return false; // все значения одинаковы — бессмысленно
 
             // Проверка 4: Two-row формат — попарная валидация
             // Phenotype одинаков для обеих строк одного индивида
-            //if (!dataDetectionModel.Format.OneRowPerInd)
+            //if (format.OneRowPerInd == false)
             //{
             //    if (!ValidatePairsForTwoRowFormat(allParsed)) return false;
             //}
@@ -103,22 +105,22 @@ namespace GenotypeApplication.Services.Data_file_scanners
         /// В two-row формате каждый индивид занимает 2 строки,
         /// значение Phenotype повторяется в обеих строках.
         /// </summary>
-        //private bool ValidatePairsForTwoRowFormat(List<int> values)
-        //{
-        //    if (values.Count < 2) return false;
-        //    if (values.Count % 2 != 0) return false;
+        private bool ValidatePairsForTwoRowFormat(List<int> values)
+        {
+            if (values.Count < 2) return false;
+            if (values.Count % 2 != 0) return false;
 
-        //    int totalPairs = values.Count / 2;
-        //    int matchedPairs = 0;
+            int totalPairs = values.Count / 2;
+            int matchedPairs = 0;
 
-        //    for (int i = 0; i < values.Count; i += 2)
-        //    {
-        //        if (values[i] == values[i + 1])
-        //            matchedPairs++;
-        //    }
+            for (int i = 0; i < values.Count; i += 2)
+            {
+                if (values[i] == values[i + 1])
+                    matchedPairs++;
+            }
 
-        //    double pairMatchRatio = (double)matchedPairs / totalPairs;
-        //    return pairMatchRatio >= 0.9;
-        //}
+            double pairMatchRatio = (double)matchedPairs / totalPairs;
+            return pairMatchRatio >= 0.9;
+        }
     }
 }

@@ -261,7 +261,7 @@ namespace GenotypeApplication.View_models
             }
             MapDistancesParam = dataFileFormatModel.MapDistances;
             PhaseInfoParam = dataFileFormatModel.PHASEINFO;
-            OneRowPerIndFileParam = dataFileFormatModel.OneRowPerInd == true;
+            OneRowPerIndFileParam = dataFileFormatModel.OneRowPerInd;
             LabelParam = dataFileFormatModel.Label;
             PopDataParam = dataFileFormatModel.PopData;
             PopFlagParam = dataFileFormatModel.PopFlag;

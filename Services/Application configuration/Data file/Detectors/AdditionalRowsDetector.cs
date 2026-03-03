@@ -161,7 +161,7 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
                 uniqueValues.Add(rowValue);
             }
 
-            if ((double)uniqueValues.Count/row.Length >= 0.7) return false;
+            if ((double)uniqueValues.Count/row.Length >= 0.44) return false;
 
             var data = dataDetectionModel.Data;
             var format = dataDetectionModel.Format;

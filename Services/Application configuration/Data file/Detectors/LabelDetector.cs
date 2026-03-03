@@ -55,7 +55,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
             }
 
             // Критерий 4: Все значения уникальны
-            if (intValues.Distinct().Count() == columnLength) return true;
+            if (intValues.Distinct().Count() == (columnLength / ((format.Ploidy != 0 && format.OneRowPerInd == false) ? format.Ploidy : 1))) return true;
 
             return false;
         }

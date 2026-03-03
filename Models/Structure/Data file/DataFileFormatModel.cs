@@ -129,11 +129,11 @@
             get => _missing; set => _missing = value;
         }
 
-        private bool? _oneRowPerInd = null;
+        private bool _oneRowPerInd = false;
         /// <summary>
         /// Данные каждого индивида в одной строке (все аллели подряд).
         /// </summary>
-        public bool? OneRowPerInd
+        public bool OneRowPerInd
         {
             get => _oneRowPerInd; set => _oneRowPerInd = value;
         }
