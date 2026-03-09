@@ -17,8 +17,4 @@
 	 
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="MVVM\DataGrid\" />
-  </ItemGroup>
-
 </Project>

@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GenotypeApplication.Application_windows"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:behaviors="clr-namespace:GenotypeApplication.MVVM.Data_grid"
         mc:Ignorable="d"
         Title="Load data file"
         Height="638"
@@ -260,6 +261,10 @@
 
             <DataGrid x:Name="inputDataGrid"
                       ItemsSource="{Binding DataTableSource.DefaultView, UpdateSourceTrigger=PropertyChanged}"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      behaviors:DataGridHighlightBehavior.HighlightMap="{Binding HighlightMap}"
+                      behaviors:DataGridHighlightBehavior.DataSource="{Binding DataTableSource}"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"
                       BorderThickness="0"
