@@ -38,19 +38,9 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
             if (foundHeadersCount > 0)
             {
                 DetectLengthDifferentRows(dataDetectionModel, foundHeadersCount); //в данных есть мета-столбцы => нужно просто классифицировать дополнительные строки по признакам
-
-                if (!format.PHASEINFO)
-                {
-                    var rowValues = GetNonEmptyRowValues(data, 0);
-                    //УБРАТЬ ОТСЮДА И ДОБАВИТЬ В ОПРЕДЕЛЕНИЕ
-                    //format.NumLoci = rowValues.Length;//количество значений в дополнительных строках всегда = количество локусов
-                }
             }
             else
             {
-                //var lastRowValues = data.GetRow(data.RowsCount - 1).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
-                //if (lastRowValues.Length < data.ColumnCount) return;
-
                 if (format.PHASEINFO) return; //был найден PhaseInfo => в данных есть мета-столбцы => нет дополнительных строк, которые должны быть короче основных строк с данными, и NumLoci уже был определён в PhaseInfoDetector
 
                 DetectLengthSameRows(dataDetectionModel);
@@ -166,20 +156,16 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
             var data = dataDetectionModel.Data;
             var format = dataDetectionModel.Format;
 
-            // Половина строки: от середины до конца
             int mid = row.Length / 2;
             var halfRow = row.Skip(mid).ToArray();
 
-            // Значения из половины строки как int
             var rowValues = new HashSet<string>(halfRow);
 
-            // Половина высоты таблицы, начиная снизу
             int halfHeight = data.RowsCount / 2;
             int startRow = data.RowsCount - halfHeight;
 
             var startColumn = data.ColumnCount - mid;
 
-            // Собираем все значения из части таблицы
             var tableValues = new HashSet<string>();
             for (int col = startColumn; col < data.ColumnCount; col++)
             {
@@ -197,7 +183,6 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
                 }
             }
 
-            // Считаем сколько значений из halfRow встречаются в таблице
             int matches = rowValues.Count(v => tableValues.Contains(v));
 
             if ((double)matches/rowValues.Count < 0.7) return false;
@@ -286,7 +271,6 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
                     hasFloat = true;
             }
 
-            // MapDistances обычно содержит дроби, но допускаем случай когда все = -1 или 0
             return hasFloat || row.All(v =>
             {
                 var fv = double.Parse(v, CultureInfo.InvariantCulture);
@@ -315,51 +299,5 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file_scann
 
             return data.GetRow(rowIndex).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
         }
-
-        //private bool IsRecessiveAlleles(string[] row, int mainDataStartRowIndex, DataTableModel dataTableModel)
-        //{
-        //    if (row.Length == 0) return false;
-
-        //    if (!row.All(IsInteger)) return false;
-
-        //    // 3. Числовая строка — эвристики MarkerNames vs RecessiveAlleles
-        //    int numLoci = row.Length;
-        //    int maxMetaCols = dataTableModel.ColumnCount - numLoci;
-
-        //    if (maxMetaCols < 0) return false;
-
-        //    int rowsCount = 0;
-        //    if (dataTableModel.RowsCount >= 30) rowsCount = (int)Math.Ceiling((double)dataTableModel.RowsCount / 2);
-        //    else rowsCount = dataTableModel.RowsCount;
-
-        //    var mainRows = dataTableModel.GetColumnRows(maxMetaCols, mainDataStartRowIndex, rowsCount);
-
-        //    int matches = 0;
-
-        //    for (int locusIdx = 0; locusIdx < numLoci; locusIdx++)
-        //    {
-        //        int colIdx = maxMetaCols + locusIdx;
-        //        if (mainRows.Length == 0 || colIdx >= mainRows[0].Length)
-        //            break;
-
-        //        var locusAlleles = new HashSet<string>();
-        //        foreach (var mainRow in mainRows)
-        //        {
-        //            if (colIdx < row.Length)
-        //                locusAlleles.Add(row[colIdx]);
-        //        }
-
-        //        if (locusAlleles.Contains(row[locusIdx]))
-        //            matches++;
-        //    }
-
-        //    double score = (double)matches / numLoci;
-
-        //    // Высокая доля совпадений с аллелями → RecessiveAlleles
-        //    if (score >= 0.7)
-        //        return true;
-
-        //    return false;
-        //}
     }
 }

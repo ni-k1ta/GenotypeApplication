@@ -21,7 +21,7 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file.Detec
             var startCol = FormatDetectorsHelper.GetCurrentDataColumn(format);
             var dataColsCount = data.ColumnCount - startCol;
 
-            //Again Ploidy
+            //again Ploidy
             if (format.Ploidy == 0)
             {
                 if (startRow != 0)

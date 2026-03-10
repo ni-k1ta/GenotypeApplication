@@ -36,7 +36,7 @@ namespace GenotypeApplication.Services.Application_configuration
             _detectors = _detectors.OrderBy(d => d.Order).ToList();
         }
 
-        public DataFileFormatModel StartParameterDetection(DataTableModel data)
+        public DataFileFormatModel StartFormatDetection(DataTableModel data)
         {
             ArgumentNullException.ThrowIfNull(data);
 
@@ -51,7 +51,7 @@ namespace GenotypeApplication.Services.Application_configuration
                     detector.Detect(dataDetectionModel);
                 }
 
-                if (!IsDetectionResultValid(dataDetectionModel.Data, dataDetectionModel.Format)) throw new FormatException(); //количество параметров формата данных, определённых детекторами, <= минимального требуемого количества даже для минимальных возможных данных в файле (учитывая default значения)
+                if (!IsFormatMatchesWithData(dataDetectionModel.Data, dataDetectionModel.Format)) throw new FormatException();
 
                 return dataDetectionModel.Format;
             }
@@ -60,38 +60,31 @@ namespace GenotypeApplication.Services.Application_configuration
                 throw;
             }
         }
-        public bool IsDetectionResultValid(DataTableModel data, DataFileFormatModel format)
+        public bool IsFormatMatchesWithData(DataTableModel? data, DataFileFormatModel format)
         {
             ArgumentNullException.ThrowIfNull(data);
             ArgumentNullException.ThrowIfNull(format);
 
-            // Ожидаемые строки
             int headerRows = (format.MarkerNames ? 1 : 0)
                            + (format.RecessiveAlleles ? 1 : 0)
                            + (format.MapDistances ? 1 : 0);
 
             int dataRows;
-            if (format.OneRowPerInd == true)
-                dataRows = format.NumInds * (format.PHASEINFO ? 2 : 1);
-            else
-                dataRows = format.NumInds * format.Ploidy + (format.PHASEINFO ? format.NumInds : 0);
+            if (format.OneRowPerInd == true) dataRows = format.NumInds * (format.PHASEINFO ? 2 : 1);
+            else dataRows = format.NumInds * format.Ploidy + (format.PHASEINFO ? format.NumInds : 0);
 
             int expectedRows = headerRows + dataRows;
 
-            // Ожидаемые столбцы
             int metadataCols = (format.Label ? 1 : 0)
                              + (format.PopData ? 1 : 0)
                              + (format.PopFlag ? 1 : 0)
                              + (format.LocData ? 1 : 0)
                              + (format.Phenotype ? 1 : 0);
 
-            int genotypeCols = format.OneRowPerInd == true
-                ? format.Ploidy * format.NumLoci
-                : format.NumLoci;
+            int genotypeCols = format.OneRowPerInd == true ? format.Ploidy * format.NumLoci : format.NumLoci;
 
             int expectedCols = metadataCols + format.ExtraCols + genotypeCols;
 
-            // Сравнение
             return expectedRows == data.RowsCount && expectedCols == data.ColumnCount;
         }
     }

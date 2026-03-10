@@ -39,7 +39,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
             var uniqueInts = new SortedSet<int>();
             var groupCounts = new Dictionary<int, int>();
 
-            // Все значения должны быть целыми положительными числами
             foreach (var columnValue in column)
             {
                 if (!int.TryParse(columnValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
@@ -53,10 +52,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 groupCounts[parsed] = count + 1;
             }
 
-            // Количество уникальных значений должно быть значительно меньше числа строк
-            // Если уникальных значений столько же, сколько строк — это идентификатор, не группировка
-            // Порог: уникальных значений не более 50% от общего количества строк
-            // (в реальных данных популяций обычно 2-20 при сотнях индивидов)
             double uniqueRatio = (double)uniqueInts.Count / column.Length;
             if (uniqueRatio > 0.5)
                 return false;
@@ -86,7 +81,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 }
             }
 
-            // Оба значения должны присутствовать
             if ((hasZero && hasOne) && !hasAnother)
                 return true;
 

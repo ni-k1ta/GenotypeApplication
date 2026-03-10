@@ -11,6 +11,7 @@ namespace GenotypeApplication.Interfaces.MVVM
     {
         Window ShowWindow<TWindow, TViewModel>(TViewModel viewModel) where TWindow : Window, new();
         void CloseWindow(Window window);
-        Window ShowDialogWindow<TWindow, TViewModel>(TViewModel viewModel) where TWindow : Window, new();
+        bool? ShowDialogWindow<TWindow, TViewModel>(TViewModel viewModel) where TWindow : Window, new();
+        void CloseDialogWindow(Window window, bool dialogResult = false);
     }
 }

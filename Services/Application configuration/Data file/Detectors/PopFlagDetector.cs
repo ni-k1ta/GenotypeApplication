@@ -9,11 +9,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
         private const int _order = 120;
         public override int Order => _order;
 
-        /// <summary>
-        /// Минимальная доля значений "1" в столбце PopFlag.
-        /// Если все 0 — это скорее не PopFlag (бессмысленно).
-        /// Небольшой порог отсекает столбцы, где все значения 0.
-        /// </summary>
         private const double _minOnesRatio = 0.05;
 
         public override void Detect(DataDetectionModel dataDetectionModel)
@@ -22,7 +17,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
 
             var format = dataDetectionModel.Format;
 
-            // PopFlag НЕ может существовать без PopData
+            // PopFlag не может существовать без PopData
             if (!format.PopData)
             {
                 format.PopFlag = false;
@@ -48,7 +43,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
             int columnLength = column.Length;
             if (columnLength == 0) return false;
 
-            // Проверка 1: Все значения должны быть целыми числами 0 или 1
             var validIntegers = new List<int>(columnLength);
 
             foreach (var columnValue in column)
@@ -58,11 +52,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
                     if (intValue != 0 && intValue != 1) return false;
                     validIntegers.Add(intValue);
                 }
-                else
-                {
-                    // PopFlag не должен содержать непарсимых значений
-                    return false;
-                }
+                else return false;
             }
 
             if (validIntegers.Count == 0) return false;
@@ -72,9 +62,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
             int zerosCount = scanned - onesCount;
             double onesRatio = (double)onesCount / scanned;
 
-            // Проверка 2: Баланс 0/1
-            // Столбец из одних 0 — скорее не PopFlag (бессмысленно, ни один 
-            // индивид не является learning sample)
             if (onesRatio < _minOnesRatio) return false;
 
             int popDataColumnIndex = format.Label ? 1 : 0;
@@ -88,8 +75,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
             var popDataValues = new List<int>(popDataColumnValues.Length);
             foreach (var v in popDataColumnValues)
             {
-                if (int.TryParse(v, out var n))
-                    popDataValues.Add(n);
+                if (int.TryParse(v, out var n)) popDataValues.Add(n);
             }
 
             if (format.OneRowPerInd == false && format.Ploidy >= 2)

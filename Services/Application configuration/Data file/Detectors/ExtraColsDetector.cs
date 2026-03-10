@@ -27,7 +27,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
             int firstCandidateCol = FormatDetectorsHelper.GetCurrentDataColumn(format);
             int totalColumns = data.ColumnCount;
 
-            // Если после известных meta-столбцов не осталось столбцов — ExtraCols = 0.
             if (firstCandidateCol >= totalColumns)
             {
                 format.ExtraCols = 0;
@@ -78,8 +77,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
                         extraColsCount++;
                         continue;
                     }
-                    // Если тест дублирования явно показал, что столбец НЕ дублируется —
-                    // это сильный сигнал начала генотипных данных. Прекращаем.
                     break;
                 }
 
@@ -102,19 +99,15 @@ namespace GenotypeApplication.Services.Data_file_scanners
 
         private bool AnySubsequentColumnHasMissing(DataTableModel data, int startCol, int endCol, int firstDataRow, int missingValue)
         {
-            // Проверяем не все последующие столбцы, а выборочно (для производительности).
-            // Проверяем до 5 столбцов с шагом, покрывающим диапазон.
             int columnsToCheck = Math.Min(10, endCol - startCol);
-            if (columnsToCheck <= 0)
-                return false;
+            if (columnsToCheck <= 0) return false;
 
             int step = Math.Max(1, (endCol - startCol) / columnsToCheck);
 
             for (int col = startCol; col < endCol; col += step)
             {
                 var values = data.GetColumn(col, firstDataRow);
-                if (ContainsMissingValue(values, missingValue))
-                    return true;
+                if (ContainsMissingValue(values, missingValue)) return true;
             }
 
             return false;
@@ -128,16 +121,12 @@ namespace GenotypeApplication.Services.Data_file_scanners
         {
             foreach (var value in values)
             {
-                if (string.IsNullOrWhiteSpace(value))
-                    continue;
+                if (string.IsNullOrWhiteSpace(value)) continue;
 
                 var normalized = value.Replace(',', '.');
 
-                if (!double.TryParse(normalized, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out _))
-                {
+                if (!double.TryParse(normalized, System.Globalization.NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                     return true;
-                }
             }
 
             return false;
@@ -152,51 +141,28 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 var normalized = s.Replace(',', '.');
                 if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
                 {
-                    if (v % 1 != 0)
-                        floatValues.Add(normalized);
-                    else if (normalized.Contains('.'))
-                    {
-                        return true;
-                    }
+                    if (v % 1 != 0) floatValues.Add(normalized);
+                    else if (normalized.Contains('.')) return true;
                 }
 
                 if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i))
-                {
                     intValues.Add(i);
-                }
             }
 
-            if (floatValues.Count/values.Length > 0.5)
-                return true;
+            if (floatValues.Count/values.Length > 0.5) return true;
 
-            if (intValues.Count/values.Length > 0.65 && floatValues.Count/values.Length < 0.35)
-                return false;
+            if (intValues.Count/values.Length > 0.65 && floatValues.Count/values.Length < 0.35) return false;
 
             return true;
         }
-        /// <summary>
-        /// Тест 3: Проверяет, дублируются ли значения столбца в строках,
-        /// принадлежащих одному индивиду (для формата с несколькими строками на индивида).
-        /// 
-        /// В Structure при ONEROWPERIND=0 все pre-genotype столбцы (включая ExtraCols)
-        /// дублируются для каждой из ploidy строк одного индивида.
-        /// Генотипные данные, как правило, различаются между аллелями.
-        /// </summary>
-        /// <returns>
-        /// true — если значения дублируются для подавляющего большинства индивидов
-        /// (т.е. столбец скорее всего ExtraCol или meta-столбец).
-        /// false — если значения различаются (т.е. столбец скорее всего генотипный).
-        /// </returns>
-        private bool IsColumnDuplicatedPerIndividual(DataTableModel data, int columnIndex,
-                                                       int firstDataRow, int ploidy)
+
+        private bool IsColumnDuplicatedPerIndividual(DataTableModel data, int columnIndex, int firstDataRow, int ploidy)
         {
-            // Ограничиваем анализ до rowsToAnalyze строк, выровняв по ploidy.
             int maxRows = data.RowsCount - firstDataRow;
-            // Убедимся, что анализируем целое число индивидов.
+
             int individualsToCheck = maxRows / ploidy;
 
-            if (individualsToCheck == 0)
-                return false;
+            if (individualsToCheck == 0) return false;
 
             int duplicatedCount = 0;
             int totalChecked = 0;
@@ -205,7 +171,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
             {
                 int baseRow = firstDataRow + ind * ploidy;
 
-                // Получаем значения для всех ploidy строк данного индивида.
                 var values = new string[ploidy];
                 bool hasData = true;
 
@@ -228,26 +193,16 @@ namespace GenotypeApplication.Services.Data_file_scanners
                     values[p] = rowData;
                 }
 
-                if (!hasData)
-                    continue;
+                if (!hasData) continue;
 
                 totalChecked++;
 
-                // Проверяем: все ли значения одинаковы?
                 bool allSame = values.All(v => v == values[0]);
-                if (allSame)
-                    duplicatedCount++;
+                if (allSame) duplicatedCount++;
             }
 
-            if (totalChecked == 0)
-                return false;
+            if (totalChecked == 0) return false;
 
-            // Порог: если >= 90% индивидов имеют одинаковые значения
-            // во всех ploidy строках — считаем столбец дублированным (ExtraCol).
-            // 
-            // Примечание: для гомозиготных генотипов значения тоже совпадут,
-            // но вероятность того, что ВСЕ индивиды гомозиготны по одному локусу, мала.
-            // Порог 90% учитывает этот пограничный случай.
             double ratio = (double)duplicatedCount / totalChecked;
             return ratio >= 0.9;
         }

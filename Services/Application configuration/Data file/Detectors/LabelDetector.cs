@@ -42,19 +42,16 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 else if (d % 1 == 0) intValues.Add((int)d);
             }
 
-            // Критерий 1: Высокая доля нечисловых значений → это Label
             double nonNumericRatio = (double)nonNumericCount / columnLength;
             if (nonNumericRatio >= 0.9) return true;
 
             if (format.OneRowPerInd == false && format.Ploidy >= 2)
             {
-                // Критерий 2: Последовательные ID(1, 2, 3, ...)
                 var uniqueSorted = intValues.Distinct().OrderBy(x => x).ToList();
                 if (uniqueSorted.Count == columnLength / format.Ploidy)
                     if (IsContinuousSequence(uniqueSorted)) return true;
             }
 
-            // Критерий 4: Все значения уникальны
             if (intValues.Distinct().Count() == (columnLength / ((format.Ploidy != 0 && format.OneRowPerInd == false) ? format.Ploidy : 1))) return true;
 
             return false;

@@ -5,6 +5,7 @@ namespace GenotypeApplication.Interfaces.Application_configuration
 {
     public interface IDataFormatDetectionService
     {
-        DataFileFormatModel StartParameterDetection(DataTableModel data);
+        DataFileFormatModel StartFormatDetection(DataTableModel data);
+        bool IsFormatMatchesWithData(DataTableModel? data, DataFileFormatModel format);
     }
 }

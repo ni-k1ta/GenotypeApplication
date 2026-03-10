@@ -27,9 +27,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 foreach (var value in columnData)
                 {
                     if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var num))
-                    {
                         allValues.Add(num);
-                    }
                 }
             }
 
@@ -40,7 +38,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
             }
 
             var knownValues = new HashSet<int> { -999, -99, -9, -1, 9, 99, 999 };
-            var candidates = new Dictionary<int, int>(); // значение -> количество
+            var candidates = new Dictionary<int, int>();
 
             foreach (var val in allValues)
             {
@@ -63,10 +61,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 return;
             }
 
-            // Ищем совпадения со списком (встречающиеся больше одного раза)
-            var matchedFromList = candidates
-                .Where(kv => knownValues.Contains(kv.Key) && kv.Value > 1)
-                .ToList();
+            var matchedFromList = candidates.Where(kv => knownValues.Contains(kv.Key) && kv.Value > 1).ToList();
 
             if (matchedFromList.Count > 0)
             {
@@ -74,10 +69,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 return;
             }
 
-            // Ищем совпадения со списком (хотя бы раз)
-            var matchedAny = candidates
-                .Where(kv => knownValues.Contains(kv.Key))
-                .ToList();
+            var matchedAny = candidates.Where(kv => knownValues.Contains(kv.Key)).ToList();
 
             if (matchedAny.Count > 0)
             {
@@ -85,8 +77,6 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 return;
             }
 
-
-            // Ни одного совпадения со списком — возвращаем самое частое
             format.Missing = PickBest(candidates.ToList());
         }
 
@@ -99,14 +89,12 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 int maxCount = items.Max(kv => kv.Value);
                 var topItems = items.Where(kv => kv.Value == maxCount).Select(kv => kv.Key).ToList();
 
-                if (topItems.Count == 1)
-                    return topItems[0];
+                if (topItems.Count == 1) return topItems[0];
 
                 var negatives = topItems.Where(v => v < 0).ToList();
                 var positives = topItems.Where(v => v >= 0).ToList();
 
-                if (negatives.Count > 0)
-                    return negatives.Max();
+                if (negatives.Count > 0) return negatives.Max();
 
                 return positives.Min();
             }
@@ -116,8 +104,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 int maxCount = negativesValues.Max(kv => kv.Value);
                 var topItems = items.Where(kv => kv.Value == maxCount).Select(kv => kv.Key).ToList();
 
-                if (topItems.Count == 1)
-                    return topItems[0];
+                if (topItems.Count == 1) return topItems[0];
 
                 var negatives = topItems.Where(v => v < 0).ToList();
                 return negatives.Max();

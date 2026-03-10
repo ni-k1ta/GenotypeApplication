@@ -369,14 +369,14 @@ namespace GenotypeApplication.View_models
         {
             if (!CanSaveChanges()) return;
 
+            var projectName = _projectName;
+            var projectPath = _projectPath;
+            var isParallelEnabled = _projectIsParallelEnabled;
+            var coresCount = _projectCoresCount;
+
             try
             {
                 _isSaving = true;
-
-                var projectName = _projectName;
-                var projectPath = _projectPath;
-                var isParallelEnabled = _projectIsParallelEnabled;
-                var coresCount = _projectCoresCount;
 
                 if (_isNewProject) await CreateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
                 else await UpdateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
@@ -389,8 +389,11 @@ namespace GenotypeApplication.View_models
             finally { _isSaving = false; }
 
             //todo загрузку установленных параметров для программ, если проект не новый
-            StructureMainParametersModel structureMainParametersModel = new StructureMainParametersModel();
-            MainWindowViewModel mainWindowViewModel = new(structureMainParametersModel, _dialogService, _pathTextValidator, _windowService);
+            DataFileFormatModel dataFileFormatModel = new();
+            string filePath = string.Empty;
+            //изменить ^^^
+
+            MainWindowViewModel mainWindowViewModel = new(_projectModel, dataFileFormatModel, filePath, _dialogService, _messageService, _pathTextValidator, _windowService);
 
             var mainWindow = _windowService.ShowWindow<MainWindow, MainWindowViewModel>(mainWindowViewModel);
             mainWindowViewModel.SetCurrentWindow(mainWindow);

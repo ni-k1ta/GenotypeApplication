@@ -44,10 +44,13 @@ namespace GenotypeApplication.View_models
         private int _extraColsCountParam;
 
         private DataTableModel? _parsedDataTable;
+        private DataFileFormatModel _dataFileFormatModel;
+        private DataFileFormatModel _calculatedDataFileFormatModel;
 
         private readonly IValidator<string> _pathTextValidator;
 
         private readonly IDialogService _dialogService;
+        private readonly IMessageService _messageService;
         private readonly IDataTableService _dataTableService;
         private readonly IDataFormatDetectionService _dataFormatDetectionService;
         private readonly IHighlightCalculationService _highlightCalculationService;
@@ -56,6 +59,8 @@ namespace GenotypeApplication.View_models
         private HighlightMapModel? _highlightMap;
         private bool _isLiveHighlightEnabled;
 
+        private bool _isSaving;
+
         private CancellationTokenSource? _debounceCts;
         private CancellationTokenSource? _calculationCts;
 
@@ -63,11 +68,15 @@ namespace GenotypeApplication.View_models
 
         private WeakReference<Window>? _currentWindowRef;
 
-        public DataFileFormatViewModel(IDialogService dialogService, IValidator<string> pathTextValidator, IWindowService windowService)
+        public DataFileFormatViewModel(IDialogService dialogService, IMessageService messageService, IValidator<string> pathTextValidator, IWindowService windowService)
         {
+            _dataFileFormatModel = new();
+            _calculatedDataFileFormatModel = new();
+
             _pathTextValidator = pathTextValidator;
 
             _dialogService = dialogService;
+            _messageService = messageService;
             _dataTableService = new DataTableService();
             _dataFormatDetectionService = new DataFormatDetectionService();
             _highlightCalculationService = new HighlightCalculationService();
@@ -96,8 +105,18 @@ namespace GenotypeApplication.View_models
             _extraColsParam = false;
             _extraColsCountParam = 0;
 
-            SelectDataFileCommand = new RelayCommand(execute => SelectDataFileAsync());
+            _isSaving = false;
+
+            SelectDataFileCommand = new AsyncRelayCommand(execute => SelectDataFileAsync());
+            SaveDataFileParametersCommand = new AsyncRelayCommand(execute => SaveDataFileParametersAsync(), canExecute => CanSaveDataFileParameters());
+
             _windowService = windowService;
+        }
+
+        public DataFileFormatModel DataFileFormatModel
+        {
+            get => _dataFileFormatModel;
+            set { SetField(ref _dataFileFormatModel, value); }
         }
 
         public string DataFileFullPath
@@ -313,7 +332,7 @@ namespace GenotypeApplication.View_models
             }
         }
 
-        public DataTableModel? ParsedDataTable
+        private DataTableModel? ParsedDataTable
         {
             get => _parsedDataTable;
             set
@@ -352,7 +371,7 @@ namespace GenotypeApplication.View_models
         //}
 
         public ICommand SelectDataFileCommand { get; }
-        private async void SelectDataFileAsync()
+        private async Task SelectDataFileAsync()
         {
             string fullDataFilePath = _dialogService.SelectFile(DATA_FILE_DEFAULT_PATH);
 
@@ -362,16 +381,17 @@ namespace GenotypeApplication.View_models
             {
                 // Сбрасываем выделение до смены данных
                 HighlightMap = null;
+                _calculatedDataFileFormatModel = new();
 
                 var parsedDataTable = _dataTableService.Load(fullDataFilePath);
 
                 ParsedDataTable = new DataTableModel(parsedDataTable);
 
-                var detectedFormat = _dataFormatDetectionService.StartParameterDetection(ParsedDataTable);
+                _calculatedDataFileFormatModel = _dataFormatDetectionService.StartFormatDetection(ParsedDataTable);
 
                 _isLiveHighlightEnabled = false;
 
-                SetFormatValues(detectedFormat);
+                SetFormatValues(_calculatedDataFileFormatModel);
 
                 await ExecuteCalculationAsync();
 
@@ -388,6 +408,7 @@ namespace GenotypeApplication.View_models
 
             DataFileFullPath = fullDataFilePath;
         }
+
         private void SetFormatValues(DataFileFormatModel dataFileFormatModel)
         {
             NumIndsParam = dataFileFormatModel.NumInds;
@@ -416,39 +437,8 @@ namespace GenotypeApplication.View_models
 
             if (ExtraColsCountParam > 0) ExtraColsParam = true;
             else ExtraColsParam = false;
-        }
 
-        private async void RequestRecalculation()
-        {
-            if (!_isLiveHighlightEnabled) return;
-
-            _debounceCts?.Cancel();
-            _debounceCts = new CancellationTokenSource();
-            var debounceToken = _debounceCts.Token;
-
-            try
-            {
-                await Task.Delay(DebounceDelay, debounceToken);
-            }
-            catch (OperationCanceledException) { return; }
-
-            await ExecuteCalculationAsync();
-        }
-        private async Task ExecuteCalculationAsync()
-        {
-            _calculationCts?.Cancel();
-            _calculationCts = new CancellationTokenSource();
-            var ct = _calculationCts.Token;
-
-            var parameters = GetFormatValues();
-
-            try
-            {
-                var result = await Task.Run(() => _highlightCalculationService.Calculate(parameters, DataTableSource, ct), ct);
-
-                if (!ct.IsCancellationRequested) HighlightMap = result;
-            }
-            catch (OperationCanceledException) { }
+            DataFileFormatModel = dataFileFormatModel;
         }
         private DataFileFormatModel GetFormatValues()
         {
@@ -474,6 +464,74 @@ namespace GenotypeApplication.View_models
                 NOTAMBIGUOUS = NotAmbiguousParam,
                 NotAmbiguousValue = NotAmbiguousValueParam
             };
+        }
+
+        private async void RequestRecalculation()
+        {
+            if (!_isLiveHighlightEnabled) return;
+
+            _debounceCts?.Cancel();
+            _debounceCts = new CancellationTokenSource();
+            var debounceToken = _debounceCts.Token;
+
+            try
+            {
+                await Task.Delay(DebounceDelay, debounceToken);
+            }
+            catch (OperationCanceledException) { return; }
+
+            await ExecuteCalculationAsync();
+        }
+        private async Task ExecuteCalculationAsync()
+        {
+            _calculationCts?.Cancel();
+            _calculationCts = new CancellationTokenSource();
+            var ct = _calculationCts.Token;
+
+            DataFileFormatModel = GetFormatValues();
+
+            try
+            {
+                var result = await Task.Run(() => _highlightCalculationService.Calculate(DataFileFormatModel, DataTableSource, ct), ct);
+
+                if (!ct.IsCancellationRequested) HighlightMap = result;
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        public ICommand SaveDataFileParametersCommand { get; }
+        private async Task SaveDataFileParametersAsync()
+        {
+            if (!CanSaveDataFileParameters()) return;
+
+            _isSaving = true;
+
+            var dataFileFormatModel = GetFormatValues();
+
+            if (!_dataFormatDetectionService.IsFormatMatchesWithData(ParsedDataTable, dataFileFormatModel))
+            {
+                _messageService.ShowWarning("The specified format parameters do not match the data. Please review your selections.");
+                return;
+            }
+            else if (dataFileFormatModel != _calculatedDataFileFormatModel)
+            {
+                var result = _messageService.ShowQuetion("The specified format parameters differ from the automatically detected format. Do you want to proceed with the specified parameters?");
+
+                if (!result) return;
+            }
+
+            DataFileFormatModel = dataFileFormatModel;
+            _isSaving = false;
+
+            if (_currentWindowRef != null && _currentWindowRef.TryGetTarget(out var window))
+            {
+                _windowService.CloseDialogWindow(window, true);
+            }
+
+        }
+        private bool CanSaveDataFileParameters()
+        {
+            return !_isSaving && !HasErrors && string.IsNullOrWhiteSpace(DataFileFullPath);
         }
 
         public void SetCurrentWindow(Window window)
