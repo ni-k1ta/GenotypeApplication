@@ -184,7 +184,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     Arguments = arguments,
                     WorkingDirectory = workingDirectory,
                     UseShellExecute = false,
-                    CreateNoWindow = false,
+                    CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
