@@ -543,7 +543,7 @@ namespace GenotypeApplication.View_models
         public ICommand LoadDataFileCommand { get; }
         public ICommand SaveChangesAsyncCommand { get; }
         public AsyncRelayCommand StartStructureAsyncCommand { get; }
-        public ICommand StopStructureCommand { get; }
+        public RelayCommand StopStructureCommand { get; }
         #endregion
 
         public static readonly SetModel CreateNewSetPlaceholder = new() { Name = "Create new set" };
@@ -908,6 +908,10 @@ namespace GenotypeApplication.View_models
             {
                 //todo
                 throw;
+            }
+            finally
+            {
+                StopStructureCommand.NotifyCanExecuteChanged();
             }
         }
         private bool CanStartStructure()
