@@ -24,7 +24,7 @@ namespace GenotypeApplication.Services
             ArgumentNullException.ThrowIfNull(model);
 
             var json = JsonSerializer.Serialize(model, GetJsonOptions());
-            await File.WriteAllTextAsync(path, json);
+            await File.WriteAllTextAsync(path, json); //перезаписывает файл
         }
 
         public IEnumerable<string> ReadFile(string filePath)
@@ -33,6 +33,26 @@ namespace GenotypeApplication.Services
             if (!File.Exists(filePath)) throw new FileNotFoundException("File was not found.", filePath);
 
             return File.ReadLines(filePath).Where(l => !string.IsNullOrWhiteSpace(l));
+        }
+
+        public void CopyFile(string sourceFilePath, string targetFilePath)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(sourceFilePath);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(targetFilePath);
+            if (!File.Exists(sourceFilePath)) throw new FileNotFoundException("Source file was not found.", sourceFilePath);
+            File.Copy(sourceFilePath, targetFilePath, overwrite: true);
+        }
+
+        public async Task WriteAllLinesAsync(string filePath, IEnumerable<string> lines)
+        {
+            await File.WriteAllLinesAsync(filePath, lines, new UTF8Encoding(false)); //перезаписывает файл
+        }
+
+        public void DeleteFile(string filePath)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
+            if (!File.Exists(filePath)) return;
+            File.Delete(filePath);
         }
 
         private static JsonSerializerOptions GetJsonOptions()

@@ -9,7 +9,6 @@ using GenotypeApplication.MVVM.Infrastructure;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 
@@ -17,7 +16,7 @@ using System.Windows.Input;
 
 namespace GenotypeApplication.View_models
 {
-    public class ProjectParametersViewModel : ViewModelErrors, IWindowAware
+    public class ProjectParametersVM : ViewModelErrors, IWindowAware
     {
         private ProjectParametersModel _projectModel;
 
@@ -53,7 +52,7 @@ namespace GenotypeApplication.View_models
         private bool _isNewProject;
         private bool _isSaving;
 
-        public ProjectParametersViewModel(IProjectService projectService, IDialogService dialogService, IMessageService messageService, IRecentProjectsService recentProjectsService, IValidator<string> nameTextValidator, IValidator<string> pathTextValidator, IWindowService windowService)
+        public ProjectParametersVM(IProjectService projectService, IDialogService dialogService, IMessageService messageService, IRecentProjectsService recentProjectsService, IValidator<string> nameTextValidator, IValidator<string> pathTextValidator, IWindowService windowService)
         {
             _projectModel = new();
 
@@ -393,9 +392,11 @@ namespace GenotypeApplication.View_models
             string filePath = string.Empty;
             //изменить ^^^
 
-            MainWindowViewModel mainWindowViewModel = new(_projectModel, dataFileFormatModel, filePath, _dialogService, _messageService, _pathTextValidator, _windowService);
+            string fullProjectFolderPath = Path.Combine(projectPath, projectName);
 
-            var mainWindow = _windowService.ShowWindow<MainWindow, MainWindowViewModel>(mainWindowViewModel);
+            MainWindowVM mainWindowViewModel = new(_projectModel, fullProjectFolderPath, dataFileFormatModel, _projectModel.CoresCount, filePath, _dialogService, _messageService, _pathTextValidator, _windowService);
+
+            var mainWindow = _windowService.ShowWindow<MainWindow, MainWindowVM>(mainWindowViewModel);
             mainWindowViewModel.SetCurrentWindow(mainWindow);
 
             Application.Current.MainWindow = mainWindow;

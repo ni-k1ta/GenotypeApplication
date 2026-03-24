@@ -9,7 +9,7 @@ namespace GenotypeApplication.Services
         {
             MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-        public void ShowWarning(string message) 
+        public void ShowWarning(string message)
         {
             MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -20,6 +20,10 @@ namespace GenotypeApplication.Services
                 return true;
             }
             return false;
+        }
+        public void ShowInformation(string message)
+        {
+            MessageBox.Show(message, "Information", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }

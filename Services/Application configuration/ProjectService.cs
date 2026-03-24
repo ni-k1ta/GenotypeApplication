@@ -2,15 +2,13 @@
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models.Project;
 using System.IO;
-using System.Text.Json;
-
 
 namespace GenotypeApplication.Services
 {
     public class ProjectService : IProjectService
     {
         private readonly string PROJECT_FILE_EXTENSION = AppConstants.PROJECT_FILE_EXTENSION;
-        private readonly string[] ADDITIONAL_PROGRAMS = AppConstants.ADDITIONAL_PROGRAMS;
+        //private readonly string[] ADDITIONAL_PROGRAMS = AppConstants.ADDITIONAL_PROGRAMS;
 
         private readonly IDirectoryService _directoryService = new DirectoryService();
         private readonly IFileService _fileService = new FileService();
@@ -22,11 +20,11 @@ namespace GenotypeApplication.Services
             string fullProjectPath = Path.Combine(projectModel.Path, projectModel.Name);
             Directory.CreateDirectory(fullProjectPath);
 
-            foreach (var program in ADDITIONAL_PROGRAMS)
-            {
-                string fullAdditionalProgramPath = Path.Combine(fullProjectPath, program);
-                Directory.CreateDirectory(fullAdditionalProgramPath);
-            }
+            //foreach (var program in ADDITIONAL_PROGRAMS)
+            //{
+            //    string fullAdditionalProgramPath = Path.Combine(fullProjectPath, program);
+            //    Directory.CreateDirectory(fullAdditionalProgramPath);
+            //}
 
             await SaveAsync(projectModel);
         }
@@ -91,11 +89,12 @@ namespace GenotypeApplication.Services
 
                     string oldProjectConfigFileName = Path.ChangeExtension(oldProjectModel.Name, PROJECT_FILE_EXTENSION);
 
-                    if (File.Exists(oldProjectConfigFileName))
+                    string fullOldProjectConfigFilePath = Path.Combine(fullNewProjectName, oldProjectConfigFileName);
+
+                    if (File.Exists(fullOldProjectConfigFilePath))
                     {
                         string newProjectConfigFileName = Path.ChangeExtension(newProjectModel.Name, PROJECT_FILE_EXTENSION);
 
-                        string fullOldProjectConfigFilePath = Path.Combine(fullNewProjectName, oldProjectConfigFileName);
                         string fullNewProjectConfigFilePath = Path.Combine(fullNewProjectName, newProjectConfigFileName);
 
                         File.Move(fullOldProjectConfigFilePath, fullNewProjectConfigFilePath);

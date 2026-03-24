@@ -12,5 +12,8 @@ namespace GenotypeApplication.Interfaces
         Task<T> ReadJsonAsync<T>(string filePath);
         Task WriteJsonAsync<T>(T model, string path);
         IEnumerable<string> ReadFile(string filePath);
+        void CopyFile(string sourceFilePath, string targetFilePath);
+        Task WriteAllLinesAsync(string filePath, IEnumerable<string> lines);
+        void DeleteFile(string filePath);
     }
 }

@@ -70,7 +70,7 @@
                         Content="Select"
                         Style="{StaticResource Rounded}"
                         Margin="10,0,0,0"
-                        Command="{Binding SelectDataFileCommand}" />
+                        Command="{Binding SelectDataFileAsyncCommand}" />
             </StackPanel>
         </GroupBox>
 
@@ -290,6 +290,7 @@
                 Grid.Row="2"
                 Grid.Column="0"
                 HorizontalAlignment="Right"
-                Style="{StaticResource Rounded}" />
+                Style="{StaticResource Rounded}"
+                Command="{Binding SaveDataFileParametersAsyncCommand}" />
     </Grid>
 </Window>

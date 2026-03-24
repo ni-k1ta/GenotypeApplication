@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GenotypeApplication"
+        xmlns:conv="clr-namespace:GenotypeApplication.MVVM.Converters"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         mc:Ignorable="d"
         Title="MainWindow"
@@ -13,6 +14,11 @@
         Height="800"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <conv:EmptyStringToPlaceholderStringConverter x:Key="EmptyStringToPlaceholderStringConverter" />
+    </Window.Resources>
+
     <Grid Margin="5">
 
         <Grid.ColumnDefinitions>
@@ -51,7 +57,8 @@
                     MinWidth="915.2">
             <TabItem x:Name="structureTabItem"
                      Header="Structure"
-                     HorizontalAlignment="Stretch">
+                     HorizontalAlignment="Stretch"
+                     DataContext="{Binding StructureTabControlVM}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -82,12 +89,12 @@
                                     Grid.Column="0"
                                     Margin="5,0,10,0"
                                     Style="{StaticResource Rounded}"
-                                    Command="{Binding LoadDataFileCommand}"/>
+                                    Command="{Binding LoadDataFileCommand}" />
                             <TextBox x:Name="dataFileNameTextBox"
+                                     Text="{Binding DataFileName, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource EmptyStringToPlaceholderStringConverter}, ConverterParameter='Data file name', FallbackValue='Data file name', TargetNullValue='Data file name'}"
                                      IsReadOnly="True"
                                      Grid.Column="1"
                                      FontWeight="Light"
-                                     Text="Data file name"
                                      Margin="0,0,5,0" />
                         </Grid>
                     </GroupBox>
@@ -103,11 +110,14 @@
 
                             <ComboBox x:Name="parameterSetsComboBox"
                                       Grid.Column="0"
-                                      Margin="5,0,10,0" />
+                                      Margin="5,0,10,0"
+                                      ItemsSource="{Binding SetModelsComboBoxItems, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedItem="{Binding ComboBoxSelectedItem, UpdateSourceTrigger=PropertyChanged}"
+                                      DisplayMemberPath="Name" />
                             <TextBox x:Name="parametersSetNameTextBox"
                                      Grid.Column="1"
                                      FontWeight="Light"
-                                     Text="Set name"
+                                     Text="{Binding SetName, UpdateSourceTrigger=PropertyChanged}"
                                      Margin="0,0,5,0" />
                         </Grid>
                     </GroupBox>
@@ -131,7 +141,8 @@
                                                     Minimum="0"
                                                     Maximum="131072"
                                                     Increment="1"
-                                                    HorizontalAlignment="Right" />
+                                                    HorizontalAlignment="Right"
+                                                    Value="{Binding BurnInParam, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
 
                             <Grid>
@@ -148,7 +159,8 @@
                                                     Minimum="0"
                                                     Maximum="131072"
                                                     Increment="1"
-                                                    HorizontalAlignment="Right" />
+                                                    HorizontalAlignment="Right"
+                                                    Value="{Binding NumRepsParam, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
                         </StackPanel>
                     </GroupBox>
@@ -174,7 +186,8 @@
                             <CheckBox x:Name="correlatedAlleleFreqsCheckBox"
                                       Content="Allele frequencies are correlated"
                                       Grid.Column="0"
-                                      Grid.Row="0" />
+                                      Grid.Row="0"
+                                      IsChecked="{Binding FreqsCorrParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="setLambdaCheckBox"
                                       Content="Set lambda"
                                       Grid.Column="1"
@@ -182,20 +195,23 @@
                             <CheckBox x:Name="inferLambdaCheckBox"
                                       Content="Infer lambda"
                                       Grid.Column="2"
-                                      Grid.Row="0" />
+                                      Grid.Row="0"
+                                      IsChecked="{Binding InferLambdaParam, UpdateSourceTrigger=PropertyChanged}" />
 
                             <CheckBox x:Name="fstSameValueCheckBox"
                                       Content="Assume same value of Fst for all subpopulations"
                                       Grid.Column="0"
                                       Grid.Row="1"
-                                      Margin="15,0,0,0" />
+                                      Margin="15,0,0,0"
+                                      IsChecked="{Binding OnefstParam, UpdateSourceTrigger=PropertyChanged}" />
                             <xctk:DoubleUpDown x:Name="lambdaDoubleUpDown"
                                                Grid.Column="1"
                                                Grid.Row="1"
                                                Minimum="-27000"
                                                Maximum="27000"
                                                Increment="0.1"
-                                               Margin="15,0,10,0" />
+                                               Margin="15,0,10,0"
+                                               Value="{Binding PopSpecificLambdaValueParam, UpdateSourceTrigger=PropertyChanged}" />
                             <StackPanel Orientation="Horizontal"
                                         Grid.Column="2"
                                         Grid.Row="1">
@@ -206,7 +222,7 @@
                                                    Minimum="-27000"
                                                    Maximum="27000"
                                                    Increment="0.1"
-                                                   Value="1" />
+                                                   Value="{Binding InferLambdaValueParam, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal"
@@ -220,7 +236,7 @@
                                                    Minimum="0"
                                                    Increment="0.01"
                                                    FormatString="0.##"
-                                                   Value="1" />
+                                                   Value="{Binding FPriorMeanParam, UpdateSourceTrigger=PropertyChanged}" />
                                 <Label x:Name="priorSdLabel"
                                        Content="Prior sd"
                                        Margin="10,0,0,0"
@@ -230,14 +246,16 @@
                                                    Minimum="0"
                                                    Increment="0.01"
                                                    FormatString="0.##"
-                                                   HorizontalAlignment="Right" />
+                                                   HorizontalAlignment="Right"
+                                                   Value="{Binding FPriorSDParam, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
 
                             <CheckBox x:Name="popLambdaSeparationCheckBox"
                                       Content="Separate lambda by population"
                                       Grid.Row="2"
                                       Grid.Column="2"
-                                      Margin="15,0,0,0" />
+                                      Margin="15,0,0,0"
+                                      IsChecked="{Binding PopSpecificLambdaParam, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
                     </GroupBox>
 
@@ -263,26 +281,31 @@
                                       Content="Assume the model without admixture"
                                       Grid.Column="0"
                                       Grid.Row="0"
-                                      Grid.ColumnSpan="2" />
+                                      Grid.ColumnSpan="2"
+                                      IsChecked="{Binding NoAdmixParam, UpdateSourceTrigger=PropertyChanged}" />
                             <GroupBox x:Name="linkageModelGroupBox"
                                       Grid.Column="0"
                                       Margin="10,0,0,0"
                                       Grid.Row="1">
                                 <GroupBox.Header>
                                     <CheckBox x:Name="linkageModelCheckBox"
-                                              Content="Use the linkage model" />
+                                              Content="Use the linkage model"
+                                              IsChecked="{Binding LinkageParam, UpdateSourceTrigger=PropertyChanged}" />
                                 </GroupBox.Header>
 
                                 <StackPanel Orientation="Vertical">
                                     <CheckBox x:Name="phaseFolowsMarkovCheckBox"
                                               Content="The phase info follows a Markov model"
-                                              Margin="12,0,0,0" />
+                                              Margin="12,0,0,0"
+                                              IsChecked="{Binding MarkovPhaseParam, UpdateSourceTrigger=PropertyChanged}" />
                                     <CheckBox x:Name="printResultsBySiteCheckBox"
                                               Content="Print site by site results"
-                                              Margin="12,0,0,0" />
+                                              Margin="12,0,0,0"
+                                              IsChecked="{Binding SiteBySiteParam, UpdateSourceTrigger=PropertyChanged}" />
                                     <CheckBox x:Name="correctPhaseDataCheckBox"
                                               Content="Data are in correct phase"
-                                              Margin="12,0,0,0" />
+                                              Margin="12,0,0,0"
+                                              IsChecked="{Binding PhasedParam, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <DockPanel Margin="27,0,0,0"
                                                LastChildFill="False">
@@ -294,7 +317,8 @@
                                                            DockPanel.Dock="Right"
                                                            Maximum="1000"
                                                            Minimum="-1000"
-                                                           Increment="0.1" />
+                                                           Increment="0.1"
+                                                           Value="{Binding Log10rMinParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </DockPanel>
                                     <DockPanel Margin="27,0,0,0"
                                                LastChildFill="False">
@@ -307,7 +331,8 @@
                                                            Maximum="1000"
                                                            Minimum="-1000"
                                                            Increment="0.1"
-                                                           DockPanel.Dock="Right" />
+                                                           DockPanel.Dock="Right"
+                                                           Value="{Binding Log10rMaxParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </DockPanel>
                                     <DockPanel Margin="27,5,0,0"
                                                LastChildFill="False">
@@ -320,7 +345,8 @@
                                                            Maximum="1000"
                                                            Minimum="-1000"
                                                            Increment="0.1"
-                                                           DockPanel.Dock="Right" />
+                                                           DockPanel.Dock="Right"
+                                                           Value="{Binding Log10rPropSDParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </DockPanel>
                                     <DockPanel Margin="27,0,0,0"
                                                LastChildFill="False">
@@ -333,7 +359,8 @@
                                                            Maximum="1000"
                                                            Minimum="-1000"
                                                            Increment="0.1"
-                                                           DockPanel.Dock="Right" />
+                                                           DockPanel.Dock="Right"
+                                                           Value="{Binding Log10rStartParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </DockPanel>
                                 </StackPanel>
                             </GroupBox>
@@ -347,13 +374,15 @@
                                           Margin="0,0,0,0">
                                     <GroupBox.Header>
                                         <CheckBox x:Name="useLocationInfoCheckBox"
-                                                  Content="Use location info to improve weak data" />
+                                                  Content="Use location info to improve weak data"
+                                                  IsChecked="{Binding LocPriorParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </GroupBox.Header>
 
                                     <StackPanel Orientation="Vertical">
                                         <CheckBox x:Name="popConsiderCheckBox"
                                                   Content="Consider the population for each locus"
-                                                  Margin="12,0,0,0" />
+                                                  Margin="12,0,0,0"
+                                                  IsChecked="{Binding LocIsPopParam, UpdateSourceTrigger=PropertyChanged}" />
                                         <DockPanel LastChildFill="False"
                                                    Margin="27,0,0,0">
                                             <Label x:Name="etaInitLabel"
@@ -363,7 +392,8 @@
                                                                 DockPanel.Dock="Right"
                                                                 Minimum="0"
                                                                 Maximum="100"
-                                                                Increment="1" />
+                                                                Increment="1"
+                                                                Value="{Binding LocPriorInitParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
                                         <DockPanel LastChildFill="False"
                                                    Margin="27,0,0,0">
@@ -374,21 +404,24 @@
                                                                 DockPanel.Dock="Right"
                                                                 Minimum="0"
                                                                 Maximum="100"
-                                                                Increment="1" />
+                                                                Increment="1"
+                                                                Value="{Binding MaxLocPriorParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
                                     </StackPanel>
                                 </GroupBox>
 
                                 <CheckBox x:Name="trainingPopFlagCheckBox"
                                           Content="Use POPFLAG for training"
-                                          Margin="9,0,0,0" />
+                                          Margin="9,0,0,0"
+                                          IsChecked="{Binding PFromPopFlagOnlyParam, UpdateSourceTrigger=PropertyChanged}" />
 
                                 <GroupBox x:Name="usePriorPopInfoGroupBox"
                                           Margin="0,0,0,0"
                                           HorizontalAlignment="Stretch">
                                     <GroupBox.Header>
                                         <CheckBox x:Name="usePriorPopInfoCheckBox"
-                                                  Content="Use prior population information" />
+                                                  Content="Use prior population information"
+                                                  IsChecked="{Binding UsePopInfoParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </GroupBox.Header>
 
                                     <StackPanel>
@@ -400,7 +433,8 @@
                                                                 DockPanel.Dock="Right"
                                                                 Minimum="0"
                                                                 Maximum="32738"
-                                                                Increment="1" />
+                                                                Increment="1"
+                                                                Value="{Binding GensBackParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
                                         <DockPanel LastChildFill="False">
                                             <Label x:Name="migpriorLabel"
@@ -411,7 +445,8 @@
                                                                Minimum="0"
                                                                Maximum="1"
                                                                Increment="0.01"
-                                                               FormatString="0.##" />
+                                                               FormatString="0.##"
+                                                               Value="{Binding MigrPriorParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
                                     </StackPanel>
                                 </GroupBox>
@@ -445,7 +480,8 @@
                                         <CheckBox x:Name="inferAlphaCheckBox"
                                                   Content="Infer alpha"
                                                   Margin="50,0,0,0"
-                                                  Grid.Column="1" />
+                                                  Grid.Column="1"
+                                                  IsChecked="{Binding InferAlphaParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
 
                                     <Grid Grid.Row="1">
@@ -458,7 +494,8 @@
                                                            Maximum="27000"
                                                            Increment="0.1"
                                                            Margin="15,0,0,0"
-                                                           Grid.Column="0" />
+                                                           Grid.Column="0"
+                                                           Value="{Binding PopAlphaValueParam, UpdateSourceTrigger=PropertyChanged}" />
 
                                         <Label x:Name="alphaInitLabel"
                                                Content="Alpha initialization"
@@ -470,13 +507,15 @@
                                                            Maximum="27000"
                                                            Increment="0.1"
                                                            Grid.Column="1"
-                                                           HorizontalAlignment="Right" />
+                                                           HorizontalAlignment="Right"
+                                                           Value="{Binding InferAlphaValueParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
 
                                     <CheckBox x:Name="useUniformPriorCheckBox"
                                               Content="Use a uniform prior for alpha"
                                               Grid.Row="4"
-                                              Margin="0,10,0,0" />
+                                              Margin="0,10,0,0"
+                                              IsChecked="{Binding UnifPriorAlphaParam, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <Grid Grid.Row="5"
                                           Margin="0"
@@ -503,7 +542,8 @@
                                                                DockPanel.Dock="Right"
                                                                Minimum="0"
                                                                Maximum="32768"
-                                                               Increment="0.1" />
+                                                               Increment="0.1"
+                                                               Value="{Binding AlphaMaxParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
 
                                         <DockPanel LastChildFill="False"
@@ -518,7 +558,8 @@
                                                                Minimum="0"
                                                                Maximum="100"
                                                                Increment="0.01"
-                                                               FormatString="0.##" />
+                                                               FormatString="0.##"
+                                                               Value="{Binding AlphaPriorAParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
 
                                         <DockPanel LastChildFill="False"
@@ -535,7 +576,8 @@
                                                                Maximum="100"
                                                                Increment="0.001"
                                                                FormatString="0.###"
-                                                               Width="70" />
+                                                               Width="70"
+                                                               Value="{Binding AlphaPropSDParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
 
                                         <DockPanel LastChildFill="False"
@@ -550,7 +592,8 @@
                                                                Minimum="0"
                                                                Maximum="100"
                                                                Increment="0.001"
-                                                               FormatString="0.###" />
+                                                               FormatString="0.###"
+                                                               Value="{Binding AlphaPriorBParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
                                     </Grid>
 
@@ -558,7 +601,8 @@
                                               Content="Separate alpha by population"
                                               Grid.Row="2"
                                               HorizontalAlignment="Center"
-                                              Margin="79,0,0,0" />
+                                              Margin="79,0,0,0"
+                                              IsChecked="{Binding PopAlphasParam, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <DockPanel Grid.Row="3"
                                                LastChildFill="False">
@@ -569,7 +613,8 @@
                                                             DockPanel.Dock="Right"
                                                             Minimum="0"
                                                             Maximum="100"
-                                                            Increment="1" />
+                                                            Increment="1"
+                                                            Value="{Binding AdmBurnInParam, UpdateSourceTrigger=PropertyChanged}" />
                                     </DockPanel>
                                 </Grid>
                             </GroupBox>
@@ -600,19 +645,23 @@
                             <CheckBox x:Name="estimateProbabilityCheckBox"
                                       Content="Estimate the probability of the data"
                                       Grid.Row="0"
-                                      Grid.Column="0" />
+                                      Grid.Column="0"
+                                      IsChecked="{Binding ComputeProbParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="printLikelihoodCheckBox"
                                       Content="Print the current value of the likelihood to screen"
                                       Grid.Row="1"
-                                      Grid.Column="0" />
+                                      Grid.Column="0"
+                                      IsChecked="{Binding PrintLikesParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="popinfoInitCheckBox"
                                       Content="Initialize at POPINFO"
                                       Grid.Row="2"
-                                      Grid.Column="0" />
+                                      Grid.Column="0"
+                                      IsChecked="{Binding StartAtPopInfoParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="printCredibleRegionsCheckBox"
                                       Content="Print credible regions"
                                       Grid.Row="3"
-                                      Grid.Column="0" />
+                                      Grid.Column="0"
+                                      IsChecked="{Binding AncestDistParam, UpdateSourceTrigger=PropertyChanged}" />
                             <StackPanel Orientation="Horizontal"
                                         Grid.Row="4"
                                         Grid.Column="0">
@@ -625,7 +674,8 @@
                                                     Minimum="1"
                                                     Maximum="32768"
                                                     Increment="1"
-                                                    DockPanel.Dock="Right" />
+                                                    DockPanel.Dock="Right"
+                                                    Value="{Binding NumBoxesParam, UpdateSourceTrigger=PropertyChanged}" />
 
                                 <Label x:Name="ancestpintLabel"
                                        Content="Ancestpint"
@@ -636,7 +686,8 @@
                                                    Maximum="1"
                                                    Increment="0.01"
                                                    FormatString="0.##"
-                                                   DockPanel.Dock="Right" />
+                                                   DockPanel.Dock="Right"
+                                                   Value="{Binding AncestPintParam, UpdateSourceTrigger=PropertyChanged}" />
 
                             </StackPanel>
 
@@ -644,22 +695,26 @@
                                       Content="Print current value of lambda"
                                       Grid.Row="0"
                                       Grid.Column="1"
-                                      Margin="10,0,0,0" />
+                                      Margin="10,0,0,0"
+                                      IsChecked="{Binding PrintLambdaParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="printQEstimatesSumCheckBox"
                                       Content="Print summary of current Q estimates to screen"
                                       Grid.Row="1"
                                       Grid.Column="1"
-                                      Margin="10,0,0,0" />
+                                      Margin="10,0,0,0"
+                                      IsChecked="{Binding PrintQsumParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="printQhatCheckBox"
                                       Content="Print Q-hat"
                                       Grid.Row="2"
                                       Grid.Column="1"
-                                      Margin="10,0,0,0" />
+                                      Margin="10,0,0,0"
+                                      IsChecked="{Binding PrintQhatParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="printNucleotideDistCheckBox"
                                       Content="Print the &quot;net nucleotide distance&quot;"
                                       Grid.Row="3"
                                       Grid.Column="1"
-                                      Margin="10,0,0,0" />
+                                      Margin="10,0,0,0"
+                                      IsChecked="{Binding PrintNetParam, UpdateSourceTrigger=PropertyChanged}" />
                             <DockPanel LastChildFill="False"
                                        Grid.Row="4"
                                        Grid.Column="1"
@@ -671,36 +726,42 @@
                                                     Minimum="0"
                                                     Maximum="100"
                                                     Increment="1"
-                                                    DockPanel.Dock="Right" />
+                                                    DockPanel.Dock="Right"
+                                                    Value="{Binding UpdateFreqParam, UpdateSourceTrigger=PropertyChanged}" />
                             </DockPanel>
 
                             <CheckBox x:Name="saveIntermediateCheckBox"
                                       Content="Save intermediate data"
                                       Grid.Row="0"
                                       Grid.Column="2"
-                                      Margin="10,0,0,0" />
+                                      Margin="10,0,0,0"
+                                      IsChecked="{Binding IntermedSaveParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="printSetBriefSumCheckBox"
                                       Content="Print a brief summary of the data set"
                                       Grid.Row="1"
                                       Grid.Column="2"
-                                      Margin="10,0,0,0" />
+                                      Margin="10,0,0,0"
+                                      IsChecked="{Binding EchoDataParam, UpdateSourceTrigger=PropertyChanged}" />
                             <CheckBox x:Name="showHitRateCheckBox"
                                       Content="Show hit rate"
                                       Grid.Row="2"
                                       Grid.Column="2"
-                                      Margin="10,0,0,0" />
+                                      Margin="10,0,0,0"
+                                      IsChecked="{Binding ReportThitRateParam, UpdateSourceTrigger=PropertyChanged}" />
                             <DockPanel Grid.Row="3"
                                        Grid.Column="2"
                                        LastChildFill="False"
                                        Margin="10,0,0,0">
                                 <CheckBox x:Name="randomSeedCheckBox"
                                           Content="Use a random seed"
-                                          DockPanel.Dock="Left" />
+                                          DockPanel.Dock="Left"
+                                          IsChecked="{Binding RandomizeParam, UpdateSourceTrigger=PropertyChanged}" />
                                 <xctk:IntegerUpDown x:Name="seedIntUpDown"
                                                     Minimum="0"
                                                     Maximum="32768"
                                                     Increment="1"
-                                                    DockPanel.Dock="Right" />
+                                                    DockPanel.Dock="Right"
+                                                    Value="{Binding SeedParam, UpdateSourceTrigger=PropertyChanged}" />
                             </DockPanel>
                             <DockPanel LastChildFill="False"
                                        Grid.Row="4"
@@ -713,7 +774,8 @@
                                                     Minimum="1"
                                                     Maximum="32768"
                                                     Increment="1"
-                                                    DockPanel.Dock="Right" />
+                                                    DockPanel.Dock="Right"
+                                                    Value="{Binding MetroFreqParam, UpdateSourceTrigger=PropertyChanged}" />
                             </DockPanel>
                         </Grid>
                     </GroupBox>
@@ -725,15 +787,18 @@
                         <Label x:Name="structureStartKLabel"
                                Content="'K' from"
                                Height="23" />
-                        <xctk:IntegerUpDown x:Name="structureStartKIntUpDown" />
+                        <xctk:IntegerUpDown x:Name="structureStartKIntUpDown"
+                                            Value="{Binding KFrom, UpdateSourceTrigger=PropertyChanged}" />
                         <Label x:Name="structureToLabel"
                                Content="to"
                                Height="23" />
-                        <xctk:IntegerUpDown x:Name="structureEndKIntUpDown" />
+                        <xctk:IntegerUpDown x:Name="structureEndKIntUpDown"
+                                            Value="{Binding KTo, UpdateSourceTrigger=PropertyChanged}" />
                         <Label x:Name="structureWithLabel"
                                Content="with"
                                Height="23" />
-                        <xctk:IntegerUpDown x:Name="structureIterationsIntUpDown" />
+                        <xctk:IntegerUpDown x:Name="structureIterationsIntUpDown"
+                                            Value="{Binding Iterations, UpdateSourceTrigger=PropertyChanged}" />
                         <Label x:Name="structureIterationsLabel"
                                Content="iterations"
                                Height="23" />
@@ -746,15 +811,18 @@
                         <Button x:Name="saveStructureOptionsButton"
                                 Content="Save"
                                 Margin="0,0,30,0"
-                                Style="{StaticResource Rounded}" />
+                                Style="{StaticResource Rounded}"
+                                Command="{Binding SaveChangesAsyncCommand}" />
                         <Button x:Name="startStructureExecutionButton"
                                 Content="Start"
                                 Margin="0,0,5,0"
-                                Style="{StaticResource Rounded}" />
+                                Style="{StaticResource Rounded}"
+                                Command="{Binding StartStructureAsyncCommand}" />
                         <Button x:Name="stopStructureExecutionButton"
                                 Content="Stop"
                                 Margin="0,0,0,0"
-                                Style="{StaticResource Rounded}" />
+                                Style="{StaticResource Rounded}"
+                                Command="{Binding StopStructureCommand}" />
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -798,7 +866,8 @@
                                 <ComboBox x:Name="structureOutputSetsComboBox"
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Bottom"
-                                          Grid.Column="0" />
+                                          Grid.Column="0"
+                                          ItemsSource="{Binding FilteredSetModelsList, UpdateSourceTrigger=PropertyChanged}" />
 
                                 <StackPanel Orientation="Vertical"
                                             Grid.Column="1"
@@ -922,7 +991,8 @@
                                 <GroupBox x:Name="structureHarvesterOutputSetsSelectionGroupBox"
                                           Header="Select Structure Harvester output set">
                                     <ComboBox x:Name="structureHarvesterOutputSetsComboBox"
-                                              HorizontalAlignment="Left" />
+                                              HorizontalAlignment="Left"
+                                              ItemsSource="{Binding FilteredSetModelsList, UpdateSourceTrigger=PropertyChanged}" />
                                 </GroupBox>
                                 <GroupBox x:Name="operatingModeSelectionGroupBox"
                                           Header="Select operating mode">
@@ -1226,7 +1296,8 @@
                         <GroupBox x:Name="clumppOutputSetsSelectionGroupBox"
                                   Header="Select CLUMPP output set"
                                   DockPanel.Dock="Left">
-                            <ComboBox />
+                            <ComboBox x:Name="CLUMPPOutputSetsComboBox"
+                                      ItemsSource="{Binding FilteredSetModelsList, UpdateSourceTrigger=PropertyChanged}" />
                         </GroupBox>
                         <GroupBox x:Name="distructParameterFilesSelectionGroupBox"
                                   Header="Select parameter file"

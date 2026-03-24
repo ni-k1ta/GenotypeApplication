@@ -27,7 +27,7 @@ namespace GenotypeApplication.Services
 
             if (!IsDirectoryExist(directoryPath)) return;
 
-            // 1. Удаляем файлы
+            // Удаляем файлы
             foreach (var file in Directory.EnumerateFiles(directoryPath, "*", SearchOption.AllDirectories))
             {
                 try
@@ -37,15 +37,13 @@ namespace GenotypeApplication.Services
                 }
                 catch (IOException)
                 {
-                    // файл занят
                 }
                 catch (UnauthorizedAccessException)
                 {
-                    // нет прав
                 }
             }
 
-            // 2. Удаляем папки снизу вверх
+            // Удаляем папки снизу вверх
             foreach (var dir in Directory.EnumerateDirectories(directoryPath, "*", SearchOption.AllDirectories)
                          .OrderByDescending(d => d.Length))
             {
@@ -55,11 +53,9 @@ namespace GenotypeApplication.Services
                 }
                 catch
                 {
-                    // не пустая / нет прав
                 }
             }
 
-            // 3. Пытаемся удалить корневую
             try
             {
                 Directory.Delete(directoryPath, false);

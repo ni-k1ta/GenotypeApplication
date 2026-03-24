@@ -16,7 +16,7 @@ using System.Windows.Input;
 
 namespace GenotypeApplication.View_models
 {
-    public class DataFileFormatViewModel : ViewModelErrors, IWindowAware
+    public class DataFileFormatVM : ViewModelErrors, IWindowAware
     {
         private readonly string DATA_FILE_DEFAULT_PATH;
 
@@ -68,7 +68,7 @@ namespace GenotypeApplication.View_models
 
         private WeakReference<Window>? _currentWindowRef;
 
-        public DataFileFormatViewModel(IDialogService dialogService, IMessageService messageService, IValidator<string> pathTextValidator, IWindowService windowService)
+        public DataFileFormatVM(IDialogService dialogService, IMessageService messageService, IValidator<string> pathTextValidator, IWindowService windowService)
         {
             _dataFileFormatModel = new();
             _calculatedDataFileFormatModel = new();
@@ -107,8 +107,8 @@ namespace GenotypeApplication.View_models
 
             _isSaving = false;
 
-            SelectDataFileCommand = new AsyncRelayCommand(execute => SelectDataFileAsync());
-            SaveDataFileParametersCommand = new AsyncRelayCommand(execute => SaveDataFileParametersAsync(), canExecute => CanSaveDataFileParameters());
+            SelectDataFileAsyncCommand = new AsyncRelayCommand(execute => SelectDataFileAsync());
+            SaveDataFileParametersAsyncCommand = new AsyncRelayCommand(execute => SaveDataFileParametersAsync(), canExecute => CanSaveDataFileParameters());
 
             _windowService = windowService;
         }
@@ -370,7 +370,7 @@ namespace GenotypeApplication.View_models
         //    }
         //}
 
-        public ICommand SelectDataFileCommand { get; }
+        public ICommand SelectDataFileAsyncCommand { get; }
         private async Task SelectDataFileAsync()
         {
             string fullDataFilePath = _dialogService.SelectFile(DATA_FILE_DEFAULT_PATH);
@@ -499,7 +499,7 @@ namespace GenotypeApplication.View_models
             catch (OperationCanceledException) { }
         }
 
-        public ICommand SaveDataFileParametersCommand { get; }
+        public ICommand SaveDataFileParametersAsyncCommand { get; }
         private async Task SaveDataFileParametersAsync()
         {
             if (!CanSaveDataFileParameters()) return;
@@ -531,7 +531,7 @@ namespace GenotypeApplication.View_models
         }
         private bool CanSaveDataFileParameters()
         {
-            return !_isSaving && !HasErrors && string.IsNullOrWhiteSpace(DataFileFullPath);
+            return !_isSaving && !HasErrors && !string.IsNullOrWhiteSpace(DataFileFullPath);
         }
 
         public void SetCurrentWindow(Window window)

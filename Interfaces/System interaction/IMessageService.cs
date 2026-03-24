@@ -12,5 +12,6 @@ namespace GenotypeApplication.Interfaces
         void ShowError(string message);
         void ShowWarning(string message);
         bool ShowQuetion(string quetion);
+        void ShowInformation(string message);
     }
 }

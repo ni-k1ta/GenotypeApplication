@@ -19,10 +19,25 @@ namespace GenotypeApplication.MVVM.Infrastructure
             _canExecute = canExecute;
         }
 
+        //собственное событие для точечного обновления
+        private event EventHandler? _canExecuteChanged;
+
         public event EventHandler? CanExecuteChanged
         {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
+            add
+            {
+                CommandManager.RequerySuggested += value;
+                _canExecuteChanged += value;
+            }
+            remove
+            {
+                CommandManager.RequerySuggested -= value;
+                _canExecuteChanged -= value;
+            }
+        }
+        public void NotifyCanExecuteChanged()
+        {
+            _canExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public bool CanExecute(object? parameter)
@@ -33,6 +48,7 @@ namespace GenotypeApplication.MVVM.Infrastructure
         public async void Execute(object? parameter)
         {
             _isExecuting = true;
+            NotifyCanExecuteChanged();
 
             try
             {
@@ -41,6 +57,7 @@ namespace GenotypeApplication.MVVM.Infrastructure
             finally
             {
                 _isExecuting = false;
+                NotifyCanExecuteChanged();
             }
         }
     }

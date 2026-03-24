@@ -26,9 +26,9 @@ namespace GenotypeApplication
             IMessageService messageService = new MessageService();
             IRecentProjectsService recentProjectsService = new RecentProjectsService();
 
-            var projectParametersViewModel = new ProjectParametersViewModel(projectService, dialogService, messageService, recentProjectsService, new NameTextValidator(), new PathTextValidator(), windowService);
+            var projectParametersViewModel = new ProjectParametersVM(projectService, dialogService, messageService, recentProjectsService, new NameTextValidator(), new PathTextValidator(), windowService);
 
-            projectParametersViewModel.SetCurrentWindow(windowService.ShowWindow<ProjectConfigurationWindow, ProjectParametersViewModel>(projectParametersViewModel));
+            projectParametersViewModel.SetCurrentWindow(windowService.ShowWindow<ProjectConfigurationWindow, ProjectParametersVM>(projectParametersViewModel));
         }
     }
 
