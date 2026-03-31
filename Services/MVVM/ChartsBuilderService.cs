@@ -7,8 +7,6 @@ namespace GenotypeApplication.Services.MVVM
 {
     public class ChartsBuilderService
     {
-        // Цвет маркеров и линий — единый для всех графиков.
-        // При желании можно вынести в настройки.
         private static readonly OxyColor MarkerColor = OxyColors.SteelBlue;
         private static readonly OxyColor ErrorBarColor = OxyColors.Black;
 
@@ -23,9 +21,6 @@ namespace GenotypeApplication.Services.MVVM
             );
         }
 
-        /// <summary>
-        /// График 1: Mean LnP(K) ± Stdev — точки с вертикальными error bars.
-        /// </summary>
         private PlotModel BuildMeanLnPKPlot(List<EvannoParametersModel> data)
         {
             var model = CreateBasePlotModel("K", "Mean LnP(K)");
@@ -55,9 +50,6 @@ namespace GenotypeApplication.Services.MVVM
             return model;
         }
 
-        /// <summary>
-        /// График 2: Ln'(K) — только точки (scatter).
-        /// </summary>
         private PlotModel BuildLnPrimeKPlot(List<EvannoParametersModel> data)
         {
             var model = CreateBasePlotModel("K", "Ln'(K)");
@@ -81,9 +73,6 @@ namespace GenotypeApplication.Services.MVVM
             return model;
         }
 
-        /// <summary>
-        /// График 3: |Ln''(K)| — только точки (scatter).
-        /// </summary>
         private PlotModel BuildLnDoublePrimeKPlot(List<EvannoParametersModel> data)
         {
             var model = CreateBasePlotModel("K", "|Ln''(K)|");
@@ -107,9 +96,6 @@ namespace GenotypeApplication.Services.MVVM
             return model;
         }
 
-        /// <summary>
-        /// График 4: Delta K — точки, соединённые прямыми линиями.
-        /// </summary>
         private PlotModel BuildDeltaKPlot(List<EvannoParametersModel> data)
         {
             var model = CreateBasePlotModel("K", "Delta K");
@@ -135,14 +121,11 @@ namespace GenotypeApplication.Services.MVVM
             return model;
         }
 
-        /// <summary>
-        /// Создаёт базовую модель графика с подписями осей и стандартными настройками.
-        /// </summary>
         private static PlotModel CreateBasePlotModel(string xTitle, string yTitle)
         {
             var model = new PlotModel
             {
-                // Отступы для подписей осей
+                // отступы для подписей осей
                 Padding = new OxyThickness(10, 10, 20, 10)
             };
 
@@ -150,7 +133,6 @@ namespace GenotypeApplication.Services.MVVM
             {
                 Position = AxisPosition.Bottom,
                 Title = xTitle,
-                // Целочисленный шаг по оси K
                 MajorStep = 1,
                 MinorStep = 1,
                 MinimumMajorStep = 1,
@@ -170,9 +152,6 @@ namespace GenotypeApplication.Services.MVVM
             return model;
         }
 
-        ///// <summary>
-        ///// Настраивает диапазон оси X (K) с небольшими отступами по краям.
-        ///// </summary>
         //private static void ConfigureKAxis(PlotModel model, List<EvannoParametersModel> data)
         //{
         //    if (data.Count == 0) return;

@@ -1,16 +1,20 @@
 ﻿using GenotypeApplication.Models.CLUMPP;
+using GenotypeApplication.MVVM.Infrastructure;
 using System.ComponentModel.DataAnnotations;
 using System.IO.Compression;
 
 namespace GenotypeApplication.Models
 {
-    public class DistructConfigurationModel : IEquatable<DistructConfigurationModel>
+    public class DistructConfigurationModel : ViewModelBase //IEquatable<DistructConfigurationModel>
     {
         private string _parametersName = string.Empty;
         public string ParametersName
         {
             get => _parametersName;
-            set => _parametersName = value;
+            set
+            {
+                SetField(ref _parametersName, value);
+            }
         }
 
         private const string _infile_popq = "K.popq";
@@ -261,99 +265,99 @@ namespace GenotypeApplication.Models
             set => _print_color_brewer = value;
         }
 
-        public bool Equals(DistructConfigurationModel? other)
-        {
-            if (other is null) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return INFILE_POPQ == other.INFILE_POPQ &&              
-                   INFILE_INDIVQ == other.INFILE_INDIVQ &&
-                   INFILE_LABEL_ATOP == other.INFILE_LABEL_ATOP &&
-                   INFILE_LABEL_BELOW == other.INFILE_LABEL_BELOW &&
-                   INFILE_CLUST_PERM == other.INFILE_CLUST_PERM &&
-                   OUTFILE == other.OUTFILE &&
-                   K == other.K &&
-                   NUMPOPS == other.NUMPOPS &&
-                   NUMINDS == other.NUMINDS &&
-                   PRINT_INDIVS == other.PRINT_INDIVS &&
-                   PRINT_LABEL_ATOP == other.PRINT_LABEL_ATOP &&
-                   PRINT_LABEL_BELOW == other.PRINT_LABEL_BELOW &&
-                   PRINT_SEP == other.PRINT_SEP &&
-                   FONTHEIGHT == other.FONTHEIGHT &&
-                   DIST_ABOVE == other.DIST_ABOVE &&
-                   DIST_BELOW == other.DIST_BELOW &&
-                   BOXHEIGHT == other.BOXHEIGHT &&
-                   INDIVWIDTH == other.INDIVWIDTH &&
-                   ORIENTATION == other.ORIENTATION &&
-                   XORIGIN == other.XORIGIN &&
-                   YORIGIN == other.YORIGIN &&
-                   XSCALE == other.XSCALE &&
-                   YSCALE == other.YSCALE &&
-                   ANGLE_LABEL_ATOP == other.ANGLE_LABEL_ATOP &&
-                   ANGLE_LABEL_BELOW == other.ANGLE_LABEL_BELOW &&
-                   LINEWIDTH_RIM == other.LINEWIDTH_RIM &&
-                   LINEWIDTH_SEP == other.LINEWIDTH_SEP &&
-                   LINEWIDTH_IND == other.LINEWIDTH_IND &&
-                   GRAYSCALE == other.GRAYSCALE &&
-                   ECHO_DATA == other.ECHO_DATA &&
-                   REPRINT_DATA == other.REPRINT_DATA &&
-                   PRINT_INFILE_NAME == other.PRINT_INFILE_NAME &&
-                   PRINT_COLOR_BREWER == other.PRINT_COLOR_BREWER;
-        }
-        public override bool Equals(object? obj)
-        {
-            return Equals(obj as DistructConfigurationModel);
-        }
+        //public bool Equals(DistructConfigurationModel? other)
+        //{
+        //    if (other is null) return false;
+        //    if (ReferenceEquals(this, other)) return true;
+        //    return INFILE_POPQ == other.INFILE_POPQ &&              
+        //           INFILE_INDIVQ == other.INFILE_INDIVQ &&
+        //           INFILE_LABEL_ATOP == other.INFILE_LABEL_ATOP &&
+        //           INFILE_LABEL_BELOW == other.INFILE_LABEL_BELOW &&
+        //           INFILE_CLUST_PERM == other.INFILE_CLUST_PERM &&
+        //           OUTFILE == other.OUTFILE &&
+        //           K == other.K &&
+        //           NUMPOPS == other.NUMPOPS &&
+        //           NUMINDS == other.NUMINDS &&
+        //           PRINT_INDIVS == other.PRINT_INDIVS &&
+        //           PRINT_LABEL_ATOP == other.PRINT_LABEL_ATOP &&
+        //           PRINT_LABEL_BELOW == other.PRINT_LABEL_BELOW &&
+        //           PRINT_SEP == other.PRINT_SEP &&
+        //           FONTHEIGHT == other.FONTHEIGHT &&
+        //           DIST_ABOVE == other.DIST_ABOVE &&
+        //           DIST_BELOW == other.DIST_BELOW &&
+        //           BOXHEIGHT == other.BOXHEIGHT &&
+        //           INDIVWIDTH == other.INDIVWIDTH &&
+        //           ORIENTATION == other.ORIENTATION &&
+        //           XORIGIN == other.XORIGIN &&
+        //           YORIGIN == other.YORIGIN &&
+        //           XSCALE == other.XSCALE &&
+        //           YSCALE == other.YSCALE &&
+        //           ANGLE_LABEL_ATOP == other.ANGLE_LABEL_ATOP &&
+        //           ANGLE_LABEL_BELOW == other.ANGLE_LABEL_BELOW &&
+        //           LINEWIDTH_RIM == other.LINEWIDTH_RIM &&
+        //           LINEWIDTH_SEP == other.LINEWIDTH_SEP &&
+        //           LINEWIDTH_IND == other.LINEWIDTH_IND &&
+        //           GRAYSCALE == other.GRAYSCALE &&
+        //           ECHO_DATA == other.ECHO_DATA &&
+        //           REPRINT_DATA == other.REPRINT_DATA &&
+        //           PRINT_INFILE_NAME == other.PRINT_INFILE_NAME &&
+        //           PRINT_COLOR_BREWER == other.PRINT_COLOR_BREWER;
+        //}
+        //public override bool Equals(object? obj)
+        //{
+        //    return Equals(obj as DistructConfigurationModel);
+        //}
 
-        public override int GetHashCode()
-        {
-            var hash = new HashCode();
+        //public override int GetHashCode()
+        //{
+        //    var hash = new HashCode();
 
-            hash.Add(INFILE_POPQ);
-            hash.Add(INFILE_INDIVQ);
-            hash.Add(INFILE_LABEL_ATOP);
-            hash.Add(INFILE_LABEL_BELOW);
-            hash.Add(INFILE_CLUST_PERM);
-            hash.Add(OUTFILE);
-            hash.Add(K);
-            hash.Add(NUMPOPS);
-            hash.Add(NUMINDS);
-            hash.Add(PRINT_INDIVS);
-            hash.Add(PRINT_LABEL_ATOP);
-            hash.Add(PRINT_LABEL_BELOW);
-            hash.Add(PRINT_SEP);
-            hash.Add(FONTHEIGHT);
-            hash.Add(DIST_ABOVE);
-            hash.Add(DIST_BELOW);
-            hash.Add(BOXHEIGHT);
-            hash.Add(INDIVWIDTH);
-            hash.Add(ORIENTATION);
-            hash.Add(XORIGIN);
-            hash.Add(YORIGIN);
-            hash.Add(XSCALE);
-            hash.Add(YSCALE);
-            hash.Add(ANGLE_LABEL_ATOP);
-            hash.Add(ANGLE_LABEL_BELOW);
-            hash.Add(LINEWIDTH_RIM);
-            hash.Add(LINEWIDTH_SEP);
-            hash.Add(LINEWIDTH_IND);
-            hash.Add(GRAYSCALE);
-            hash.Add(ECHO_DATA);
-            hash.Add(REPRINT_DATA);
-            hash.Add(PRINT_INFILE_NAME);
-            hash.Add(PRINT_COLOR_BREWER);
+        //    hash.Add(INFILE_POPQ);
+        //    hash.Add(INFILE_INDIVQ);
+        //    hash.Add(INFILE_LABEL_ATOP);
+        //    hash.Add(INFILE_LABEL_BELOW);
+        //    hash.Add(INFILE_CLUST_PERM);
+        //    hash.Add(OUTFILE);
+        //    hash.Add(K);
+        //    hash.Add(NUMPOPS);
+        //    hash.Add(NUMINDS);
+        //    hash.Add(PRINT_INDIVS);
+        //    hash.Add(PRINT_LABEL_ATOP);
+        //    hash.Add(PRINT_LABEL_BELOW);
+        //    hash.Add(PRINT_SEP);
+        //    hash.Add(FONTHEIGHT);
+        //    hash.Add(DIST_ABOVE);
+        //    hash.Add(DIST_BELOW);
+        //    hash.Add(BOXHEIGHT);
+        //    hash.Add(INDIVWIDTH);
+        //    hash.Add(ORIENTATION);
+        //    hash.Add(XORIGIN);
+        //    hash.Add(YORIGIN);
+        //    hash.Add(XSCALE);
+        //    hash.Add(YSCALE);
+        //    hash.Add(ANGLE_LABEL_ATOP);
+        //    hash.Add(ANGLE_LABEL_BELOW);
+        //    hash.Add(LINEWIDTH_RIM);
+        //    hash.Add(LINEWIDTH_SEP);
+        //    hash.Add(LINEWIDTH_IND);
+        //    hash.Add(GRAYSCALE);
+        //    hash.Add(ECHO_DATA);
+        //    hash.Add(REPRINT_DATA);
+        //    hash.Add(PRINT_INFILE_NAME);
+        //    hash.Add(PRINT_COLOR_BREWER);
 
-            return hash.ToHashCode();
-        }
+        //    return hash.ToHashCode();
+        //}
 
-        public static bool operator ==(DistructConfigurationModel? left, DistructConfigurationModel? right)
-        {
-            if (left is null) return right is null;
-            return left.Equals(right);
-        }
+        //public static bool operator ==(DistructConfigurationModel? left, DistructConfigurationModel? right)
+        //{
+        //    if (left is null) return right is null;
+        //    return left.Equals(right);
+        //}
 
-        public static bool operator !=(DistructConfigurationModel? left, DistructConfigurationModel? right)
-        {
-            return !(left == right);
-        }
+        //public static bool operator !=(DistructConfigurationModel? left, DistructConfigurationModel? right)
+        //{
+        //    return !(left == right);
+        //}
     }
 }

@@ -36,9 +36,10 @@ namespace GenotypeApplication.Models.Project
 
             //обновить фильтры во всех вкладках
             StateRefreshed?.Invoke();
+            CurrentSetChanged?.Invoke(set);
 
             //установить этот Set как текущий (чтобы он подхватился следующей вкладкой)
-            CurrentSet = set;
+            //CurrentSet = set;
         }
         public SetModel CreateNewSet(string name)
         {

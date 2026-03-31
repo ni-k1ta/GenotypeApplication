@@ -1,7 +1,6 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models;
-using GenotypeApplication.Models.CLUMPP;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.MVVM.Infrastructure;
 using GenotypeApplication.Services.Application_configuration.External_program_interaction;
@@ -81,9 +80,11 @@ namespace GenotypeApplication.View_models
             StartDistructAsyncCommand = new AsyncRelayCommand(execute => StartDistructAsync(), canExecute => CanStartDistruct());
             StopDistructCommand = new RelayCommand(execute => StopDistruct(), canExecute => CanStopDistruct());
 
-            RebuildConfigurationParametersItems();
 
             _isCreatingNewConfiguration = true;
+
+            RebuildConfigurationParametersItems();
+            SelectedConfigurationParameters = ConfigurationParametersItems.LastOrDefault();
         }
 
         #region Configuration parameters properties
@@ -273,7 +274,6 @@ namespace GenotypeApplication.View_models
         }
 
         private DistructConfigurationModel? _selectedConfigurationParameters = new();
-        private ObservableCollection<DistructConfigurationModel> _configurationParametersItems = new();
         private ObservableCollection<DistructConfigurationModel> _savedConfigurationParametersItems = new();
         #endregion
 
@@ -304,11 +304,7 @@ namespace GenotypeApplication.View_models
                 }
             }
         }
-        public ObservableCollection<DistructConfigurationModel> ConfigurationParametersItems
-        {
-            get => _configurationParametersItems;
-            set { SetField(ref _configurationParametersItems, value); }
-        }
+        public ObservableCollection<DistructConfigurationModel> ConfigurationParametersItems { get; } = new();
         public static readonly DistructConfigurationModel CreateNewSetPlaceholder = new() { ParametersName = "Create new" };
 
         private void RebuildConfigurationParametersItems()
