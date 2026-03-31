@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:GenotypeApplication"
         xmlns:conv="clr-namespace:GenotypeApplication.MVVM.Converters"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:oxy="http://oxyplot.org/wpf"
         mc:Ignorable="d"
         Title="MainWindow"
         MinHeight="600"
@@ -111,7 +112,7 @@
                             <ComboBox x:Name="parameterSetsComboBox"
                                       Grid.Column="0"
                                       Margin="5,0,10,0"
-                                      ItemsSource="{Binding SetModelsComboBoxItems, UpdateSourceTrigger=PropertyChanged}"
+                                      ItemsSource="{Binding SetModelsComboBoxItems}"
                                       SelectedItem="{Binding ComboBoxSelectedItem, UpdateSourceTrigger=PropertyChanged}"
                                       DisplayMemberPath="Name" />
                             <TextBox x:Name="parametersSetNameTextBox"
@@ -191,7 +192,8 @@
                             <CheckBox x:Name="setLambdaCheckBox"
                                       Content="Set lambda"
                                       Grid.Column="1"
-                                      Grid.Row="0" />
+                                      Grid.Row="0"
+                                      IsChecked="{Binding NotInferLambdaParam, UpdateSourceTrigger=PropertyChanged}"/>
                             <CheckBox x:Name="inferLambdaCheckBox"
                                       Content="Infer lambda"
                                       Grid.Column="2"
@@ -476,7 +478,8 @@
                                         </Grid.ColumnDefinitions>
                                         <CheckBox x:Name="setAlphaCheckBox"
                                                   Content="Set alpha"
-                                                  Grid.Column="0" />
+                                                  Grid.Column="0"
+                                                  IsChecked="{Binding NotInferAlphaParam, UpdateSourceTrigger=PropertyChanged}"/>
                                         <CheckBox x:Name="inferAlphaCheckBox"
                                                   Content="Infer alpha"
                                                   Margin="50,0,0,0"
@@ -828,7 +831,8 @@
             </TabItem>
 
             <TabItem x:Name="structureHarvesterTabItem"
-                     Header="Structure Harvester">
+                     Header="Structure Harvester"
+                     DataContext="{Binding StructureHarvesterTabControlVM}">
 
                 <Grid>
 
@@ -867,7 +871,9 @@
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Bottom"
                                           Grid.Column="0"
-                                          ItemsSource="{Binding FilteredSetModelsList, UpdateSourceTrigger=PropertyChanged}" />
+                                          ItemsSource="{Binding FilteredSetModelsList}"
+                                          SelectedItem="{Binding CurrentSet, UpdateSourceTrigger=PropertyChanged}"
+                                          DisplayMemberPath="Name" />
 
                                 <StackPanel Orientation="Vertical"
                                             Grid.Column="1"
@@ -875,9 +881,11 @@
                                             VerticalAlignment="Bottom"
                                             Margin="10,0,0,0">
                                     <CheckBox x:Name="evannoCheckBox"
-                                              Content="Use evanno method" />
+                                              Content="Use evanno method"
+                                              IsChecked="{Binding EvannoParam, UpdateSourceTrigger=PropertyChanged}" />
                                     <CheckBox x:Name="clumppOutputCheckBox"
-                                              Content="Generate output for CLUMPP" />
+                                              Content="Generate output for CLUMPP"
+                                              IsChecked="{Binding CLUMPPOutputParam, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Grid>
 
@@ -886,7 +894,8 @@
                                     Grid.Column="1"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Bottom"
-                                    Style="{StaticResource Rounded}" />
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding StartStructureHarvesterAsyncCommand}" />
                         </Grid>
 
                     </GroupBox>
@@ -914,40 +923,74 @@
                                       HorizontalAlignment="Left"
                                       VerticalAlignment="Bottom"
                                       Grid.Column="0"
-                                      Grid.Row="0" />
+                                      Grid.Row="0"
+                                      ItemsSource="{Binding GraphSetModelsComboBoxItems}"
+                                      SelectedItem="{Binding GraphSelectedSetModel, UpdateSourceTrigger=PropertyChanged}"
+                                      DisplayMemberPath="Name" />
                             <Button x:Name="loadChartsButton"
                                     Content="Load charts"
                                     Grid.Column="1"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Bottom"
                                     Grid.Row="0"
-                                    Style="{StaticResource Rounded}" />
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding LoadChartsAsyncCommand}" />
 
-                            <TextBox Grid.Row="1"
+                            <oxy:PlotView Model="{Binding MeanLogLKPlotModel, UpdateSourceTrigger=PropertyChanged}"
+                                          Grid.Row="1"
+                                          Grid.Column="0"
+                                          Width="441.1"
+                                          Height="211.644190120697"
+                                          Margin="0,5,5,5"
+                                          HorizontalAlignment="Stretch" />
+                            <!--<TextBox Grid.Row="1"
                                      Grid.Column="0"
                                      Width="441.1"
                                      Height="211.644190120697"
                                      Margin="0,5,5,5"
-                                     HorizontalAlignment="Stretch" />
-                            <TextBox Grid.Row="1"
+                                     HorizontalAlignment="Stretch" />-->
+
+                            <oxy:PlotView Model="{Binding FirstDiffLKPlotModel, UpdateSourceTrigger=PropertyChanged}"
+                                          Grid.Row="1"
+                                          Grid.Column="1"
+                                          Width="441.1"
+                                          Height="211.644190120697"
+                                          Margin="0,5,0,5"
+                                          HorizontalAlignment="Stretch" />
+                            <!--<TextBox Grid.Row="1"
                                      Grid.Column="1"
                                      Width="441.1"
                                      Height="211.644190120697"
                                      Margin="0,5,0,5"
-                                     HorizontalAlignment="Stretch" />
+                                     HorizontalAlignment="Stretch" />-->
 
-                            <TextBox Grid.Row="2"
+                            <oxy:PlotView Model="{Binding SecondDiffLKPlotModel, UpdateSourceTrigger=PropertyChanged}"
+                                          Grid.Row="2"
+                                          Grid.Column="0"
+                                          Width="441.1"
+                                          Height="211.644190120697"
+                                          Margin="0,0,5,0"
+                                          HorizontalAlignment="Stretch" />
+                            <!--<TextBox Grid.Row="2"
                                      Grid.Column="0"
                                      Width="441.1"
                                      Height="211.644190120697"
                                      Margin="0,0,5,0"
-                                     HorizontalAlignment="Stretch" />
-                            <TextBox Grid.Row="2"
+                                     HorizontalAlignment="Stretch" />-->
+
+                            <oxy:PlotView Model="{Binding DeltaKPlotModel, UpdateSourceTrigger=PropertyChanged}"
+                                          Grid.Row="2"
+                                          Grid.Column="1"
+                                          Width="441.1"
+                                          Height="211.644190120697"
+                                          Margin="0,0,0,0"
+                                          HorizontalAlignment="Stretch" />
+                            <!--<TextBox Grid.Row="2"
                                      Grid.Column="1"
                                      Width="441.1"
                                      Height="211.644190120697"
                                      Margin="0,0,0,0"
-                                     HorizontalAlignment="Stretch" />
+                                     HorizontalAlignment="Stretch" />-->
 
                         </Grid>
                     </GroupBox>
@@ -956,7 +999,8 @@
             </TabItem>
 
             <TabItem x:Name="clumppTabItem"
-                     Header="CLUMPP">
+                     Header="CLUMPP"
+                     DataContext="{Binding CLUMPPTabControlVM}">
 
                 <Grid>
                     <Grid.RowDefinitions>
@@ -992,15 +1036,19 @@
                                           Header="Select Structure Harvester output set">
                                     <ComboBox x:Name="structureHarvesterOutputSetsComboBox"
                                               HorizontalAlignment="Left"
-                                              ItemsSource="{Binding FilteredSetModelsList, UpdateSourceTrigger=PropertyChanged}" />
+                                              ItemsSource="{Binding FilteredSetModelsList}"
+                                              SelectedItem="{Binding CurrentSet, UpdateSourceTrigger=PropertyChanged}"
+                                              DisplayMemberPath="Name" />
                                 </GroupBox>
                                 <GroupBox x:Name="operatingModeSelectionGroupBox"
                                           Header="Select operating mode">
                                     <StackPanel Orientation="Vertical">
-                                        <RadioButton x:Name="onlyPopsRadioButton"
-                                                     Content="Only populations" />
-                                        <RadioButton x:Name="popsAndIndividsRadioButton"
-                                                     Content="Populations and individuals" />
+                                        <CheckBox x:Name="onlyPopsRadioButton"
+                                                  Content="Populations"
+                                                  IsChecked="{Binding IsPop, UpdateSourceTrigger=PropertyChanged}" />
+                                        <CheckBox x:Name="popsAndIndividsRadioButton"
+                                                  Content="Individuals"
+                                                  IsChecked="{Binding IsIndv, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                 </GroupBox>
                             </StackPanel>
@@ -1032,7 +1080,8 @@
                                                         HorizontalAlignment="Right"
                                                         Minimum="0"
                                                         Maximum="1000000"
-                                                        Increment="1" />
+                                                        Increment="1"
+                                                        Value="{Binding R, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <Label x:Name="individsNumLabel"
                                            Content="Number of individuals"
@@ -1044,7 +1093,8 @@
                                                         HorizontalAlignment="Right"
                                                         Minimum="0"
                                                         Maximum="27000000"
-                                                        Increment="1" />
+                                                        Increment="1"
+                                                        Value="{Binding IndvsCount, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <Label x:Name="popsNumLabel"
                                            Content="Number of populations"
@@ -1056,7 +1106,8 @@
                                                         HorizontalAlignment="Right"
                                                         Minimum="0"
                                                         Maximum="27000000"
-                                                        Increment="1" />
+                                                        Increment="1"
+                                                        Value="{Binding PopsCount, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <Label x:Name="usedMethodLabel"
                                            Content="Method to be used"
@@ -1065,7 +1116,11 @@
                                     <ComboBox x:Name="usedMethodComboBox"
                                               Grid.Column="1"
                                               Grid.Row="3"
-                                              HorizontalAlignment="Right" />
+                                              HorizontalAlignment="Right"
+                                              ItemsSource="{Binding Algorithms}"
+                                              DisplayMemberPath="Value"
+                                              SelectedValuePath="Key"
+                                              SelectedValue="{Binding SelectedAlgorithm, UpdateSourceTrigger=PropertyChanged}" />
                                 </Grid>
                             </GroupBox>
 
@@ -1078,10 +1133,13 @@
                                       Header="Select parameter file"
                                       Height="62.88">
                                 <StackPanel Orientation="Horizontal">
-                                    <ComboBox x:Name="clumppParameterFilesComboBox" />
+                                    <ComboBox x:Name="clumppParameterFilesComboBox"
+                                              ItemsSource="{Binding ConfigurationParametersItems}"
+                                              SelectedItem="{Binding SelectedConfigurationParameters, UpdateSourceTrigger=PropertyChanged}"
+                                              DisplayMemberPath="ParametersName" />
                                     <TextBox x:Name="clumppParameterFileNameTextBox"
                                              FontWeight="Light"
-                                             Text="Parameter name"
+                                             Text="{Binding ConfigurationName, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="10,0,0,0" />
                                 </StackPanel>
                             </GroupBox>
@@ -1107,7 +1165,11 @@
                                     <ComboBox x:Name="greedyOptionComboBox"
                                               Grid.Row="0"
                                               Grid.Column="1"
-                                              HorizontalAlignment="Right" />
+                                              HorizontalAlignment="Right"
+                                              ItemsSource="{Binding GreedyOptions}"
+                                              DisplayMemberPath="Value"
+                                              SelectedValuePath="Key"
+                                              SelectedValue="{Binding SelectedGreedyOption, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <Label x:Name="repeatsLabel"
                                            Content="Repeats"
@@ -1119,7 +1181,8 @@
                                                         Minimum="1"
                                                         Maximum="27000000"
                                                         Increment="1"
-                                                        HorizontalAlignment="Right" />
+                                                        HorizontalAlignment="Right"
+                                                        Value="{Binding Repeats, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <GroupBox x:Name="permutationFileSelectionGroupBox"
                                               Header="Select permutation file"
@@ -1135,8 +1198,8 @@
 
                                             <TextBox x:Name="permutationFilePathTextBox"
                                                      FontWeight="Light"
-                                                     Text="File path"
-                                                     Grid.Column="0" />
+                                                     Grid.Column="0"
+                                                     Text="{Binding PermutationFile, UpdateSourceTrigger=PropertyChanged}" />
                                             <Button x:Name="selectPermutationFileButton"
                                                     Content="Select"
                                                     Grid.Column="1"
@@ -1166,10 +1229,13 @@
 
                                     <CheckBox x:Name="numIndidvidsBasedWeighingCheckBox"
                                               Content="Weighing based on the number of individuals"
-                                              Grid.Row="0" />
+                                              Grid.Row="0"
+                                              IsEnabled="{Binding IsPop, UpdateSourceTrigger=PropertyChanged}"
+                                              IsChecked="{Binding W, UpdateSourceTrigger=PropertyChanged}" />
                                     <CheckBox x:Name="overrideWarningsCheckBox"
                                               Content="Override warnings"
-                                              Grid.Row="1" />
+                                              Grid.Row="1"
+                                              IsChecked="{Binding OverrideWarnings, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <Grid Grid.Row="2">
                                         <Grid.ColumnDefinitions>
@@ -1185,12 +1251,14 @@
                                                             Minimum="0"
                                                             Maximum="10000"
                                                             Increment="1"
-                                                            HorizontalAlignment="Right" />
+                                                            HorizontalAlignment="Right"
+                                                            Value="{Binding OrderByRun, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
 
                                     <CheckBox x:Name="useAlterStatisticCheckBox"
                                               Content="Use alternative similarity statistic [0, 1]"
-                                              Grid.Row="3" />
+                                              Grid.Row="3"
+                                              IsChecked="{Binding S, UpdateSourceTrigger=PropertyChanged}" />
 
                                 </Grid>
                             </GroupBox>
@@ -1207,11 +1275,13 @@
                                     <Label x:Name="clumppStartKLabel"
                                            Content="'K' from"
                                            Height="23" />
-                                    <xctk:IntegerUpDown x:Name="clumppStartKIntUpDown" />
+                                    <xctk:IntegerUpDown x:Name="clumppStartKIntUpDown"
+                                                        Value="{Binding KFrom, UpdateSourceTrigger=PropertyChanged}" />
                                     <Label x:Name="clumppToLabel"
                                            Content="to"
                                            Height="23" />
-                                    <xctk:IntegerUpDown x:Name="clumppEndKIntUpDown" />
+                                    <xctk:IntegerUpDown x:Name="clumppEndKIntUpDown"
+                                                        Value="{Binding KTo, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
 
                                 <Button x:Name="saveClumppOptionsButton"
@@ -1219,7 +1289,8 @@
                                         Grid.Column="1"
                                         HorizontalAlignment="Right"
                                         Margin="0,0,1,0"
-                                        Style="{StaticResource Rounded}" />
+                                        Style="{StaticResource Rounded}"
+                                        Command="{Binding SaveChangesAsyncCommand}" />
                             </Grid>
                         </StackPanel>
 
@@ -1249,15 +1320,21 @@
                                                Grid.Column="0" />
                                         <ComboBox x:Name="printPermutedDataComboBox"
                                                   Grid.Column="1"
-                                                  HorizontalAlignment="Right" />
+                                                  HorizontalAlignment="Right"
+                                                  ItemsSource="{Binding PrintPermutedDataOptions}"
+                                                  DisplayMemberPath="Value"
+                                                  SelectedValuePath="Key"
+                                                  SelectedValue="{Binding SelectedPrintPermutedData, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
 
                                     <CheckBox x:Name="printEveryPermCheckBox"
                                               Content="Print every perm"
-                                              Grid.Row="1" />
+                                              Grid.Row="1"
+                                              IsChecked="{Binding PrintEveryPerm, UpdateSourceTrigger=PropertyChanged}" />
                                     <CheckBox x:Name="printRandomInputOrderCheckBox"
                                               Content="Print random input order"
-                                              Grid.Row="2" />
+                                              Grid.Row="2"
+                                              IsChecked="{Binding PrintRandomInputorder, UpdateSourceTrigger=PropertyChanged}" />
                                 </Grid>
                             </GroupBox>
 
@@ -1265,11 +1342,13 @@
                                         HorizontalAlignment="Right">
                                 <Button x:Name="startClumppExecutionButton"
                                         Content="Start"
-                                        Style="{StaticResource Rounded}" />
+                                        Style="{StaticResource Rounded}"
+                                        Command="{Binding StartCLUMPPAsyncCommand}" />
                                 <Button x:Name="stopClumppExecutionButton"
                                         Content="Stop"
                                         Margin="5,0,0,0"
-                                        Style="{StaticResource Rounded}" />
+                                        Style="{StaticResource Rounded}"
+                                        Command="{Binding StopCLUMPPCommand}" />
                             </StackPanel>
                         </StackPanel>
                     </Grid>
@@ -1277,7 +1356,8 @@
             </TabItem>
 
             <TabItem x:Name="distructTabItem"
-                     Header="Distruct">
+                     Header="Distruct"
+                     DataContext="{Binding DistructTabControlVM}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -1297,7 +1377,9 @@
                                   Header="Select CLUMPP output set"
                                   DockPanel.Dock="Left">
                             <ComboBox x:Name="CLUMPPOutputSetsComboBox"
-                                      ItemsSource="{Binding FilteredSetModelsList, UpdateSourceTrigger=PropertyChanged}" />
+                                      ItemsSource="{Binding FilteredSetModelsList}"
+                                      SelectedItem="{Binding CurrentSet, UpdateSourceTrigger=PropertyChanged}"
+                                      DisplayMemberPath="Name" />
                         </GroupBox>
                         <GroupBox x:Name="distructParameterFilesSelectionGroupBox"
                                   Header="Select parameter file"
@@ -1317,17 +1399,21 @@
                             <StackPanel Orientation="Horizontal">
                                 <StackPanel Orientation="Vertical">
                                     <CheckBox x:Name="printIndividsCheckBox"
-                                              Content="Print individuals" />
+                                              Content="Print individuals"
+                                              IsChecked="{Binding PRINT_INDIVS, UpdateSourceTrigger=PropertyChanged}"/>
                                     <CheckBox x:Name="printPopSeparatorsCheckBox"
-                                              Content="Print pop separators" />
+                                              Content="Print pop separators"
+                                              IsChecked="{Binding PRINT_SEP, UpdateSourceTrigger=PropertyChanged}"/>
                                 </StackPanel>
 
                                 <StackPanel Orientation="Vertical"
                                             Margin="5,0,0,0">
                                     <CheckBox x:Name="printAtopLabelsCheckBox"
-                                              Content="Print labels atop figure" />
+                                              Content="Print labels atop figure"
+                                              IsChecked="{Binding PRINT_LABEL_ATOP, UpdateSourceTrigger=PropertyChanged}"/>
                                     <CheckBox x:Name="printBelowLabelsCheckBox"
-                                              Content="Print labels below figure" />
+                                              Content="Print labels below figure"
+                                              IsChecked="{Binding PRINT_LABEL_BELOW, UpdateSourceTrigger=PropertyChanged}"/>
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>
@@ -1367,7 +1453,11 @@
                                            DockPanel.Dock="Left" />
                                     <ComboBox x:Name="orientationComboBox"
                                               DockPanel.Dock="Right"
-                                              Height="20" />
+                                              Height="20"
+                                              ItemsSource="{Binding OrientationOptions}"
+                                              DisplayMemberPath="Value"
+                                              SelectedValuePath="Key"
+                                              SelectedValue="{Binding SelectedOrientation, UpdateSourceTrigger=PropertyChanged}" />
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="0"
@@ -1379,7 +1469,8 @@
                                                        Minimum="0"
                                                        Maximum="27000"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding XORIGIN, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="0"
@@ -1391,7 +1482,8 @@
                                                        Minimum="0"
                                                        Maximum="27000"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding YORIGIN, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="0"
@@ -1403,7 +1495,8 @@
                                                        Minimum="0"
                                                        Maximum="27000"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding XSCALE, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="0"
@@ -1415,7 +1508,8 @@
                                                        Minimum="0"
                                                        Maximum="27000"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding YSCALE, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="1"
@@ -1428,7 +1522,8 @@
                                                        Minimum="0"
                                                        Maximum="27000"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding LINEWIDTH_IND, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="1"
@@ -1441,7 +1536,8 @@
                                                        Minimum="0"
                                                        Maximum="27000"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding LINEWIDTH_SEP, UpdateSourceTrigger=PropertyChanged}" />
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="1"
@@ -1454,7 +1550,8 @@
                                                        Minimum="0"
                                                        Maximum="27000"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding LINEWIDTH_RIM, UpdateSourceTrigger=PropertyChanged}" />
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="1"
@@ -1467,7 +1564,8 @@
                                                        Minimum="0"
                                                        Maximum="180"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding ANGLE_LABEL_ATOP, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
                                 <DockPanel LastChildFill="False"
                                            Grid.Column="1"
@@ -1480,7 +1578,8 @@
                                                        Minimum="0"
                                                        Maximum="180"
                                                        Increment="0.1"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Value="{Binding ANGLE_LABEL_BELOW, UpdateSourceTrigger=PropertyChanged}" />
                                 </DockPanel>
 
 
@@ -1489,31 +1588,36 @@
                                           HorizontalAlignment="Left"
                                           Grid.Column="2"
                                           Grid.Row="0"
-                                          Margin="5,0,0,0" />
+                                          Margin="5,0,0,0"
+                                          IsChecked="{Binding PRINT_INFILE_NAME, UpdateSourceTrigger=PropertyChanged}"/>
                                 <CheckBox x:Name="printDataAsCommentCheckBox"
                                           Content="Print the data as a comment in the output"
                                           HorizontalAlignment="Left"
                                           Grid.Column="2"
                                           Grid.Row="1"
-                                          Margin="5,0,0,0" />
+                                          Margin="5,0,0,0"
+                                          IsChecked="{Binding REPRINT_DATA, UpdateSourceTrigger=PropertyChanged}"/>
                                 <CheckBox x:Name="printDataToLogAreaCheckBox"
                                           Content="Print some of the data to the log area"
                                           HorizontalAlignment="Left"
                                           Grid.Column="2"
                                           Grid.Row="2"
-                                          Margin="5,0,0,0" />
+                                          Margin="5,0,0,0"
+                                          IsChecked="{Binding ECHO_DATA, UpdateSourceTrigger=PropertyChanged}"/>
                                 <CheckBox x:Name="printColorBrewerSettingsCheckBox"
                                           Content="Print colorBrewer settings in the output"
                                           HorizontalAlignment="Left"
                                           Grid.Column="2"
                                           Grid.Row="3"
-                                          Margin="5,0,0,0" />
+                                          Margin="5,0,0,0"
+                                          IsChecked="{Binding PRINT_COLOR_BREWER, UpdateSourceTrigger=PropertyChanged}"/>
                                 <CheckBox x:Name="useGrayscaleCheckBox"
                                           Content="Use grayscale instead of colors"
                                           HorizontalAlignment="Left"
                                           Grid.Column="2"
                                           Grid.Row="4"
-                                          Margin="5,0,0,0" />
+                                          Margin="5,0,0,0"
+                                          IsChecked="{Binding GRAYSCALE, UpdateSourceTrigger=PropertyChanged}"/>
 
                             </Grid>
                         </GroupBox>
@@ -1585,29 +1689,6 @@
 
                                     <StackPanel Orientation="Vertical"
                                                 Grid.Column="0">
-                                        <GroupBox x:Name="inputBelowLabelsFileSelectionGroupBox"
-                                                  Header="Input file of labels below the figure"
-                                                  HorizontalAlignment="Stretch">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBox x:Name="inputBelowLabelsFilePathTextBox"
-                                                         Text="File path"
-                                                         FontWeight="Light"
-                                                         Grid.Column="0"
-                                                         HorizontalAlignment="Left" />
-                                                <Button x:Name="selectInputBelowLabelsFileButton"
-                                                        Content="Select"
-                                                        Margin="10,0,0,0"
-                                                        Grid.Column="1"
-                                                        HorizontalAlignment="Right"
-                                                        Style="{StaticResource Rounded}" />
-                                            </Grid>
-                                        </GroupBox>
-
                                         <GroupBox x:Name="inputAtopLabelsFileSelectionGroupBox"
                                                   Header="Input file of labels atop the figure"
                                                   HorizontalAlignment="Stretch">
@@ -1618,11 +1699,34 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <TextBox x:Name="inputAtopLabelsFilePathTextBox"
-                                                         Text="File path"
+                                                         Text="{Binding INFILE_LABEL_ATOP, UpdateSourceTrigger=PropertyChanged}"
                                                          FontWeight="Light"
                                                          Grid.Column="0"
                                                          HorizontalAlignment="Left" />
                                                 <Button x:Name="selectInputAtopLabelsFileButton"
+                                                        Content="Select"
+                                                        Margin="10,0,0,0"
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Right"
+                                                        Style="{StaticResource Rounded}" />
+                                            </Grid>
+                                        </GroupBox>
+
+                                        <GroupBox x:Name="inputBelowLabelsFileSelectionGroupBox"
+                                                  Header="Input file of labels below the figure"
+                                                  HorizontalAlignment="Stretch">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBox x:Name="inputBelowLabelsFilePathTextBox"
+                                                         Text="{Binding INFILE_LABEL_BELOW, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontWeight="Light"
+                                                         Grid.Column="0"
+                                                         HorizontalAlignment="Left" />
+                                                <Button x:Name="selectInputBelowLabelsFileButton"
                                                         Content="Select"
                                                         Margin="10,0,0,0"
                                                         Grid.Column="1"
@@ -1643,7 +1747,7 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <TextBox x:Name="clustersPermutationsInputFilePathTextBox"
-                                                         Text="File path"
+                                                         Text="{Binding INFILE_CLUST_PERM, UpdateSourceTrigger=PropertyChanged}"
                                                          FontWeight="Light"
                                                          Grid.Column="0"
                                                          HorizontalAlignment="Left" />
@@ -1665,7 +1769,8 @@
                                                                 Maximum="27000000"
                                                                 Increment="1"
                                                                 DockPanel.Dock="Right"
-                                                                Margin="0,0,1,0" />
+                                                                Margin="0,0,1,0"
+                                                                Value="{Binding NUMPOPS, UpdateSourceTrigger=PropertyChanged}"/>
                                         </DockPanel>
 
                                         <DockPanel LastChildFill="False">
@@ -1677,7 +1782,8 @@
                                                                 Maximum="27000000"
                                                                 Increment="1"
                                                                 DockPanel.Dock="Right"
-                                                                Margin="0,0,1,0" />
+                                                                Margin="0,0,1,0"
+                                                                Value="{Binding NUMINDS, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
                                     </StackPanel>
                                 </Grid>
@@ -1703,7 +1809,8 @@
                                                                Minimum="0"
                                                                Maximum="100"
                                                                Increment="0.1"
-                                                               DockPanel.Dock="Right" />
+                                                               DockPanel.Dock="Right"
+                                                               Value="{Binding FONTHEIGHT, UpdateSourceTrigger=PropertyChanged}"/>
                                         </DockPanel>
                                         <DockPanel LastChildFill="False">
                                             <Label x:Name="figureHeightLabel"
@@ -1713,7 +1820,8 @@
                                                                Minimum="0"
                                                                Maximum="1000"
                                                                Increment="0.1"
-                                                               DockPanel.Dock="Right" />
+                                                               DockPanel.Dock="Right"
+                                                               Value="{Binding BOXHEIGHT, UpdateSourceTrigger=PropertyChanged}"/>
                                         </DockPanel>
                                         <DockPanel LastChildFill="False">
                                             <Label x:Name="textAbovePlacementDistLabel"
@@ -1723,7 +1831,8 @@
                                                                Minimum="0"
                                                                Maximum="100"
                                                                Increment="0.1"
-                                                               DockPanel.Dock="Right" />
+                                                               DockPanel.Dock="Right"
+                                                               Value="{Binding DIST_ABOVE, UpdateSourceTrigger=PropertyChanged}"/>
                                         </DockPanel>
                                     </StackPanel>
 
@@ -1740,7 +1849,8 @@
                                                                Minimum="0"
                                                                Maximum="100"
                                                                Increment="0.1"
-                                                               DockPanel.Dock="Right" />
+                                                               DockPanel.Dock="Right"
+                                                               Value="{Binding INDIVWIDTH, UpdateSourceTrigger=PropertyChanged}"/>
                                         </DockPanel>
                                         <DockPanel LastChildFill="False">
                                             <Label x:Name="textBelowPlacementDistLabel"
@@ -1750,7 +1860,8 @@
                                                                Minimum="-100"
                                                                Maximum="100"
                                                                Increment="0.1"
-                                                               DockPanel.Dock="Right" />
+                                                               DockPanel.Dock="Right"
+                                                               Value="{Binding DIST_BELOW, UpdateSourceTrigger=PropertyChanged}"/>
                                         </DockPanel>
                                     </StackPanel>
                                 </Grid>
@@ -1790,11 +1901,11 @@
                             <Label x:Name="distructStartKLabel"
                                    Content="'K' from"
                                    Height="23" />
-                            <xctk:IntegerUpDown x:Name="distructStartKIntUpDown" />
+                            <xctk:IntegerUpDown x:Name="distructStartKIntUpDown" Value="{Binding KFrom, UpdateSourceTrigger=PropertyChanged}"/>
                             <Label x:Name="distructToLabel"
                                    Content="to"
                                    Height="23" />
-                            <xctk:IntegerUpDown x:Name="distructEndKIntUpDown" />
+                            <xctk:IntegerUpDown x:Name="distructEndKIntUpDown" Value="{Binding KTo, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal"
@@ -1802,15 +1913,18 @@
                             <Button x:Name="saveDistructOptionsButton"
                                     Content="Save"
                                     Margin="0,0,58,0"
-                                    Style="{StaticResource Rounded}" />
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding SaveChangesAsyncCommand}"/>
                             <Button x:Name="startDistructExecutionButton"
                                     Content="Start"
                                     Margin="0,0,5,0"
-                                    Style="{StaticResource Rounded}" />
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding StartDistructAsyncCommand}"/>
                             <Button x:Name="stopDistructExecutionButton"
                                     Content="Stop"
                                     Margin="0,0,0,0"
-                                    Style="{StaticResource Rounded}" />
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding StopDistructCommand}"/>
                         </StackPanel>
                     </DockPanel>
                 </Grid>

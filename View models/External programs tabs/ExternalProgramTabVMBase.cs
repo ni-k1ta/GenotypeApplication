@@ -1,6 +1,8 @@
 ﻿using GenotypeApplication.Constants;
+using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.MVVM.Infrastructure;
+using GenotypeApplication.Services;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
@@ -18,6 +20,32 @@ namespace GenotypeApplication.View_models.External_programs_tabs
         protected readonly string _fullProjectFolderPath;
         protected readonly int _coresCount;
 
+        protected int PredefinedIterationsLimit
+        {
+            get;
+            private set;
+        }
+        protected int PredefinedKStart
+        {
+            get;
+            private set;
+        }
+        protected int PredefinedKEnd
+        {
+            get;
+            private set;
+        }
+        protected int PredefinedPopCount
+        {
+            get;
+            private set;
+        }
+        protected int PredefinedIndvCount
+        {
+            get;
+            private set;
+        }
+
         public ICollectionView FilteredSetModelsList { get; }
 
         public SetModel? CurrentSet
@@ -25,17 +53,22 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             get => _currentSet;
             set
             {
-                if (_currentSet == value) return;
-                SetField(ref _currentSet, value);
+                if (SetField(ref _currentSet, value))
+                {
+                    //если это пользовательский выбор (не синхронизация) — сообщаем сервису
+                    if (!_isSyncing) WorkflowState.CurrentSet = value;
 
-                //если это пользовательский выбор (не синхронизация) — сообщаем сервису
-                if (!_isSyncing) WorkflowState.CurrentSet = value;
-
-                LoadSelectedSetParameters(value);
+                    LoadSelectedSetParameters(value);
+                }
             }
         }
 
-        protected ExternalProgramTabVMBase(WorkflowStateModel workflowState, SetProcessingStage stage, int coresCount, string fullProjectFolderPath)
+        protected IMessageService _messageService;
+        protected IDirectoryService _directoryService;
+        protected IFileService _fileService;
+        protected IDialogService _dialogService;
+
+        protected ExternalProgramTabVMBase(WorkflowStateModel workflowState, SetProcessingStage stage, int coresCount, string fullProjectFolderPath, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IDialogService dialogService)
         {
             WorkflowState = workflowState;
             ProcessingStage = stage;
@@ -53,8 +86,12 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             workflowState.CurrentSetChanged += OnCurrentSetChanged;
 
             //подписка на обновление фильтров
-            workflowState.StateRefreshed += () =>
-                Application.Current.Dispatcher.Invoke(() => FilteredSetModelsList.Refresh());
+            workflowState.StateRefreshed += () => UIDispatcherHelper.RunOnUI(() => FilteredSetModelsList.Refresh());
+
+            _directoryService = directoryService;
+            _fileService = fileService;
+            _messageService = messageService;
+            _dialogService = dialogService;
         }
 
         private void OnCurrentSetChanged(SetModel? newSet)

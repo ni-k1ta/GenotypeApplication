@@ -4,6 +4,7 @@ using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.MVVM.Validation;
 using GenotypeApplication.Services;
 using GenotypeApplication.Services.MVVM;
+using GenotypeApplication.Services.Project;
 using GenotypeApplication.View_models;
 using System.Windows;
 using Application = System.Windows.Application;
@@ -21,12 +22,14 @@ namespace GenotypeApplication
 
             IWindowService windowService = new WindowService();
 
-            IProjectService projectService = new ProjectService();
+            IDirectoryService directoryService = new DirectoryService();
+            IFileService fileService = new FileService();
+
             IDialogService dialogService = new DialogService();
             IMessageService messageService = new MessageService();
             IRecentProjectsService recentProjectsService = new RecentProjectsService();
 
-            var projectParametersViewModel = new ProjectParametersVM(projectService, dialogService, messageService, recentProjectsService, new NameTextValidator(), new PathTextValidator(), windowService);
+            var projectParametersViewModel = new ProjectParametersVM(directoryService, fileService, dialogService, messageService, recentProjectsService, new NameTextValidator(), new PathTextValidator(), windowService);
 
             projectParametersViewModel.SetCurrentWindow(windowService.ShowWindow<ProjectConfigurationWindow, ProjectParametersVM>(projectParametersViewModel));
         }

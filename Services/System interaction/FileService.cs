@@ -45,7 +45,12 @@ namespace GenotypeApplication.Services
 
         public async Task WriteAllLinesAsync(string filePath, IEnumerable<string> lines)
         {
-            await File.WriteAllLinesAsync(filePath, lines, new UTF8Encoding(false)); //перезаписывает файл
+            using var writer = new StreamWriter(filePath, false, new UTF8Encoding(false));
+            writer.NewLine = "\n";
+            foreach (var line in lines)
+            {
+                await writer.WriteLineAsync(line);
+            } //перезаписывает файл
         }
 
         public void DeleteFile(string filePath)

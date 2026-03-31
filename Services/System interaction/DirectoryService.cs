@@ -66,7 +66,15 @@ namespace GenotypeApplication.Services
         }
         public bool IsDirectoryExist(string directoryPath)
         {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(directoryPath);
             return Directory.Exists(directoryPath);
+        }
+
+        public bool IsDirectoryEmpty(string directoryPath)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(directoryPath);
+            if (!IsDirectoryExist(directoryPath)) throw new DirectoryNotFoundException($"The directory {directoryPath} does not exist.");
+            return !Directory.EnumerateFileSystemEntries(directoryPath).Any();
         }
     }
 }

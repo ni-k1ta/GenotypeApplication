@@ -9,6 +9,6 @@ namespace GenotypeApplication.Interfaces
 {
     public interface IDataTableService
     {
-        DataTable Load(string filePath);
+        DataTable Parse(string filePath);
     }
 }

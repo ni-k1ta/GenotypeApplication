@@ -6,6 +6,7 @@ using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.Models.Structure;
 using GenotypeApplication.MVVM.Infrastructure;
+using GenotypeApplication.Services.Project;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -20,6 +21,8 @@ namespace GenotypeApplication.View_models
     {
         private ProjectParametersModel _projectModel;
 
+        private readonly IDirectoryService _directoryService;
+        private readonly IFileService _fileService;
         private readonly IProjectService _projectService;
         private readonly IDialogService _dialogService;
         private readonly IMessageService _messageService;
@@ -52,11 +55,13 @@ namespace GenotypeApplication.View_models
         private bool _isNewProject;
         private bool _isSaving;
 
-        public ProjectParametersVM(IProjectService projectService, IDialogService dialogService, IMessageService messageService, IRecentProjectsService recentProjectsService, IValidator<string> nameTextValidator, IValidator<string> pathTextValidator, IWindowService windowService)
+        public ProjectParametersVM(IDirectoryService directoryService, IFileService fileService, IDialogService dialogService, IMessageService messageService, IRecentProjectsService recentProjectsService, IValidator<string> nameTextValidator, IValidator<string> pathTextValidator, IWindowService windowService)
         {
             _projectModel = new();
 
-            _projectService = projectService;
+            _directoryService = directoryService;
+            _fileService = fileService;
+            _projectService = new ProjectService(directoryService, fileService);
             _dialogService = dialogService;
             _messageService = messageService;
             _recentProjectsService = recentProjectsService;
@@ -376,8 +381,13 @@ namespace GenotypeApplication.View_models
             try
             {
                 _isSaving = true;
+                bool shouldContinue = true;
 
-                if (_isNewProject) await CreateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
+                if (_isNewProject)
+                {
+                    shouldContinue = await CreateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
+                    if (!shouldContinue) return;
+                }
                 else await UpdateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
             }
             catch (Exception)
@@ -394,7 +404,7 @@ namespace GenotypeApplication.View_models
 
             string fullProjectFolderPath = Path.Combine(projectPath, projectName);
 
-            MainWindowVM mainWindowViewModel = new(_projectModel, fullProjectFolderPath, dataFileFormatModel, _projectModel.CoresCount, filePath, _dialogService, _messageService, _pathTextValidator, _windowService);
+            MainWindowVM mainWindowViewModel = new(_projectModel, fullProjectFolderPath, dataFileFormatModel, _projectModel.CoresCount, filePath, _directoryService, _fileService, _dialogService, _messageService, _pathTextValidator, _windowService);
 
             var mainWindow = _windowService.ShowWindow<MainWindow, MainWindowVM>(mainWindowViewModel);
             mainWindowViewModel.SetCurrentWindow(mainWindow);
@@ -406,13 +416,13 @@ namespace GenotypeApplication.View_models
                 _windowService.CloseWindow(window);
             }
         }
-        private async Task CreateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
+        private async Task<bool> CreateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
         {
             string fullProjectFolderPath = Path.Combine(projectPath, projectName);
             if (_projectService.IsProjectExist(fullProjectFolderPath))
             {
                 _messageService.ShowWarning("A project with this name already exists.");
-                return;
+                return false;
             }
 
             var projectModel = ProjectParametersModel.Create(projectName, projectPath, isParallelEnabled, coresCount);
@@ -439,6 +449,7 @@ namespace GenotypeApplication.View_models
                 _isNewProject = false;
 
             _recentProjectsService.AddProject(_projectModel);
+            return true;
         }
         private async Task UpdateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
         {

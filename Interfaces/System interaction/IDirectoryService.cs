@@ -11,5 +11,6 @@ namespace GenotypeApplication.Interfaces
         void CopyDirectory(string sourceDir, string targetDir);
         void DeleteDirectory(string dir);
         bool IsDirectoryExist(string directoryPath);
+        bool IsDirectoryEmpty(string directoryPath);
     }
 }

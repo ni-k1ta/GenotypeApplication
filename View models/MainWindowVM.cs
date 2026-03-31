@@ -3,7 +3,7 @@ using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.Models.Structure;
 using GenotypeApplication.MVVM.Infrastructure;
-using GenotypeApplication.Services.Application_configuration;
+using GenotypeApplication.Services.Set;
 using System.Windows;
 
 namespace GenotypeApplication.View_models
@@ -27,7 +27,7 @@ namespace GenotypeApplication.View_models
 
         private WeakReference<Window>? _currentWindowRef;
 
-        public MainWindowVM(ProjectParametersModel projectModel, string fullProjectFolderPath, DataFileFormatModel dataFileFormatModel, int coresCount, string dataFileFullPath, IDialogService dialogService, IMessageService messageService, IValidator<string> pathTextValidator, IWindowService windowService)
+        public MainWindowVM(ProjectParametersModel projectModel, string fullProjectFolderPath, DataFileFormatModel dataFileFormatModel, int coresCount, string dataFileFullPath, IDirectoryService directoryService, IFileService fileService, IDialogService dialogService, IMessageService messageService, IValidator<string> pathTextValidator, IWindowService windowService)
         {
             //_strutureDataFileName = string.Empty;
 
@@ -51,10 +51,10 @@ namespace GenotypeApplication.View_models
             var setService = new SetConfigurationService();
             //изменить ^^^
 
-            StructureTabControlVM = new(_workflowStateModel, fullProjectFolderPath, coresCount, dataFileFormatModel, dataFileFullPath, structureMainParams, structureExtraParams, setService, dialogService, messageService, pathTextValidator, windowService);
-            StructureHarvesterTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath);
-            CLUMPPTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath);
-            DistructTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath);
+            StructureTabControlVM = new(_workflowStateModel, fullProjectFolderPath, coresCount, dataFileFormatModel, dataFileFullPath, structureMainParams, structureExtraParams, setService, dialogService, directoryService, fileService, messageService, pathTextValidator, windowService);
+            StructureHarvesterTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath, dialogService, directoryService, fileService, messageService);
+            CLUMPPTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath, dialogService, directoryService, fileService, messageService);
+            DistructTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath, dialogService, directoryService, fileService, messageService);
         }
 
         public StructureTabControlVM StructureTabControlVM { get; private set; }

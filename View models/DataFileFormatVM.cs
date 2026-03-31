@@ -9,6 +9,7 @@ using GenotypeApplication.MVVM.Infrastructure;
 using GenotypeApplication.Services;
 using GenotypeApplication.Services.Application_configuration;
 using GenotypeApplication.Services.Application_configuration.Data_file;
+using GenotypeApplication.Services.Parsers;
 using System.Data;
 using System.IO;
 using System.Windows;
@@ -51,7 +52,7 @@ namespace GenotypeApplication.View_models
 
         private readonly IDialogService _dialogService;
         private readonly IMessageService _messageService;
-        private readonly IDataTableService _dataTableService;
+        private readonly IDataTableService _dataTableParser;
         private readonly IDataFormatDetectionService _dataFormatDetectionService;
         private readonly IHighlightCalculationService _highlightCalculationService;
         private readonly IWindowService _windowService;
@@ -77,7 +78,7 @@ namespace GenotypeApplication.View_models
 
             _dialogService = dialogService;
             _messageService = messageService;
-            _dataTableService = new DataTableService();
+            _dataTableParser = new DataTableParser();
             _dataFormatDetectionService = new DataFormatDetectionService();
             _highlightCalculationService = new HighlightCalculationService();
 
@@ -383,7 +384,7 @@ namespace GenotypeApplication.View_models
                 HighlightMap = null;
                 _calculatedDataFileFormatModel = new();
 
-                var parsedDataTable = _dataTableService.Load(fullDataFilePath);
+                var parsedDataTable = _dataTableParser.Parse(fullDataFilePath);
 
                 ParsedDataTable = new DataTableModel(parsedDataTable);
 
@@ -443,6 +444,7 @@ namespace GenotypeApplication.View_models
         private DataFileFormatModel GetFormatValues()
         {
             var ExtraColsCount = ExtraColsParam ? ExtraColsCountParam : 0;
+            var NotAmbiguousValue = NotAmbiguousValueParam == 0 ? -999 : NotAmbiguousValueParam;
 
             return new DataFileFormatModel
             {
@@ -462,7 +464,7 @@ namespace GenotypeApplication.View_models
                 PHASEINFO = PhaseInfoParam,
                 Missing = MissingParam,
                 NOTAMBIGUOUS = NotAmbiguousParam,
-                NotAmbiguousValue = NotAmbiguousValueParam
+                NotAmbiguousValue = NotAmbiguousValue
             };
         }
 
@@ -517,7 +519,11 @@ namespace GenotypeApplication.View_models
             {
                 var result = _messageService.ShowQuetion("The specified format parameters differ from the automatically detected format. Do you want to proceed with the specified parameters?");
 
-                if (!result) return;
+                if (!result)
+                {
+                    _isSaving = false;
+                    return;
+                }
             }
 
             DataFileFormatModel = dataFileFormatModel;

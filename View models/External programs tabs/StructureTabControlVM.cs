@@ -5,8 +5,8 @@ using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.Models.Structure;
 using GenotypeApplication.MVVM.Infrastructure;
-using GenotypeApplication.Services.Application_configuration;
 using GenotypeApplication.Services.Application_configuration.External_program_interaction;
+using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -115,11 +115,9 @@ namespace GenotypeApplication.View_models
         private readonly SetConfigurationService _setConfigurationService;
         private readonly StructureInteractionService _structureInteractionService;
         private readonly IWindowService _windowService;
-        private readonly IMessageService _messageService;
-        private readonly IDialogService _dialogService;
         private readonly IValidator<string> _pathTextValidator;
 
-        public StructureTabControlVM(WorkflowStateModel workflowStateModel, string fullProjectFolderPath, int coresCount, DataFileFormatModel dataFileFormatModel, string dataFileFullPath, StructureMainParametersModel mainParametersModel, StructureExtraParametersModel extraParametersModel, SetConfigurationService setConfigurationService, IDialogService dialogService, IMessageService messageService, IValidator<string> pathTextValidator, IWindowService windowService) : base(workflowStateModel, SetProcessingStage.Structure, coresCount, fullProjectFolderPath)
+        public StructureTabControlVM(WorkflowStateModel workflowStateModel, string fullProjectFolderPath, int coresCount, DataFileFormatModel dataFileFormatModel, string dataFileFullPath, StructureMainParametersModel mainParametersModel, StructureExtraParametersModel extraParametersModel, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathTextValidator, IWindowService windowService) : base(workflowStateModel, SetProcessingStage.Structure, coresCount, fullProjectFolderPath, directoryService, fileService, messageService, dialogService)
         {
             _dataFileName = string.Empty;
 
@@ -142,9 +140,7 @@ namespace GenotypeApplication.View_models
             StopStructureCommand = new RelayCommand(execute => StopStructure(), canExecute => CanStopStructure());
 
             _setConfigurationService = setConfigurationService;
-            _structureInteractionService = new StructureInteractionService();
-            _dialogService = dialogService;
-            _messageService = messageService;
+            _structureInteractionService = new StructureInteractionService(directoryService, fileService);
             _windowService = windowService;
             _pathTextValidator = pathTextValidator;
 
@@ -246,10 +242,24 @@ namespace GenotypeApplication.View_models
             get => _onefstParam;
             set { SetField(ref _onefstParam, value); }
         }
+
         public bool InferAlphaParam //
         {
             get => _inferAlphaParam;
-            set { SetField(ref _inferAlphaParam, value); }
+            set 
+            { 
+                if (SetField(ref _inferAlphaParam, value))
+                    OnPropertyChanged(nameof(NotInferAlphaParam));
+            }
+        }
+        public bool NotInferAlphaParam
+        {
+            get => !InferAlphaParam;
+            set
+            {
+                if (value)
+                    InferAlphaParam = false;
+            }
         }
         public double InferAlphaValueParam //
         {
@@ -266,10 +276,24 @@ namespace GenotypeApplication.View_models
             get => _popAlphaValueParam;
             set { SetField(ref _popAlphaValueParam, value); }
         }
+
         public bool InferLambdaParam //
         {
             get => _inferLambdaParam;
-            set { SetField(ref _inferLambdaParam, value); }
+            set 
+            {
+                if (SetField(ref _inferLambdaParam, value))
+                    OnPropertyChanged(nameof(NotInferLambdaParam));
+            }
+        }
+        public bool NotInferLambdaParam
+        {
+            get => !InferLambdaParam;
+            set
+            {
+                if (value)
+                    InferLambdaParam = false;
+            }
         }
         public double InferLambdaValueParam //
         {
@@ -507,36 +531,35 @@ namespace GenotypeApplication.View_models
         {
             get => _comboBoxSelectedItem;
             set
-            {
-                if (_comboBoxSelectedItem == value)
+            {   
+                if (SetField(ref _comboBoxSelectedItem, value))
                 {
-                    SetField(ref _comboBoxSelectedItem, value);
-                    return;
-                }
-                
-                SetField(ref _comboBoxSelectedItem, value);
-
-                if (value == CreateNewSetPlaceholder)
-                {
-                    if (!_isCreatingNewSet) ResetSetParameters();
-                    // Режим создания — очищаем поля, не трогаем SharedState
-                    _isCreatingNewSet = true;
-                    //SetName = string.Empty;
-                }
-                else if (value != null)
-                {
-                    if (_savedSetName == value.Name)
+                    if (value == CreateNewSetPlaceholder)
                     {
-                        //todo просто подгрузить параметры в интерфейс, без излишнего чтения файлов с параметрами
+                        if (!_isCreatingNewSet) ResetSetParameters();
+                        // Режим создания — очищаем поля, не трогаем SharedState
+                        _isCreatingNewSet = true;
+                        //SetName = string.Empty;
                     }
+                    else if (value != null)
+                    {
+                        if (_savedSetName == value.Name)
+                        {
+                            //todo просто подгрузить параметры в интерфейс, без излишнего чтения файлов с параметрами
+                        }
 
-                    // Выбор существующего Set
-                    _isCreatingNewSet = false;
-                    CurrentSet = value; // -> уйдёт в SharedState.SelectSet
-                    LoadSelectedSetParameters(value);
+                        // Выбор существующего Set
+                        _isCreatingNewSet = false;
+                        CurrentSet = value; // -> уйдёт в SharedState.SelectSet
+                        LoadSelectedSetParameters(value);
+                    }
                 }
             }
         }
+
+        public static readonly SetModel CreateNewSetPlaceholder = new() { Name = "Create new set" };
+        public ObservableCollection<SetModel> SetModelsComboBoxItems { get; } = new();
+
         #endregion
 
         #region Commands properties
@@ -546,17 +569,17 @@ namespace GenotypeApplication.View_models
         public RelayCommand StopStructureCommand { get; }
         #endregion
 
-        public static readonly SetModel CreateNewSetPlaceholder = new() { Name = "Create new set" };
-        public ObservableCollection<SetModel> SetModelsComboBoxItems { get; } = new();
-
         private void RebuildComboBoxItems()
         {
-            SetModelsComboBoxItems.Clear();
-            foreach (SetModel item in FilteredSetModelsList)
+            UIDispatcherHelper.RunOnUI(() =>
             {
-                SetModelsComboBoxItems.Add(item);
-            }
-            SetModelsComboBoxItems.Add(CreateNewSetPlaceholder);
+                SetModelsComboBoxItems.Clear();
+
+                foreach (SetModel item in FilteredSetModelsList)
+                    SetModelsComboBoxItems.Add(item);
+
+                SetModelsComboBoxItems.Add(CreateNewSetPlaceholder);
+            });
         }
 
 
@@ -761,12 +784,15 @@ namespace GenotypeApplication.View_models
                 _savedDataFileFormatModel = dataFileFormatModel;
                 _savedDataFileFullPath = dataFileFullPath;
                 _isCreatingNewSet = false;
-                StartStructureAsyncCommand.NotifyCanExecuteChanged();
             }
             catch (Exception)
             {
                 //todo
                 throw;
+            }
+            finally
+            {
+                StartStructureAsyncCommand.NotifyCanExecuteChanged();
             }
         }
         private bool CanSaveChanges()
@@ -793,9 +819,8 @@ namespace GenotypeApplication.View_models
              */
 
             var newSet = WorkflowState.CreateNewSet(newSetName);
-            SetField(ref _currentSet, newSet);
-            SetField(ref _comboBoxSelectedItem, newSet);
-            OnPropertyChanged(nameof(ComboBoxSelectedItem));
+            SetField(ref _currentSet, newSet, null);
+            SetField(ref _comboBoxSelectedItem, newSet, nameof(ComboBoxSelectedItem));
             WorkflowState.CurrentSet = newSet;
             //////////////////////////////////////////////////////////
 
@@ -875,6 +900,7 @@ namespace GenotypeApplication.View_models
                 }
                 else
                 {
+
                     _structureInteractionService.PrepareInputDataFile(fullNewSetFolderPath, dataFileFullPath, _savedDataFileFullPath);
 
                     await _structureInteractionService.PrepareParametersFile(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
@@ -902,7 +928,7 @@ namespace GenotypeApplication.View_models
             {
                 await _structureInteractionService.StartExecution(kFrom, kTo, iterations, fullSetFolderPath, _coresCount);
 
-                WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, SetProcessingStage.Structure);
+                WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
             }
             catch (Exception)
             {

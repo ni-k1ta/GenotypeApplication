@@ -17,7 +17,10 @@ namespace GenotypeApplication.MVVM.Infrastructure
                 return false;
 
             field = value;
-            OnPropertyChanged(propertyName);
+
+            if (!string.IsNullOrEmpty(propertyName))
+                OnPropertyChanged(propertyName);
+
             return true;
         }
     }

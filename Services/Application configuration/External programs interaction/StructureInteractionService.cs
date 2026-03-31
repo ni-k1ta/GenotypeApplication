@@ -1,6 +1,7 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models.Structure;
+using GenotypeApplication.Services.Set;
 using System.Diagnostics;
 using System.IO;
 
@@ -16,8 +17,8 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         private readonly string EXTERNAL_PROGRAMS_FOLDER_PATH = PathConstants.EXTERNAL_PROGRAMS_DEFAULT_FOLDER_PATH;
         private readonly string STRUCTURE_OUTPUT_FILE_DEFAULT_NAME = StructureConstants.STRUCTURE_OUTPUT_FILE_DEFAULT_NAME;
 
-        private readonly IFileService _fileService = new FileService();
-        private readonly IDirectoryService _directoryService = new DirectoryService();
+        private readonly IFileService _fileService;
+        private readonly IDirectoryService _directoryService;
 
         //private readonly ILogger<StructureExecutionService> _logger;
 
@@ -31,8 +32,10 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         //событие, вызываемое при завершении одного юнита работы.
         public event Action<int, int, int, int, int>? UnitCompleted;
 
-        public StructureInteractionService()
+        public StructureInteractionService(IDirectoryService directoryService, IFileService fileService)
         {
+            _directoryService = directoryService;
+            _fileService = fileService;
             //_logger = logger;
         }
 
@@ -53,7 +56,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             if (!_directoryService.IsDirectoryExist(fullStructureFolderPath))
                 throw new DirectoryNotFoundException($"The directory {fullStructureFolderPath} does not exist.");
 
-            if (!string.IsNullOrWhiteSpace(savedDataFileFullPath)) _fileService.DeleteFile(savedDataFileFullPath);
+            if (!string.IsNullOrWhiteSpace(savedDataFileFullPath)) _fileService.DeleteFile(Path.Combine(fullStructureFolderPath, Path.GetFileName(savedDataFileFullPath)));
 
             _fileService.CopyFile(dataFileFullPath, Path.Combine(fullStructureFolderPath, Path.GetFileName(dataFileFullPath)));
         }
@@ -65,11 +68,11 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             ArgumentNullException.ThrowIfNull(structureMainParametersModel);
             ArgumentNullException.ThrowIfNull(structureExtraParametersModel);
 
-            var structureMainParametersLines = DefineParameterModelConverter.GetFormatedLines(dataFileFormatModel)
-            .Concat(DefineParameterModelConverter.GetFormatedLines(structureMainParametersModel))
+            var structureMainParametersLines = DefineParameterModelConverter.GetFormatedLines(dataFileFormatModel, "#define")
+            .Concat(DefineParameterModelConverter.GetFormatedLines(structureMainParametersModel, "#define"))
             .ToList();
 
-            var structureExtraParametersLines = (DefineParameterModelConverter.GetFormatedLines(structureExtraParametersModel)).ToList();
+            var structureExtraParametersLines = (DefineParameterModelConverter.GetFormatedLines(structureExtraParametersModel, "#define")).ToList();
 
             var fullStructureFolderPath = Path.Combine(fullCurrentSetFolderPath, STRUCTURE_FOLDER_NAME);
 
@@ -238,8 +241,8 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                   // _logger.LogError(ex,
-                   //"Failed to kill process: K={K}, Iteration={Iteration}", k, iteration);
+                    // _logger.LogError(ex,
+                    //"Failed to kill process: K={K}, Iteration={Iteration}", k, iteration);
                 }
 
                 throw;

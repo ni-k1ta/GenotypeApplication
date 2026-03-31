@@ -93,7 +93,7 @@
             get => _fPriorSD; set => _fPriorSD = value;
         }
 
-        private bool _unifPriorAlpha;
+        private bool _unifPriorAlpha = true;
         [DefineParameterModel("UNIFPRIORALPHA")]
         public bool UNIFPRIORALPHA
         {
@@ -191,28 +191,28 @@
             get => _locPriorInit; set => _locPriorInit = value;
         }
 
-        private double _maxLocPrior = 1.0;
+        private double _maxLocPrior = 20.0;
         [DefineParameterModel("MAXLOCPRIOR")]
         public double MAXLOCPRIOR
         {
             get => _maxLocPrior; set => _maxLocPrior = value;
         }
 
-        private bool _printNet;
+        private bool _printNet = true;
         [DefineParameterModel("PRINTNET")]
         public bool PRINTNET
         {
             get => _printNet; set => _printNet = value;
         }
 
-        private bool _printLambda;
+        private bool _printLambda = true;
         [DefineParameterModel("PRINTLAMBDA")]
         public bool PRINTLAMBDA
         {
             get => _printLambda; set => _printLambda = value;
         }
 
-        private bool _printQsum;
+        private bool _printQsum = true;
         [DefineParameterModel("PRINTQSUM")]
         public bool PRINTQSUM
         {
@@ -310,14 +310,14 @@
             get => _computeProb; set => _computeProb = value;
         }
 
-        private int _admBurnIn;
+        private int _admBurnIn = 500;
         [DefineParameterModel("ADMBURNIN")]
         public int ADMBURNIN
         {
             get => _admBurnIn; set => _admBurnIn = value;
         }
 
-        private bool _randomize;
+        private bool _randomize = true;
         [DefineParameterModel("RANDOMIZE")]
         public bool RANDOMIZE
         {
