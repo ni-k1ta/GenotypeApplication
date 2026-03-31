@@ -3,7 +3,6 @@ using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models.CLUMPP;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.MVVM.Infrastructure;
-using GenotypeApplication.Services;
 using GenotypeApplication.Services.Application_configuration.External_program_interaction;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
@@ -22,7 +21,7 @@ namespace GenotypeApplication.View_models
         private int _kTo;
 
         #region Configuration parameters
-        private string _parametersName;
+        private string _configurationName;
 
         private bool _isPop;
         private bool _savedIsPop;
@@ -43,7 +42,7 @@ namespace GenotypeApplication.View_models
         private bool _printEveryPerm;
         private bool _printRandomInputorder;
         private bool _overrideWarnings;
-        private bool _orderByRun = true;
+        private int _orderByRun = 1;
 
         private readonly Dictionary<int, string> _algorithms = new()
         {
@@ -70,7 +69,6 @@ namespace GenotypeApplication.View_models
         private int _selectedPrintPermutedData = 1; //PRINT_PERMUTED_DATA value
 
         private CLUMPPConfigurationModel? _selectedConfigurationParameters = new();
-        private ObservableCollection<CLUMPPConfigurationModel> _configurationParametersItems = new();
         private ObservableCollection<CLUMPPConfigurationModel> _savedConfigurationParametersItems = new();
         #endregion
 
@@ -167,7 +165,7 @@ namespace GenotypeApplication.View_models
             get => _overrideWarnings;
             set { SetField(ref _overrideWarnings, value); }
         }
-        public bool OrderByRun//
+        public int OrderByRun//
         {
             get => _orderByRun;
             set { SetField(ref _orderByRun, value); }
@@ -196,8 +194,8 @@ namespace GenotypeApplication.View_models
 
         public string ConfigurationName
         {
-            get => _parametersName;
-            set { SetField(ref _parametersName, value); }
+            get => _configurationName;
+            set { SetField(ref _configurationName, value); }
         }
         public CLUMPPConfigurationModel? SelectedConfigurationParameters
         {
@@ -215,11 +213,7 @@ namespace GenotypeApplication.View_models
                 }
             }
         }
-        public ObservableCollection<CLUMPPConfigurationModel> ConfigurationParametersItems
-        {
-            get => _configurationParametersItems;
-            set { SetField(ref _configurationParametersItems, value); }
-        }
+        public ObservableCollection<CLUMPPConfigurationModel> ConfigurationParametersItems { get; } = new();
         public static readonly CLUMPPConfigurationModel CreateNewSetPlaceholder = new() { ParametersName = "Create new" };
         #endregion
 
@@ -273,7 +267,7 @@ namespace GenotypeApplication.View_models
                 PRINT_RANDOM_INPUTORDER = PrintRandomInputorder,
                 //RANDOM_INPUTORDERFILE
                 OVERRIDE_WARNINGS = OverrideWarnings,
-                ORDER_BY_RUN = OrderByRun ? 1 : 0
+                ORDER_BY_RUN = OrderByRun
             }, IsPop, PopsCount, IsIndv, IndvsCount);
         }
 
@@ -298,7 +292,7 @@ namespace GenotypeApplication.View_models
             PrintEveryPerm = model.PRINT_EVERY_PERM;
             PrintRandomInputorder = model.PRINT_RANDOM_INPUTORDER;
             OverrideWarnings = model.OVERRIDE_WARNINGS;
-            OrderByRun = model.ORDER_BY_RUN == 1;
+            OrderByRun = model.ORDER_BY_RUN;
         }
 
         private async Task SaveChangesAsync()

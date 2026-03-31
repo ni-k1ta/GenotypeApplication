@@ -1,14 +1,18 @@
 ﻿using GenotypeApplication.Models.Structure;
+using GenotypeApplication.MVVM.Infrastructure;
 
 namespace GenotypeApplication.Models.CLUMPP
 {
-    public class CLUMPPConfigurationModel : IEquatable<CLUMPPConfigurationModel>
+    public class CLUMPPConfigurationModel : ViewModelBase/*, IEquatable<CLUMPPConfigurationModel>*/
     {
         private string _parametersName = string.Empty;
         public string ParametersName
         {
             get => _parametersName;
-            set => _parametersName = value;
+            set
+            {
+                SetField(ref _parametersName, value);
+            }
         }
 
         private bool _dataType;
@@ -155,77 +159,77 @@ namespace GenotypeApplication.Models.CLUMPP
             set => _orderByRun = value;
         }
 
-        public bool Equals(CLUMPPConfigurationModel? other)
-        {
-            if (other is null) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return DATATYPE == other.DATATYPE &&
-                   INDFILE == other.INDFILE &&
-                   POPFILE == other.POPFILE &&
-                   OUTFILE == other.OUTFILE &&
-                   MISCFILE == other.MISCFILE &&
-                   K == other.K &&
-                   C == other.C &&
-                   R == other.R &&
-                   M == other.M &&
-                   W == other.W &&
-                   S == other.S &&
-                   GREEDY_OPTION == other.GREEDY_OPTION &&
-                   REPEATS == other.REPEATS &&
-                   PERMUTATIONFILE == other.PERMUTATIONFILE &&
-                   PRINT_PERMUTED_DATA == other.PRINT_PERMUTED_DATA &&
-                   PERMUTED_DATAFILE == other.PERMUTED_DATAFILE &&
-                   PRINT_EVERY_PERM == other.PRINT_EVERY_PERM &&
-                   EVERY_PERMFILE == other.EVERY_PERMFILE &&
-                   PRINT_RANDOM_INPUTORDER == other.PRINT_RANDOM_INPUTORDER &&
-                   RANDOM_INPUTORDERFILE == other.RANDOM_INPUTORDERFILE &&
-                   OVERRIDE_WARNINGS == other.OVERRIDE_WARNINGS &&
-                   ORDER_BY_RUN == other.ORDER_BY_RUN;
-        }
-        public override bool Equals(object? obj)
-        {
-            return Equals(obj as CLUMPPConfigurationModel);
-        }
+        //public bool Equals(CLUMPPConfigurationModel? other)
+        //{
+        //    if (other is null) return false;
+        //    if (ReferenceEquals(this, other)) return true;
+        //    return DATATYPE == other.DATATYPE &&
+        //           INDFILE == other.INDFILE &&
+        //           POPFILE == other.POPFILE &&
+        //           OUTFILE == other.OUTFILE &&
+        //           MISCFILE == other.MISCFILE &&
+        //           K == other.K &&
+        //           C == other.C &&
+        //           R == other.R &&
+        //           M == other.M &&
+        //           W == other.W &&
+        //           S == other.S &&
+        //           GREEDY_OPTION == other.GREEDY_OPTION &&
+        //           REPEATS == other.REPEATS &&
+        //           PERMUTATIONFILE == other.PERMUTATIONFILE &&
+        //           PRINT_PERMUTED_DATA == other.PRINT_PERMUTED_DATA &&
+        //           PERMUTED_DATAFILE == other.PERMUTED_DATAFILE &&
+        //           PRINT_EVERY_PERM == other.PRINT_EVERY_PERM &&
+        //           EVERY_PERMFILE == other.EVERY_PERMFILE &&
+        //           PRINT_RANDOM_INPUTORDER == other.PRINT_RANDOM_INPUTORDER &&
+        //           RANDOM_INPUTORDERFILE == other.RANDOM_INPUTORDERFILE &&
+        //           OVERRIDE_WARNINGS == other.OVERRIDE_WARNINGS &&
+        //           ORDER_BY_RUN == other.ORDER_BY_RUN;
+        //}
+        //public override bool Equals(object? obj)
+        //{
+        //    return Equals(obj as CLUMPPConfigurationModel);
+        //}
 
-        public override int GetHashCode()
-        {
-            var hash = new HashCode();
+        //public override int GetHashCode()
+        //{
+        //    var hash = new HashCode();
 
-            hash.Add(DATATYPE);
-            hash.Add(INDFILE);
-            hash.Add(POPFILE);
-            hash.Add(OUTFILE);
-            hash.Add(MISCFILE);
-            hash.Add(K);
-            hash.Add(C);
-            hash.Add(R);
-            hash.Add(M);
-            hash.Add(W);
-            hash.Add(S);
-            hash.Add(GREEDY_OPTION);
-            hash.Add(REPEATS);
-            hash.Add(PERMUTATIONFILE);
-            hash.Add(PRINT_PERMUTED_DATA);
-            hash.Add(PERMUTED_DATAFILE);
-            hash.Add(PRINT_EVERY_PERM);
-            hash.Add(EVERY_PERMFILE);
-            hash.Add(PRINT_RANDOM_INPUTORDER);
-            hash.Add(RANDOM_INPUTORDERFILE);
-            hash.Add(OVERRIDE_WARNINGS);
-            hash.Add(ORDER_BY_RUN);
+        //    hash.Add(DATATYPE);
+        //    hash.Add(INDFILE);
+        //    hash.Add(POPFILE);
+        //    hash.Add(OUTFILE);
+        //    hash.Add(MISCFILE);
+        //    hash.Add(K);
+        //    hash.Add(C);
+        //    hash.Add(R);
+        //    hash.Add(M);
+        //    hash.Add(W);
+        //    hash.Add(S);
+        //    hash.Add(GREEDY_OPTION);
+        //    hash.Add(REPEATS);
+        //    hash.Add(PERMUTATIONFILE);
+        //    hash.Add(PRINT_PERMUTED_DATA);
+        //    hash.Add(PERMUTED_DATAFILE);
+        //    hash.Add(PRINT_EVERY_PERM);
+        //    hash.Add(EVERY_PERMFILE);
+        //    hash.Add(PRINT_RANDOM_INPUTORDER);
+        //    hash.Add(RANDOM_INPUTORDERFILE);
+        //    hash.Add(OVERRIDE_WARNINGS);
+        //    hash.Add(ORDER_BY_RUN);
 
-            return hash.ToHashCode();
-        }
+        //    return hash.ToHashCode();
+        //}
 
-        public static bool operator ==(CLUMPPConfigurationModel? left, CLUMPPConfigurationModel? right)
-        {
-            if (left is null) return right is null;
-            return left.Equals(right);
-        }
+        //public static bool operator ==(CLUMPPConfigurationModel? left, CLUMPPConfigurationModel? right)
+        //{
+        //    if (left is null) return right is null;
+        //    return left.Equals(right);
+        //}
 
-        public static bool operator !=(CLUMPPConfigurationModel? left, CLUMPPConfigurationModel? right)
-        {
-            return !(left == right);
-        }
+        //public static bool operator !=(CLUMPPConfigurationModel? left, CLUMPPConfigurationModel? right)
+        //{
+        //    return !(left == right);
+        //}
     }
 }
