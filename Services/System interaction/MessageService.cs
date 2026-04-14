@@ -25,5 +25,13 @@ namespace GenotypeApplication.Services
         {
             MessageBox.Show(message, "Information", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+        public bool? ShowExpandedQuetion(string quetion)
+        {
+            var result = MessageBox.Show(quetion, "Quetion", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes) return true;
+            else if (result == MessageBoxResult.No) return false;
+            else return null;
+        }
     }
 }

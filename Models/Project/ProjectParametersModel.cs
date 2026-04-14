@@ -1,22 +1,14 @@
-﻿using GenotypeApplication.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace GenotypeApplication.Models.Project
+﻿namespace GenotypeApplication.Models.Project
 {
     public class ProjectParametersModel
     {
-        public string Name { get; private set; } = string.Empty;
-        public string Path { get; private set; } = string.Empty;
-        public bool IsParallelEnabled { get; private set; }
-        public int CoresCount { get; private set; }
+        public string Name { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
+        public bool IsParallelEnabled { get; set; }
+        public int CoresCount { get; set; }
 
-        public DateTime CreatedAt { get; private set; }
-        public DateTime LastModified { get; private set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime LastModified { get; set; }
 
         public static ProjectParametersModel Create(string name, string path, bool isParallelEnabled, int coresCount)
         {

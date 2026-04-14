@@ -20,11 +20,11 @@ namespace GenotypeApplication.MVVM.Infrastructure
             }
             return errors;
         }
-        //public bool HasErrorsFor(string propertyName)
-        //{
-        //    return _propertyErrors.ContainsKey(propertyName) &&
-        //           _propertyErrors[propertyName].Count > 0;
-        //}
+        public bool HasErrorsFor([CallerMemberName] string? propertyName = null)
+        {
+            if (string.IsNullOrEmpty(propertyName)) return false;
+            return _propertyErrors.TryGetValue(propertyName, out var errors) && errors.Count > 0;
+        }
         public void AddError(string errorMessage, [CallerMemberName] string propertyName = "")
         {
             if (!_propertyErrors.ContainsKey(propertyName)) _propertyErrors.Add(propertyName, []);

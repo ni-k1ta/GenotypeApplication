@@ -13,5 +13,6 @@ namespace GenotypeApplication.Interfaces
         void ShowWarning(string message);
         bool ShowQuetion(string quetion);
         void ShowInformation(string message);
+        bool? ShowExpandedQuetion(string message);
     }
 }

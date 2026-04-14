@@ -1,10 +1,12 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models.CLUMPP;
+using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace GenotypeApplication.Services.Application_configuration.External_program_interaction
 {
@@ -27,17 +29,17 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         private readonly object _lock = new();
         private bool _isRunning;
 
-        //событие, вызываемое при получении строки вывода от процесса.
-        public event Action<int, string>? OutputReceived;
+        public event Action<double>? ProgressChanged;
+        private readonly Dictionary<(int k, string dataType), double> _unitProgress = new();
+        int _totalUnits = 1;
 
-        //событие, вызываемое при завершении одного юнита работы.
-        public event Action<int, int, int, int>? UnitCompleted;
+        private ProgramLogger _logger;
 
-        public CLUMPPInteractionService(IDirectoryService directoryService, IFileService fileService)
+        public CLUMPPInteractionService(IDirectoryService directoryService, IFileService fileService, ProgramLogger logger)
         {
             _directoryService = directoryService;
             _fileService = fileService;
-            //_logger = logger;
+            _logger = logger;
         }
 
         public void PrepareCLUMPPDirectory(string fullCurrentSetFolderPath)
@@ -47,41 +49,164 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             Directory.CreateDirectory(fullCLUMPPFolderPath);
         }
 
-        public async Task PrepareConfiguration(string fullCurrentSetFolderPath, CLUMPPConfigurationModel configurationParametersModel, bool isPop, int popCount, bool isIndv, int indvCount)
+        public async Task PrepareConfiguration(string fullCurrentSetFolderPath, CLUMPPConfigurationModel configurationParameters, bool isPop, int popCount, bool isIndv, int indvCount)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
-            ArgumentNullException.ThrowIfNull(configurationParametersModel);
+            ArgumentNullException.ThrowIfNull(configurationParameters);
 
             var fullCLUMPPFolderPath = Path.Combine(fullCurrentSetFolderPath, CLUMPP_FOLDER_NAME);
 
             if (!_directoryService.IsDirectoryExist(fullCLUMPPFolderPath))
                 throw new DirectoryNotFoundException($"The directory {fullCLUMPPFolderPath} does not exist.");
 
-            var fullConfigurationFolderPath = Path.Combine(fullCLUMPPFolderPath, configurationParametersModel.ParametersName);
+            var fullConfigurationFolderPath = Path.Combine(fullCLUMPPFolderPath, configurationParameters.ParametersName);
 
             Directory.CreateDirectory(fullConfigurationFolderPath);
 
-            var fullConfigurationFilePath = Path.Combine(fullConfigurationFolderPath, configurationParametersModel.ParametersName);
+            var fullConfigurationFilePath = Path.Combine(fullConfigurationFolderPath, configurationParameters.ParametersName);
+
+            CLUMPPConfigurationModel tempConfiguration = new CLUMPPConfigurationModel(configurationParameters);
 
             List<string> configurationParametersLines;
 
             if (isIndv)
             {
-                configurationParametersModel.DATATYPE = false;
-                configurationParametersModel.C = indvCount;
-                configurationParametersModel.W = false;
-                configurationParametersLines = DefineParameterModelConverter.GetFormatedLines(configurationParametersModel).ToList();
+                tempConfiguration.DATATYPE = false;
+                tempConfiguration.C = indvCount;
+                tempConfiguration.W = false;
+                configurationParametersLines = DefineParameterModelConverter.GetFormatedLines(tempConfiguration).ToList();
                 await _fileService.WriteAllLinesAsync(fullConfigurationFilePath + CLUMPP_INDV_PARAMFILE_POSTFIX, configurationParametersLines);
             }
             if (isPop)
             {
-                configurationParametersModel.DATATYPE = true;
-                configurationParametersModel.C = popCount;
-                configurationParametersLines = DefineParameterModelConverter.GetFormatedLines(configurationParametersModel).ToList();
+                tempConfiguration.DATATYPE = true;
+                tempConfiguration.C = popCount;
+                configurationParametersLines = DefineParameterModelConverter.GetFormatedLines(tempConfiguration).ToList();
                 await _fileService.WriteAllLinesAsync(fullConfigurationFilePath + CLUMPP_POP_PARAMFILE_POSTFIX, configurationParametersLines);
             }
         }
 
+        public async Task<List<CLUMPPConfigurationModel>> LoadConfigurationsListAsync(string fullSetFolderPath)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
+
+            if (!_directoryService.IsDirectoryExist(fullSetFolderPath)) throw new DirectoryNotFoundException($"Set folder \"{fullSetFolderPath}\" was not found.");
+
+            string fullCLUMPPFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME);
+            if (!_directoryService.IsDirectoryExist(fullCLUMPPFolderPath)) throw new DirectoryNotFoundException($"CLUMPP folder was not found in set folder: {fullCLUMPPFolderPath}");
+
+            try
+            {
+                List<CLUMPPConfigurationModel> configurations = new();
+
+                foreach (var configurationFolder in Directory.EnumerateDirectories(fullCLUMPPFolderPath))
+                {
+                    var configurationName = Path.GetFileName(configurationFolder);
+
+                    var (configurationModel, _, _, _, _) = await LoadConfiguration(fullSetFolderPath, configurationName);
+
+                    configurations.Add(configurationModel);
+                }
+
+                return configurations;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        public async Task<(CLUMPPConfigurationModel configurationModel, bool isPop, bool isIndv, int kStart, int kEnd)> LoadConfiguration(string fullSetFolderPath, string? configurationName)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
+
+            if (!_directoryService.IsDirectoryExist(fullSetFolderPath)) throw new DirectoryNotFoundException($"Set folder \"{fullSetFolderPath}\" was not found.");
+
+            string fullCLUMPPFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME);
+            if (!_directoryService.IsDirectoryExist(fullCLUMPPFolderPath)) throw new DirectoryNotFoundException($"CLUMPP folder was not found in set folder: {fullCLUMPPFolderPath}");
+
+            string fullConfigurationFolderPath = Path.Combine(fullCLUMPPFolderPath, configurationName ?? string.Empty);
+
+            try
+            {
+                var popParametersFilePath = Path.Combine(fullConfigurationFolderPath, $"{configurationName}{CLUMPP_POP_PARAMFILE_POSTFIX}");
+                var indvParametersFilePath = Path.Combine(fullConfigurationFolderPath, $"{configurationName}{CLUMPP_INDV_PARAMFILE_POSTFIX}");
+
+                // Проверяем наличие файлов _pop и _indv
+                bool isPop = File.Exists(popParametersFilePath);
+                bool isIndv = File.Exists(indvParametersFilePath);
+
+                CLUMPPConfigurationModel configurationModel = new();
+
+                if (isPop)
+                {
+                    var parametersLines = await _fileService.ReadAllLinesAsync(popParametersFilePath);
+                    DefineParameterModelConverter.PopulateModelFromLines(configurationModel, parametersLines);
+                }
+                if (!isPop && isIndv)
+                {
+                    var parametersLines = await _fileService.ReadAllLinesAsync(indvParametersFilePath);
+                    DefineParameterModelConverter.PopulateModelFromLines(configurationModel, parametersLines);
+                }
+
+                int kMin = int.MaxValue, kMax = 0;
+                bool found = false;
+                // Ищем K-файлы в Results
+                var resultsPath = Path.Combine(fullConfigurationFolderPath, CLUMPP_RESULTS_FOLDER_NAME);
+                if (_directoryService.IsDirectoryExist(resultsPath) && !_directoryService.IsDirectoryEmpty(resultsPath))
+                {
+                    var regex = new Regex(@"^K(\d+)\.(popq|indvq)$", RegexOptions.Compiled);
+
+                    foreach (var filePath in Directory.EnumerateFiles(resultsPath))
+                    {
+                        var match = regex.Match(Path.GetFileName(filePath));
+                        if (!match.Success)
+                            continue;
+
+                        found = true;
+                        int k = int.Parse(match.Groups[1].Value);
+
+                        if (k < kMin) kMin = k;
+                        if (k > kMax) kMax = k;
+                    }
+
+                    if (!found)
+                    {
+                        kMax = 0;
+                        kMin = 0;
+                    }
+                }
+
+                configurationModel.HasPopResults = Directory.EnumerateFiles(resultsPath, "*.popq").Any();
+                configurationModel.IsProcessed = found;
+
+                return (configurationModel, isPop, isIndv, kMin, kMax);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public bool HasPopResults(string fullSetFolderPath, string configurationName)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(configurationName);
+
+            if (!_directoryService.IsDirectoryExist(fullSetFolderPath)) throw new DirectoryNotFoundException($"Set folder \"{fullSetFolderPath}\" was not found.");
+
+            string fullCLUMPPFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME);
+            if (!_directoryService.IsDirectoryExist(fullCLUMPPFolderPath)) throw new DirectoryNotFoundException($"CLUMPP folder was not found in set folder: {fullCLUMPPFolderPath}");
+
+            string fullConfigurationFolderPath = Path.Combine(fullCLUMPPFolderPath, configurationName);
+            if (!_directoryService.IsDirectoryExist(fullConfigurationFolderPath)) throw new DirectoryNotFoundException($"Set folder \"{fullConfigurationFolderPath}\" was not found.");
+
+            var resultsPath = Path.Combine(fullConfigurationFolderPath, CLUMPP_RESULTS_FOLDER_NAME);
+            if (!_directoryService.IsDirectoryExist(resultsPath)) throw new DirectoryNotFoundException($"Set folder \"{resultsPath}\" was not found.");
+
+            return Directory.EnumerateFiles(resultsPath, "*.popq").Any();
+        }
         private record CLUMPPJob(int K, string ParametersFileName, string DataType, string InputFilePath, string OutFilePath, string OutMiscfilePath);
 
         private List<CLUMPPJob> BuildJobs(int kFrom, int kTo, bool isPop, bool isIndv, string configurationName)
@@ -147,8 +272,13 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                        kFrom, kTo, isPop, isIndv,
                        configurationName);
 
-            int totalUnits = jobs.Count;
+            _totalUnits = jobs.Count;
             int completedUnits = 0;
+
+            lock (_unitProgress)
+            {
+                _unitProgress.Clear();
+            }
 
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
@@ -167,7 +297,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 () =>
                 {
                     int completed = Interlocked.Increment(ref completedUnits);
-                    return (completed, totalUnits);
+                    return (completed, _totalUnits);
                 }));
 
                 await Task.WhenAll(tasks);
@@ -197,6 +327,10 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 string highestHLine = string.Empty;
 
+                int totalConfigurations = 0;
+                int lastRepeat = 0;
+                bool inRunningPhase = false;
+
                 var arguments =
                     $"{job.ParametersFileName}" +
                     $" {job.DataType}" +
@@ -221,10 +355,9 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 process.OutputDataReceived += (_, e) =>
                 {
-                    if (e.Data is null) return;
+                    if (string.IsNullOrWhiteSpace(e.Data)) return;
 
-                    Debug.WriteLine($"[K={job.K}] {e.Data}");
-                    OutputReceived?.Invoke(job.K, e.Data);
+                    _logger.Info($"[K={job.K}] {e.Data}");
 
                     if (e.Data.StartsWith("The highest value of H", StringComparison.OrdinalIgnoreCase)
                         || e.Data.StartsWith("The highest value of G", StringComparison.OrdinalIgnoreCase))
@@ -232,25 +365,70 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                         highestHLine = e.Data;
                     }
 
-                    if (e.Data.StartsWith("The program finished in", StringComparison.OrdinalIgnoreCase))
+                    var line = e.Data.Trim();
+
+                    if (line.StartsWith("In total,") && line.Contains("configurations"))
                     {
-                        process.StandardInput.WriteLine();
+                        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length >= 3 && int.TryParse(parts[2], out int parsed))
+                        {
+                            totalConfigurations = parsed;
+                        }
+
+                        lock (_unitProgress)
+                        {
+                            _unitProgress[(job.K, job.DataType)] = 2.0;
+                            ReportTotalProgress();
+                        }
                     }
+                    else if (line == "Running...")
+                    {
+                        inRunningPhase = true;
+                    }
+                    else if (inRunningPhase && line.StartsWith("Results"))
+                    {
+                        inRunningPhase = false;
+
+                        lock (_unitProgress)
+                        {
+                            _unitProgress[(job.K, job.DataType)] = 95.0;
+                            ReportTotalProgress();
+                        }
+                    }
+                    else if (inRunningPhase && totalConfigurations > 0)
+                    {
+                        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length == 2 && int.TryParse(parts[1], out int repeat) && repeat > lastRepeat)
+                        {
+                            lastRepeat = repeat;
+                            double unitValue = 2.0 + (repeat / (double)totalConfigurations) * 88.0;
+
+                            lock (_unitProgress)
+                            {
+                                _unitProgress[(job.K, job.DataType)] = unitValue;
+                                ReportTotalProgress();
+                            }
+                        }
+                    }
+
+                    //if (e.Data.Contains("Press Return", StringComparison.OrdinalIgnoreCase))
+                    //{
+                    //    process.StandardInput.WriteLine();
+                    //}
                 };
 
                 process.ErrorDataReceived += (_, e) =>
                 {
-                    if (e.Data is not null)
-                    {
-                        Debug.WriteLine($"[K={job.K}] [STDERR] {e.Data}");
-                        OutputReceived?.Invoke(job.K, $"[STDERR] {e.Data}");
+                    if (string.IsNullOrWhiteSpace(e.Data)) return;
 
-                    }
+                    _logger.Error($"[K={job.K}] {e.Data}");
                 };
 
                 process.Start();
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
+
+                process.StandardInput.Close();
 
                 Debug.WriteLine($"Started [K={job.K}] PID={process.Id}");
 
@@ -263,7 +441,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     try
                     {
                         var hvFileName = $"K{job.K}_hv.txt";
-                        var hvFilePath = Path.Combine(workingDirectory, hvFileName);
+                        var hvFilePath = Path.Combine(workingDirectory, CLUMPP_RESULTS_FOLDER_NAME, hvFileName);
 
                         await File.WriteAllTextAsync(
                             hvFilePath,
@@ -285,7 +463,11 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 //"ExitCode={ExitCode}, Progress={Completed}/{Total}",
                 //k, iteration, process.ExitCode, completed, total);
 
-                UnitCompleted?.Invoke(job.K, process.ExitCode, completed, total);
+                lock (_unitProgress)
+                {
+                    _unitProgress[(job.K, job.DataType)] = 100.0;
+                    ReportTotalProgress();
+                }
             }
             catch (OperationCanceledException) when (process is { HasExited: false })
             {
@@ -326,6 +508,59 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var fullCLUMPPFolderPath = Path.Combine(fullCurrentSetFolderPath, CLUMPP_FOLDER_NAME);
             var fullConfigurationFolderPath = Path.Combine(fullCLUMPPFolderPath, configurationName);
             return _directoryService.IsDirectoryExist(fullConfigurationFolderPath);
+        }
+
+        public async Task RenameConfiguration(string fullCurrentSetFolderPath, string oldConfigurationName, string newConfigurationName)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(oldConfigurationName);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(newConfigurationName);
+
+            var fullOldConfigurationPath = Path.Combine(fullCurrentSetFolderPath, CLUMPP_FOLDER_NAME, oldConfigurationName);
+            var fullNewConfigurationPath = Path.Combine(fullCurrentSetFolderPath, CLUMPP_FOLDER_NAME, newConfigurationName);
+
+            Directory.Move(fullOldConfigurationPath, fullNewConfigurationPath);
+
+            var fullOldPopParametersFilePath = Path.Combine(fullNewConfigurationPath, $"{oldConfigurationName}{CLUMPP_POP_PARAMFILE_POSTFIX}");
+            var fullNewPopParametersFilePath = Path.Combine(fullNewConfigurationPath, $"{newConfigurationName}{CLUMPP_POP_PARAMFILE_POSTFIX}");
+
+            var fullOldIndvParametersFilePath = Path.Combine(fullNewConfigurationPath, $"{oldConfigurationName}{CLUMPP_INDV_PARAMFILE_POSTFIX}");
+            var fullNewIndvParametersFilePath = Path.Combine(fullNewConfigurationPath, $"{newConfigurationName}{CLUMPP_INDV_PARAMFILE_POSTFIX}");
+
+            var configurationModel = new CLUMPPConfigurationModel();
+
+            if (File.Exists(fullOldPopParametersFilePath))
+            {
+                var parametersLines = await _fileService.ReadAllLinesAsync(fullOldPopParametersFilePath);
+                DefineParameterModelConverter.PopulateModelFromLines(configurationModel, parametersLines);
+
+                configurationModel.ParametersName = newConfigurationName;
+
+                var newParametersLines = DefineParameterModelConverter.GetFormatedLines(configurationModel).ToList();
+                await _fileService.WriteAllLinesAsync(fullNewPopParametersFilePath, newParametersLines);
+
+                _fileService.DeleteFile(fullOldPopParametersFilePath);
+            }
+
+            if (File.Exists(fullOldIndvParametersFilePath))
+            {
+                var parametersLines = await _fileService.ReadAllLinesAsync(fullOldIndvParametersFilePath);
+                DefineParameterModelConverter.PopulateModelFromLines(configurationModel, parametersLines);
+
+                configurationModel.ParametersName = newConfigurationName;
+
+                var newParametersLines = DefineParameterModelConverter.GetFormatedLines(configurationModel).ToList();
+                await _fileService.WriteAllLinesAsync(fullNewIndvParametersFilePath, newParametersLines);
+
+                _fileService.DeleteFile(fullOldIndvParametersFilePath);
+            }
+        }
+
+        private void ReportTotalProgress()
+        {
+            if (_unitProgress.Count == 0 || _totalUnits == 0) return;
+            double total = _unitProgress.Values.Sum() / _totalUnits;
+            ProgressChanged?.Invoke(total);
         }
 
         public bool IsRunning

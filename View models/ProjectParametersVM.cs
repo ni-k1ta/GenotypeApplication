@@ -1,11 +1,10 @@
-﻿#define EXPERIMENTAL
-
-using GenotypeApplication.Constants;
+﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.Models.Structure;
 using GenotypeApplication.MVVM.Infrastructure;
+using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Project;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -234,8 +233,8 @@ namespace GenotypeApplication.View_models
         }
         public int MinSelectedCores => _minSelectedCores;
         public int MaxSelectedCores => _maxSelectedCores;
-        public RecentProjectModel SelectedRecentProject 
-        { 
+        public RecentProjectModel SelectedRecentProject
+        {
             get => _selectedRecentProject;
             set => SetField(ref _selectedRecentProject, value);
         }
@@ -389,6 +388,26 @@ namespace GenotypeApplication.View_models
                     if (!shouldContinue) return;
                 }
                 else await UpdateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
+
+                string fullProjectFolderPath = Path.Combine(projectPath, projectName);
+
+                MainWindowVM mainWindowViewModel = new(_projectModel, fullProjectFolderPath, _projectModel.CoresCount, _directoryService, _fileService, _dialogService, _messageService, _pathTextValidator, _nameTextValidator, _windowService);
+
+                if (!_isNewProject)
+                {
+                    await mainWindowViewModel.LoadProjectSets();
+                    _isNewProject = false;
+                }
+
+                var mainWindow = _windowService.ShowWindow<MainWindow, MainWindowVM>(mainWindowViewModel);
+                mainWindowViewModel.SetCurrentWindow(mainWindow);
+
+                Application.Current.MainWindow = mainWindow;
+
+                if (_currentWindowRef != null && _currentWindowRef.TryGetTarget(out var window))
+                {
+                    _windowService.CloseWindow(window);
+                }
             }
             catch (Exception)
             {
@@ -396,25 +415,6 @@ namespace GenotypeApplication.View_models
                 throw;
             }
             finally { _isSaving = false; }
-
-            //todo загрузку установленных параметров для программ, если проект не новый
-            DataFileFormatModel dataFileFormatModel = new();
-            string filePath = string.Empty;
-            //изменить ^^^
-
-            string fullProjectFolderPath = Path.Combine(projectPath, projectName);
-
-            MainWindowVM mainWindowViewModel = new(_projectModel, fullProjectFolderPath, dataFileFormatModel, _projectModel.CoresCount, filePath, _directoryService, _fileService, _dialogService, _messageService, _pathTextValidator, _windowService);
-
-            var mainWindow = _windowService.ShowWindow<MainWindow, MainWindowVM>(mainWindowViewModel);
-            mainWindowViewModel.SetCurrentWindow(mainWindow);
-
-            Application.Current.MainWindow = mainWindow;
-
-            if (_currentWindowRef != null && _currentWindowRef.TryGetTarget(out var window))
-            {
-                _windowService.CloseWindow(window);
-            }
         }
         private async Task<bool> CreateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
         {
@@ -445,8 +445,6 @@ namespace GenotypeApplication.View_models
                 }
             }
             else SelectedCores = 1;
-
-                _isNewProject = false;
 
             _recentProjectsService.AddProject(_projectModel);
             return true;

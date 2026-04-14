@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
+using System.Windows.Threading;
 
 namespace GenotypeApplication.MVVM.Infrastructure
 {
@@ -14,7 +10,7 @@ namespace GenotypeApplication.MVVM.Infrastructure
             if (Application.Current.Dispatcher.CheckAccess())
                 action();
             else
-                Application.Current.Dispatcher.Invoke(action);
+                Application.Current.Dispatcher.BeginInvoke(action, DispatcherPriority.Render);
         }
     }
 }

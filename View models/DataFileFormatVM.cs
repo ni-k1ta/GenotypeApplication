@@ -114,6 +114,7 @@ namespace GenotypeApplication.View_models
             _windowService = windowService;
         }
 
+        #region Properties
         public DataFileFormatModel DataFileFormatModel
         {
             get => _dataFileFormatModel;
@@ -357,7 +358,7 @@ namespace GenotypeApplication.View_models
             get => _highlightMap;
             private set => SetField(ref _highlightMap, value);
         }
-
+        #endregion
         //public bool IsLiveHighlightEnabled
         //{
         //    get => _isLiveHighlightEnabled;
@@ -407,6 +408,35 @@ namespace GenotypeApplication.View_models
                 throw;
             }
 
+            DataFileFullPath = fullDataFilePath;
+        }
+
+        public async Task LoadDataFileFormat(DataFileFormatModel dataFileFormatModel, string fullDataFilePath)
+        {
+            ArgumentNullException.ThrowIfNull(dataFileFormatModel);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullDataFilePath);
+
+            try
+            {
+                HighlightMap = null;
+                _calculatedDataFileFormatModel = new();
+
+                var parsedDataTable = _dataTableParser.Parse(fullDataFilePath);
+
+                ParsedDataTable = new DataTableModel(parsedDataTable);
+
+                _isLiveHighlightEnabled = false;
+
+                SetFormatValues(dataFileFormatModel);
+
+                await ExecuteCalculationAsync();
+
+                _isLiveHighlightEnabled = true;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
             DataFileFullPath = fullDataFilePath;
         }
 

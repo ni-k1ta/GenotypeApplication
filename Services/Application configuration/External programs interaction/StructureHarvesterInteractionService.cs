@@ -1,5 +1,6 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
+using GenotypeApplication.Services.Application_configuration.Logger;
 using System.Diagnostics;
 using System.IO;
 
@@ -15,14 +16,19 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         private readonly string STRUCTURE_FOLDER_NAME = StructureConstants.STRUCTURE_FOLDER_NAME;
         private readonly string STRUCTURE_RESULTS_FOLDER_NAME = StructureConstants.STRUCTURE_RESULTS_FOLDER_NAME;
 
-        private readonly IDirectoryService _directoryService = new DirectoryService();
+        private readonly IDirectoryService _directoryService;
+        private readonly IFileService _fileService;
 
         private readonly object _lock = new();
         private bool _isRunning;
 
-        public StructureHarvesterInteractionService(IDirectoryService directoryService, IFileService fileService)
+        private ProgramLogger _logger;
+
+        public StructureHarvesterInteractionService(IDirectoryService directoryService, IFileService fileService, ProgramLogger logger)
         {
             _directoryService = directoryService;
+            _fileService = fileService;
+            _logger = logger;
         }
 
         public void PrepareStructureHarvesterDirectory(string fullCurrentSetFolderPath)
@@ -30,6 +36,31 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
             var fullStructureHarvesterFolderPath = Path.Combine(fullCurrentSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME);
             Directory.CreateDirectory(fullStructureHarvesterFolderPath);
+        }
+
+        public async Task<(bool evanno, bool clumpp)> LoadConfiguration(string fullSetFolderPath)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
+
+            if (!_directoryService.IsDirectoryExist(fullSetFolderPath)) throw new DirectoryNotFoundException();
+
+            var fullStructureHarvesterFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME);
+            if (!_directoryService.IsDirectoryExist(fullStructureHarvesterFolderPath)) throw new DirectoryNotFoundException();
+
+            var fullStructureHarvesterResultsFolderPath = Path.Combine(fullStructureHarvesterFolderPath, STRUCTURE_HARVESTER_RESULTS_FOLDER_NAME);
+            if (!_directoryService.IsDirectoryExist(fullStructureHarvesterResultsFolderPath))
+                throw new DirectoryNotFoundException();
+
+            bool evanno = File.Exists(Path.Combine(fullStructureHarvesterResultsFolderPath, "evanno.txt"));
+
+            bool clumpp = Directory.EnumerateFiles(fullStructureHarvesterResultsFolderPath).Any(f =>
+                {
+                    var name = Path.GetFileName(f);
+                    return name.EndsWith(".indfile", StringComparison.OrdinalIgnoreCase) ||
+                           name.EndsWith(".popfile", StringComparison.OrdinalIgnoreCase);
+                });
+
+            return (evanno, clumpp);
         }
 
         public async Task StartExecution(string fullSetFolderPath, bool evannoParam, bool clumppOutputParam/*, CancellationToken ct*/) // <-- расскоментить
@@ -79,22 +110,19 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 process.OutputDataReceived += (_, e) =>
                 {
-                    if (e.Data is not null)
-                    {
-                        Debug.WriteLine($"{e.Data}");
-                        //OutputReceived?.Invoke(k, iteration, e.Data);
-                    }
+                    if (e.Data is null) return;
+
+                    _logger.Info($"{e.Data}");
+                    //OutputReceived?.Invoke(k, iteration, e.Data);
                 };
 
                 process.ErrorDataReceived += (_, e) =>
                 {
-                    if (e.Data is not null)
-                    {
-                        //_logger.LogWarning(
-                        //"STDERR [K={K}, i={Iteration}]: {Line}", k, iteration, e.Data);
-                        Debug.WriteLine($"{e.Data}");
-                        //OutputReceived?.Invoke(k, iteration, $"[STDERR] {e.Data}");
-                    }
+                    if (e.Data is null) return;
+                    //_logger.LogWarning(
+                    //"STDERR [K={K}, i={Iteration}]: {Line}", k, iteration, e.Data);
+                    _logger.Error($"{e.Data}");
+                    //OutputReceived?.Invoke(k, iteration, $"[STDERR] {e.Data}");
                 };
 
                 process.Start();
@@ -127,6 +155,52 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 process?.Dispose();
                 IsRunning = false;
             }
+        }
+
+        public int GetPopulationsCountFromResults(string fullSetFolderPath)
+        {
+            var directoryPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME, STRUCTURE_HARVESTER_RESULTS_FOLDER_NAME);
+
+            string? filePath = Directory.GetFiles(directoryPath, "*.popfile").FirstOrDefault()
+                     ?? Directory.GetFiles(directoryPath, "*.indfile").FirstOrDefault();
+
+            if (filePath == null) return 0;
+
+            bool isPopFile = filePath.EndsWith(".popfile", StringComparison.OrdinalIgnoreCase);
+
+            int max = 0;
+
+            foreach (string line in _fileService.ReadFile(filePath))
+            {
+                string trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed))
+                    continue;
+
+                int val;
+
+                if (isPopFile)
+                {
+                    int colonIndex = trimmed.IndexOf(':');
+                    if (colonIndex <= 0 || !int.TryParse(trimmed.AsSpan(0, colonIndex).Trim(), out val))
+                        continue;
+                }
+                else
+                {
+                    string[] parts = trimmed.Split(':', 2);
+                    if (parts.Length < 2) continue;
+
+                    string[] tokens = parts[0].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                    if (tokens.Length < 4 || !int.TryParse(tokens[3], out val))
+                        continue;
+                }
+
+                if (val <= max && max > 0)
+                    break; // значения пошли по второму кругу
+
+                max = val;
+            }
+
+            return max;
         }
 
         public bool IsRunning

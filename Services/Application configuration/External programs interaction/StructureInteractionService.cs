@@ -1,9 +1,11 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models.Structure;
+using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
 using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace GenotypeApplication.Services.Application_configuration.External_program_interaction
 {
@@ -20,23 +22,20 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         private readonly IFileService _fileService;
         private readonly IDirectoryService _directoryService;
 
-        //private readonly ILogger<StructureExecutionService> _logger;
-
         private CancellationTokenSource? _cts;
         private readonly object _lock = new();
         private bool _isRunning;
 
-        //событие, вызываемое при получении строки вывода от процесса.
-        public event Action<int, int, string>? OutputReceived;
+        public event Action<double>? ProgressChanged;
+        private readonly Dictionary<(int k, int iteration), double> _unitProgress = new();
+        int _totalUnits = 1;
 
-        //событие, вызываемое при завершении одного юнита работы.
-        public event Action<int, int, int, int, int>? UnitCompleted;
-
-        public StructureInteractionService(IDirectoryService directoryService, IFileService fileService)
+        private ProgramLogger _logger;
+        public StructureInteractionService(IDirectoryService directoryService, IFileService fileService, ProgramLogger logger)
         {
             _directoryService = directoryService;
             _fileService = fileService;
-            //_logger = logger;
+            _logger = logger;
         }
 
         public void PrepareStructureDirectory(string fullCurrentSetFolderPath)
@@ -61,7 +60,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             _fileService.CopyFile(dataFileFullPath, Path.Combine(fullStructureFolderPath, Path.GetFileName(dataFileFullPath)));
         }
 
-        public async Task PrepareParametersFile(string fullCurrentSetFolderPath, DataFileFormatModel dataFileFormatModel, StructureMainParametersModel structureMainParametersModel, StructureExtraParametersModel structureExtraParametersModel)
+        public async Task PrepareParameterFiles(string fullCurrentSetFolderPath, DataFileFormatModel dataFileFormatModel, StructureMainParametersModel structureMainParametersModel, StructureExtraParametersModel structureExtraParametersModel)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
             ArgumentNullException.ThrowIfNull(dataFileFormatModel);
@@ -84,6 +83,83 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             var fullStructureExtraParametersFilePath = Path.Combine(fullStructureFolderPath, STRUCTURE_EXTRAPARAMETERS_FILE_NAME);
             await _fileService.WriteAllLinesAsync(fullStructureExtraParametersFilePath, structureExtraParametersLines);
+        }
+
+        public async Task<(DataFileFormatModel dataFileFormatModel, StructureMainParametersModel mainParametersModel, StructureExtraParametersModel extraParametersModel, string fullInputFilePath, int kStart, int kEnd, int iterations)> LoadConfiguration(string fullSetFolderPath)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
+
+            if (!_directoryService.IsDirectoryExist(fullSetFolderPath)) throw new DirectoryNotFoundException($"Set folder \"{fullSetFolderPath}\" was not found.");
+
+            var fullStructureFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_FOLDER_NAME);
+
+            if (!_directoryService.IsDirectoryExist(fullStructureFolderPath)) throw new DirectoryNotFoundException($"Structure folder \"{fullStructureFolderPath}\" was not found.");
+
+            var fullStructureMainParametersFilePath = Path.Combine(fullStructureFolderPath, STRUCTURE_MAINPARAMETERS_FILE_NAME);
+            var fullStructureExtraParametersFilePath = Path.Combine(fullStructureFolderPath, STRUCTURE_EXTRAPARAMETERS_FILE_NAME);
+
+            if (!File.Exists(fullStructureMainParametersFilePath) || !File.Exists(fullStructureExtraParametersFilePath))
+                throw new FileNotFoundException($"Structure parameter files was not found by path \"{fullStructureFolderPath}\".");
+
+            try
+            {
+                var mainParametersLines = await _fileService.ReadAllLinesAsync(fullStructureMainParametersFilePath);
+                var extraParametersLines = await _fileService.ReadAllLinesAsync(fullStructureExtraParametersFilePath);
+
+                DataFileFormatModel dataFileFormatModel = new();
+                StructureMainParametersModel structureMainParametersModel = new();
+                StructureExtraParametersModel structureExtraParametersModel = new();
+
+                DefineParameterModelConverter.PopulateModelFromLines(dataFileFormatModel, mainParametersLines, "#define");
+                DefineParameterModelConverter.PopulateModelFromLines(structureMainParametersModel, mainParametersLines, "#define");
+                DefineParameterModelConverter.PopulateModelFromLines(structureExtraParametersModel, extraParametersLines, "#define");
+
+                var inputFileName = Directory.GetFiles(fullStructureFolderPath).Select(Path.GetFileName).FirstOrDefault(name =>
+                !string.Equals(name, STRUCTURE_MAINPARAMETERS_FILE_NAME, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(name, STRUCTURE_EXTRAPARAMETERS_FILE_NAME, StringComparison.OrdinalIgnoreCase));
+
+                if (string.IsNullOrEmpty(inputFileName)) throw new FileNotFoundException($"Input data file was not found in structure folder \"{fullStructureFolderPath}\".");
+
+                var fullInputFilePath = Path.Combine(fullStructureFolderPath, inputFileName);
+
+                int iterations = 0, kStart = int.MaxValue, kEnd = 0;
+                bool found = false;
+
+                var fullStructureResultsFolderPath = Path.Combine(fullStructureFolderPath, STRUCTURE_RESULTS_FOLDER_NAME);
+
+                if (_directoryService.IsDirectoryExist(fullStructureResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullStructureResultsFolderPath))
+                {
+                    var regex = new Regex(@"^outfile_K(\d+)-i(\d+)_f$", RegexOptions.Compiled);
+
+                    foreach (var filePath in Directory.EnumerateFiles(fullStructureResultsFolderPath))
+                    {
+                        var match = regex.Match(Path.GetFileName(filePath));
+                        if (!match.Success)
+                            continue;
+
+                        found = true;
+                        int k = int.Parse(match.Groups[1].Value);
+                        int i = int.Parse(match.Groups[2].Value);
+
+                        if (i > iterations) iterations = i;
+                        if (k < kStart) kStart = k;
+                        if (k > kEnd) kEnd = k;
+                    }
+
+                    if (!found)
+                    {
+                        iterations = 0;
+                        kStart = 0;
+                        kEnd = 0;
+                    }
+                }
+
+                return (dataFileFormatModel, structureMainParametersModel, structureExtraParametersModel, fullInputFilePath, kStart, kEnd, iterations);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         public async Task StartExecution(int kFrom, int kTo, int iterations, string fullSetFolderPath, int coresCount)
@@ -114,8 +190,13 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 for (int i = 1; i <= iterations; i++)
                     units.Add((k, i));
 
-            int totalUnits = units.Count;
+            _totalUnits = units.Count;
             int completedUnits = 0;
+
+            lock (_unitProgress)
+            {
+                _unitProgress.Clear();
+            }
 
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
@@ -136,12 +217,16 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                () =>
                {
                    int completed = Interlocked.Increment(ref completedUnits);
-                   return (completed, totalUnits); //нужно только для проброса выше (например во ViewModel для отображения прогресса - этим мы займёмся позже) и не используется нигде для непосредственно логики 
+                   return (completed, _totalUnits); //нужно только для проброса выше (например во ViewModel для отображения прогресса - этим мы займёмся позже) и не используется нигде для непосредственно логики 
                }));
 
                 await Task.WhenAll(tasks);
 
                 //_logger.LogInformation("All {Total} units completed successfully.", totalUnits);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception)
             {
@@ -177,10 +262,6 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 var arguments = $"-K {k} -o {outFilePath}K{k}-i{iteration}";
 
-                //_logger.LogInformation(
-                //"Starting process: K={K}, Iteration={Iteration}, Args=\"{Args}\"",
-                //k, iteration, arguments);
-
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = executablePath,
@@ -196,22 +277,32 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 process.OutputDataReceived += (_, e) =>
                 {
-                    if (e.Data is not null)
+                    if (string.IsNullOrWhiteSpace(e.Data)) return;
+
+                    _logger.Info($"[K={k}, i={iteration}] {e.Data}");
+
+                    double unitValue = e.Data switch
                     {
-                        Debug.WriteLine($"[K={k}, i={iteration}] {e.Data}");
-                        OutputReceived?.Invoke(k, iteration, e.Data);
+                        var s when s.Contains("Finished initialization") => 33.0,
+                        var s when s.Contains("Final results printed to file") => 90.0,
+                        _ => -1
+                    };
+
+                    if (unitValue >= 0)
+                    {
+                        lock (_unitProgress)
+                        {
+                            _unitProgress[(k, iteration)] = unitValue;
+                            ReportTotalProgress();
+                        }
                     }
                 };
 
                 process.ErrorDataReceived += (_, e) =>
                 {
-                    if (e.Data is not null)
-                    {
-                        //_logger.LogWarning(
-                        //"STDERR [K={K}, i={Iteration}]: {Line}", k, iteration, e.Data);
-                        Debug.WriteLine($"[K={k}, i={iteration}] [STDERR] {e.Data}");
-                        OutputReceived?.Invoke(k, iteration, $"[STDERR] {e.Data}");
-                    }
+                    if (string.IsNullOrWhiteSpace(e.Data)) return;
+
+                    _logger.Error($"[K={k}, i={iteration}] {e.Data}");
                 };
 
                 process.Start();
@@ -231,7 +322,14 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 //"ExitCode={ExitCode}, Progress={Completed}/{Total}",
                 //k, iteration, process.ExitCode, completed, total);
 
-                UnitCompleted?.Invoke(k, iteration, process.ExitCode, completed, total);
+                lock (_unitProgress)
+                {
+                    _unitProgress[(k, iteration)] = 100.0;
+                    ReportTotalProgress();
+                }
+
+
+                //UnitCompleted?.Invoke(k, iteration, process.ExitCode, completed, total);
             }
             catch (OperationCanceledException) when (process is { HasExited: false })
             {
@@ -253,6 +351,14 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 semaphore.Release();
             }
         }
+
+        private void ReportTotalProgress()
+        {
+            if (_unitProgress.Count == 0 || _totalUnits == 0) return;
+            double total = _unitProgress.Values.Sum() / _totalUnits;
+            ProgressChanged?.Invoke(total);
+        }
+
         public void StopExecution()
         {
             if (_cts is { IsCancellationRequested: false })

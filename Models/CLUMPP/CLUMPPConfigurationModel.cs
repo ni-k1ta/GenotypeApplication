@@ -1,10 +1,27 @@
-﻿using GenotypeApplication.Models.Structure;
+﻿using GenotypeApplication.Constants;
+using GenotypeApplication.Models.Structure;
 using GenotypeApplication.MVVM.Infrastructure;
 
 namespace GenotypeApplication.Models.CLUMPP
 {
     public class CLUMPPConfigurationModel : ViewModelBase/*, IEquatable<CLUMPPConfigurationModel>*/
     {
+        public CLUMPPConfigurationModel() { }
+        public CLUMPPConfigurationModel(CLUMPPConfigurationModel other)
+        {
+            R = other.R;
+            M = other.M;
+            W = other.W;
+            S = other.S;
+            GREEDY_OPTION = other.GREEDY_OPTION;
+            REPEATS = other.REPEATS;
+            PERMUTATIONFILE = other.PERMUTATIONFILE;
+            PRINT_PERMUTED_DATA = other.PRINT_PERMUTED_DATA;
+            PRINT_EVERY_PERM = other.PRINT_EVERY_PERM;
+            PRINT_RANDOM_INPUTORDER = other.PRINT_RANDOM_INPUTORDER;
+            ORDER_BY_RUN = other.ORDER_BY_RUN;
+        }
+
         private string _parametersName = string.Empty;
         public string ParametersName
         {
@@ -14,6 +31,31 @@ namespace GenotypeApplication.Models.CLUMPP
                 SetField(ref _parametersName, value);
             }
         }
+
+
+        private bool _isProcessed;
+        public bool IsProcessed //создать подписку в DistructVM на это свойство, чтобы отображать только обработанные
+        {
+            get => _isProcessed;
+            set => SetField(ref _isProcessed, value);
+        }
+
+        private bool _hasPopResults;
+        public bool HasPopResults
+        {
+            get => _hasPopResults;
+            set => SetField(ref _hasPopResults, value);
+        }
+        public bool IsAvailableForStage(SetProcessingStage stage)
+        {
+            return stage switch
+            {
+                SetProcessingStage.CLUMPP => true,
+                SetProcessingStage.Distruct => IsProcessed && HasPopResults,
+                _ => false
+            };
+        }
+
 
         private bool _dataType;
         [DefineParameterModel("DATATYPE")]
@@ -59,7 +101,7 @@ namespace GenotypeApplication.Models.CLUMPP
             set => _r = value;
         }
 
-        private int _m = 0;
+        private int _m = 1;
         [DefineParameterModel("M")]
         public int M
         {
@@ -75,7 +117,7 @@ namespace GenotypeApplication.Models.CLUMPP
             set => _w = value;
         }
 
-        private int _s = 0;
+        private int _s = 1;
         [DefineParameterModel("S")]
         public int S
         {
@@ -83,7 +125,7 @@ namespace GenotypeApplication.Models.CLUMPP
             set => _s = value;
         }
 
-        private int _greedyOption = 0;
+        private int _greedyOption = 1;
         [DefineParameterModel("GREEDY_OPTION")]
         public int GREEDY_OPTION
         {
@@ -91,7 +133,7 @@ namespace GenotypeApplication.Models.CLUMPP
             set => _greedyOption = value;
         }
 
-        private int _repeats = 0;
+        private int _repeats = 1000;
         [DefineParameterModel("REPEATS")]
         public int REPEATS
         {
@@ -107,7 +149,7 @@ namespace GenotypeApplication.Models.CLUMPP
             set => _permutationFile = value;
         }
 
-        private int _printPermutedData = 0;
+        private int _printPermutedData = 1;
         [DefineParameterModel("PRINT_PERMUTED_DATA")]
         public int PRINT_PERMUTED_DATA
         {
@@ -143,15 +185,11 @@ namespace GenotypeApplication.Models.CLUMPP
         [DefineParameterModel("RANDOM_INPUTORDERFILE")]
         public string RANDOM_INPUTORDERFILE => _randomInputorderFile;
 
-        private bool _overrideWarnings;
+        private bool _overrideWarnings = true;
         [DefineParameterModel("OVERRIDE_WARNINGS")]
-        public bool OVERRIDE_WARNINGS
-        {
-            get => _overrideWarnings;
-            set => _overrideWarnings = value;
-        }
+        public bool OVERRIDE_WARNINGS => _overrideWarnings;
 
-        private int _orderByRun = 0;
+        private int _orderByRun = 1;
         [DefineParameterModel("ORDER_BY_RUN")]
         public int ORDER_BY_RUN
         {

@@ -51,14 +51,53 @@ namespace GenotypeApplication.Services.Set
 
             var fullNewSetConfigFilePath = Path.Combine(
                 fullNewSetFolderPath,
-                 Path.ChangeExtension(Path.GetFileName(fullNewSetFolderPath), SET_CONFIGURATION_FILE_EXTENSION)
-                 );
+                 Path.ChangeExtension(Path.GetFileName(fullNewSetFolderPath), SET_CONFIGURATION_FILE_EXTENSION));
 
             if (File.Exists(fullNewSetConfigFilePath)) throw new InvalidOperationException("The configuration file with the new set name already exists.");
 
             File.Move(fullSavedSetConfigFilePath, fullNewSetConfigFilePath);
 
             await SaveConfigFileAsync(fullNewSetFolderPath, newSetModel);
+        }
+
+        public async Task<(List<SetModel>, bool allIsOk)> LoadSetsList(string fullProjectFolderPath)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullProjectFolderPath);
+
+            if (!_directoryService.IsDirectoryExist(fullProjectFolderPath) || _directoryService.IsDirectoryEmpty(fullProjectFolderPath)) throw new DirectoryNotFoundException();
+
+            bool allConfigsExists = true;
+
+            try
+            {
+                List<SetModel> sets = new();
+                SetModel? set = null;
+
+                foreach (var setDirectory in Directory.EnumerateDirectories(fullProjectFolderPath))
+                {
+                    var setConfigurationFilePath = Path.Combine(
+                        fullProjectFolderPath,
+                        setDirectory,
+                        Path.ChangeExtension(Path.GetFileName(setDirectory), SET_CONFIGURATION_FILE_EXTENSION));
+
+                    if (!File.Exists(setConfigurationFilePath))
+                    {
+                        allConfigsExists = false;
+                        continue;
+                    } 
+
+                    set = await _fileService.ReadJsonAsync<SetModel>(setConfigurationFilePath);
+
+                    sets.Add(set);
+                }
+
+                return (sets, allConfigsExists);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
         public bool IsSetExist(string fullSetFolderPath)

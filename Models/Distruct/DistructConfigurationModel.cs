@@ -53,7 +53,7 @@ namespace GenotypeApplication.Models
         [DefineParameterModel("OUTFILE")]
         public string OUTFILE => _outfile;
 
-        private const int _k = 0;
+        private const int _k = 1;
         [DefineParameterModel("K")]
         public int K => _k;
 
@@ -73,7 +73,7 @@ namespace GenotypeApplication.Models
             set => _numinds = value;
         }
 
-        private bool _print_indivs;
+        private bool _print_indivs = true;
         [DefineParameterModel("PRINT_INDIVS")]
         public bool PRINT_INDIVS
         {
@@ -81,7 +81,7 @@ namespace GenotypeApplication.Models
             set => _print_indivs = value;
         }
 
-        private bool _print_label_atop;
+        private bool _print_label_atop = true;
         [DefineParameterModel("PRINT_LABEL_ATOP")]
         public bool PRINT_LABEL_ATOP
         {
@@ -89,7 +89,7 @@ namespace GenotypeApplication.Models
             set => _print_label_atop = value;
         }
 
-        private bool _print_label_below;
+        private bool _print_label_below = true;
         [DefineParameterModel("PRINT_LABEL_BELOW")]
         public bool PRINT_LABEL_BELOW
         {
@@ -97,7 +97,7 @@ namespace GenotypeApplication.Models
             set => _print_label_below = value;
         }
 
-        private bool _print_sep;
+        private bool _print_sep = true;
         [DefineParameterModel("PRINT_SEP")]
         public bool PRINT_SEP
         {
@@ -105,7 +105,7 @@ namespace GenotypeApplication.Models
             set => _print_sep = value;
         }
 
-        private double _fontheight;
+        private double _fontheight = 6.0;
         [DefineParameterModel("FONTHEIGHT")]
         public double FONTHEIGHT
         {
@@ -113,7 +113,7 @@ namespace GenotypeApplication.Models
             set => _fontheight = value;
         }
 
-        private double _dist_above;
+        private double _dist_above = 5.0;
         [DefineParameterModel("DIST_ABOVE")]
         public double DIST_ABOVE
         {
@@ -121,7 +121,7 @@ namespace GenotypeApplication.Models
             set => _dist_above = value;
         }
 
-        private double _dist_below;
+        private double _dist_below = -7.0;
         [DefineParameterModel("DIST_BELOW")]
         public double DIST_BELOW
         {
@@ -129,7 +129,7 @@ namespace GenotypeApplication.Models
             set => _dist_below = value;
         }
 
-        private double _boxheight;
+        private double _boxheight = 36.0;
         [DefineParameterModel("BOXHEIGHT")]
         public double BOXHEIGHT
         {
@@ -137,7 +137,7 @@ namespace GenotypeApplication.Models
             set => _boxheight = value;
         }
 
-        private double _indivwidth;
+        private double _indivwidth = 1.5;
         [DefineParameterModel("INDIVWIDTH")]
         public double INDIVWIDTH
         {
@@ -145,7 +145,7 @@ namespace GenotypeApplication.Models
             set => _indivwidth = value;
         }
 
-        private int _orientation;
+        private int _orientation = 0;
         [DefineParameterModel("ORIENTATION")]
         public int ORIENTATION
         {
@@ -153,7 +153,7 @@ namespace GenotypeApplication.Models
             set => _orientation = value;
         }
 
-        private double _xorigin;
+        private double _xorigin = 72.0;
         [DefineParameterModel("XORIGIN")]
         public double XORIGIN
         {
@@ -161,7 +161,7 @@ namespace GenotypeApplication.Models
             set => _xorigin = value;
         }
 
-        private double _yorigin;
+        private double _yorigin = 28.0;
         [DefineParameterModel("YORIGIN")]
         public double YORIGIN
         {
@@ -169,7 +169,7 @@ namespace GenotypeApplication.Models
             set => _yorigin = value;
         }
 
-        private double _xscale;
+        private double _xscale = 1.0;
         [DefineParameterModel("XSCALE")]
         public double XSCALE
         {
@@ -177,7 +177,7 @@ namespace GenotypeApplication.Models
             set => _xscale = value;
         }
 
-        private double _yscale;
+        private double _yscale = 1.0;
         [DefineParameterModel("YSCALE")]
         public double YSCALE
         {
@@ -185,7 +185,7 @@ namespace GenotypeApplication.Models
             set => _yscale = value;
         }
 
-        private double _angle_label_atop;
+        private double _angle_label_atop = 60.0;
         [DefineParameterModel("ANGLE_LABEL_ATOP")]
         public double ANGLE_LABEL_ATOP
         {
@@ -193,7 +193,7 @@ namespace GenotypeApplication.Models
             set => _angle_label_atop = value;
         }
 
-        private double _angle_label_below;
+        private double _angle_label_below = 60.0;
         [DefineParameterModel("ANGLE_LABEL_BELOW")]
         public double ANGLE_LABEL_BELOW
         {
@@ -201,7 +201,7 @@ namespace GenotypeApplication.Models
             set => _angle_label_below = value;
         }
 
-        private double _linewidth_rim;
+        private double _linewidth_rim = 3.0;
         [DefineParameterModel("LINEWIDTH_RIM")]
         public double LINEWIDTH_RIM
         {
@@ -209,7 +209,7 @@ namespace GenotypeApplication.Models
             set => _linewidth_rim = value;
         }
 
-        private double _linewidth_sep;
+        private double _linewidth_sep = 0.3;
         [DefineParameterModel("LINEWIDTH_SEP")]
         public double LINEWIDTH_SEP
         {
@@ -217,7 +217,7 @@ namespace GenotypeApplication.Models
             set => _linewidth_sep = value;
         }
 
-        private double _linewidth_ind;
+        private double _linewidth_ind = 0.3;
         [DefineParameterModel("LINEWIDTH_IND")]
         public double LINEWIDTH_IND
         {
@@ -233,7 +233,7 @@ namespace GenotypeApplication.Models
             set => _grayscale = value;
         }
 
-        private bool _echo_data;
+        private bool _echo_data = true;
         [DefineParameterModel("ECHO_DATA")]
         public bool ECHO_DATA
         {
@@ -241,7 +241,7 @@ namespace GenotypeApplication.Models
             set => _echo_data = value;
         }
 
-        private bool _reprint_data;
+        private bool _reprint_data = true;
         [DefineParameterModel("REPRINT_DATA")]
         public bool REPRINT_DATA
         {
@@ -257,107 +257,12 @@ namespace GenotypeApplication.Models
             set => _print_infile_name = value;
         }
 
-        private bool _print_color_brewer;
+        private bool _print_color_brewer = true;
         [DefineParameterModel("PRINT_COLOR_BREWER")]
         public bool PRINT_COLOR_BREWER
         {
             get => _print_color_brewer;
             set => _print_color_brewer = value;
         }
-
-        //public bool Equals(DistructConfigurationModel? other)
-        //{
-        //    if (other is null) return false;
-        //    if (ReferenceEquals(this, other)) return true;
-        //    return INFILE_POPQ == other.INFILE_POPQ &&              
-        //           INFILE_INDIVQ == other.INFILE_INDIVQ &&
-        //           INFILE_LABEL_ATOP == other.INFILE_LABEL_ATOP &&
-        //           INFILE_LABEL_BELOW == other.INFILE_LABEL_BELOW &&
-        //           INFILE_CLUST_PERM == other.INFILE_CLUST_PERM &&
-        //           OUTFILE == other.OUTFILE &&
-        //           K == other.K &&
-        //           NUMPOPS == other.NUMPOPS &&
-        //           NUMINDS == other.NUMINDS &&
-        //           PRINT_INDIVS == other.PRINT_INDIVS &&
-        //           PRINT_LABEL_ATOP == other.PRINT_LABEL_ATOP &&
-        //           PRINT_LABEL_BELOW == other.PRINT_LABEL_BELOW &&
-        //           PRINT_SEP == other.PRINT_SEP &&
-        //           FONTHEIGHT == other.FONTHEIGHT &&
-        //           DIST_ABOVE == other.DIST_ABOVE &&
-        //           DIST_BELOW == other.DIST_BELOW &&
-        //           BOXHEIGHT == other.BOXHEIGHT &&
-        //           INDIVWIDTH == other.INDIVWIDTH &&
-        //           ORIENTATION == other.ORIENTATION &&
-        //           XORIGIN == other.XORIGIN &&
-        //           YORIGIN == other.YORIGIN &&
-        //           XSCALE == other.XSCALE &&
-        //           YSCALE == other.YSCALE &&
-        //           ANGLE_LABEL_ATOP == other.ANGLE_LABEL_ATOP &&
-        //           ANGLE_LABEL_BELOW == other.ANGLE_LABEL_BELOW &&
-        //           LINEWIDTH_RIM == other.LINEWIDTH_RIM &&
-        //           LINEWIDTH_SEP == other.LINEWIDTH_SEP &&
-        //           LINEWIDTH_IND == other.LINEWIDTH_IND &&
-        //           GRAYSCALE == other.GRAYSCALE &&
-        //           ECHO_DATA == other.ECHO_DATA &&
-        //           REPRINT_DATA == other.REPRINT_DATA &&
-        //           PRINT_INFILE_NAME == other.PRINT_INFILE_NAME &&
-        //           PRINT_COLOR_BREWER == other.PRINT_COLOR_BREWER;
-        //}
-        //public override bool Equals(object? obj)
-        //{
-        //    return Equals(obj as DistructConfigurationModel);
-        //}
-
-        //public override int GetHashCode()
-        //{
-        //    var hash = new HashCode();
-
-        //    hash.Add(INFILE_POPQ);
-        //    hash.Add(INFILE_INDIVQ);
-        //    hash.Add(INFILE_LABEL_ATOP);
-        //    hash.Add(INFILE_LABEL_BELOW);
-        //    hash.Add(INFILE_CLUST_PERM);
-        //    hash.Add(OUTFILE);
-        //    hash.Add(K);
-        //    hash.Add(NUMPOPS);
-        //    hash.Add(NUMINDS);
-        //    hash.Add(PRINT_INDIVS);
-        //    hash.Add(PRINT_LABEL_ATOP);
-        //    hash.Add(PRINT_LABEL_BELOW);
-        //    hash.Add(PRINT_SEP);
-        //    hash.Add(FONTHEIGHT);
-        //    hash.Add(DIST_ABOVE);
-        //    hash.Add(DIST_BELOW);
-        //    hash.Add(BOXHEIGHT);
-        //    hash.Add(INDIVWIDTH);
-        //    hash.Add(ORIENTATION);
-        //    hash.Add(XORIGIN);
-        //    hash.Add(YORIGIN);
-        //    hash.Add(XSCALE);
-        //    hash.Add(YSCALE);
-        //    hash.Add(ANGLE_LABEL_ATOP);
-        //    hash.Add(ANGLE_LABEL_BELOW);
-        //    hash.Add(LINEWIDTH_RIM);
-        //    hash.Add(LINEWIDTH_SEP);
-        //    hash.Add(LINEWIDTH_IND);
-        //    hash.Add(GRAYSCALE);
-        //    hash.Add(ECHO_DATA);
-        //    hash.Add(REPRINT_DATA);
-        //    hash.Add(PRINT_INFILE_NAME);
-        //    hash.Add(PRINT_COLOR_BREWER);
-
-        //    return hash.ToHashCode();
-        //}
-
-        //public static bool operator ==(DistructConfigurationModel? left, DistructConfigurationModel? right)
-        //{
-        //    if (left is null) return right is null;
-        //    return left.Equals(right);
-        //}
-
-        //public static bool operator !=(DistructConfigurationModel? left, DistructConfigurationModel? right)
-        //{
-        //    return !(left == right);
-        //}
     }
 }

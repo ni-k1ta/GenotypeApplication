@@ -47,17 +47,6 @@ namespace GenotypeApplication.Models.Project
             set { SetField(ref _isCurrent, value); }
         }
 
-        public bool IsProcessedForStage(SetProcessingStage stage)
-        {
-            return stage switch
-            {
-                SetProcessingStage.Structure => IsStructureProcessed,
-                SetProcessingStage.StructureHarvester => IsStructureHarvesterProcessed,
-                SetProcessingStage.CLUMPP => IsCLUMPPProcessed,
-                SetProcessingStage.Distruct => IsDistructProcessed,
-                _ => false
-            };
-        }
         public void MarkAsProcessedForStage(SetProcessingStage stage)
         {
             switch (stage)

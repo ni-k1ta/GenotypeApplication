@@ -52,6 +52,16 @@ namespace GenotypeApplication.Services
                 await writer.WriteLineAsync(line);
             } //перезаписывает файл
         }
+        public async Task<IEnumerable<string>> ReadAllLinesAsync(string filePath)
+        {
+            var lines = new List<string>();
+            using var reader = new StreamReader(filePath, new UTF8Encoding(false));
+            while (await reader.ReadLineAsync() is { } line)
+            {
+                lines.Add(line);
+            }
+            return lines;
+        }
 
         public void DeleteFile(string filePath)
         {

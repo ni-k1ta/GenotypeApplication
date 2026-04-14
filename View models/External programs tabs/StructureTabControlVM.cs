@@ -2,13 +2,16 @@
 using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Interfaces.MVVM;
+using GenotypeApplication.Models.CLUMPP;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.Models.Structure;
 using GenotypeApplication.MVVM.Infrastructure;
 using GenotypeApplication.Services.Application_configuration.External_program_interaction;
+using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
 
@@ -18,12 +21,15 @@ namespace GenotypeApplication.View_models
     {
         #region Data file parameters
 
-        private string _dataFileName;
-        private string _dataFileFullPath;
-        private string _savedDataFileFullPath;
-        private DataFileFormatModel _dataFileFormatModel;
-        private DataFileFormatModel _savedDataFileFormatModel;
-        private bool _isNewDataFile;
+        private string _dataFileName;//
+        private string _dataFileFullPath;//
+        private string _savedDataFileFullPath;//
+        private DataFileFormatModel _dataFileFormatModel; //
+
+        private readonly ParametersChangesTracker<DataFileFormatModel> _dataFileFormatChangesTracker = new();//-
+        //private DataFileFormatModel _savedDataFileFormatModel;
+
+        private bool _isNewDataFile;//
 
         #endregion
 
@@ -96,58 +102,90 @@ namespace GenotypeApplication.View_models
 
         #region Set parameters
 
-        private string _setName;
-        private string _savedSetName;
+        private string _setName;//
+        //private string _savedSetName;//
 
-        private int _kFrom;
-        private int _kTo;
-        private int _iterations;
+        private int _kFrom;//
+        private int _kTo;//
+        private int _iterations;//
 
-        private bool _isCreatingNewSet;
+        private bool _isCreatingNewSet;//
         private bool _wasSaved; // используется только для определения возможности запуска обработки, т.е. если текущий набор параметров был когда-либо сохранён (загруженный набор параметров тоже считается сохранённым, т.к. файлы для запуска обработки существуют), даже если после этого его параметры были изменены, то возможность запуска всё равно остаётся доступной, просто, если запуск произойдёт, будут использоваться неактуальные параметры
 
-        private SetModel? _comboBoxSelectedItem;
+        private SetModel? _selectedComboBoxSet;//
         #endregion
 
-        private StructureMainParametersModel _savedMainParameters;
-        private StructureExtraParametersModel _savedExtraParameters;
+        #region Services
+        //private readonly SetConfigurationService _setConfigurationService;
+        private readonly StructureInteractionService _structureInteractionService;//
 
-        private readonly SetConfigurationService _setConfigurationService;
-        private readonly StructureInteractionService _structureInteractionService;
-        private readonly IWindowService _windowService;
-        private readonly IValidator<string> _pathTextValidator;
+        private readonly IWindowService _windowService;//
 
-        public StructureTabControlVM(WorkflowStateModel workflowStateModel, string fullProjectFolderPath, int coresCount, DataFileFormatModel dataFileFormatModel, string dataFileFullPath, StructureMainParametersModel mainParametersModel, StructureExtraParametersModel extraParametersModel, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathTextValidator, IWindowService windowService) : base(workflowStateModel, SetProcessingStage.Structure, coresCount, fullProjectFolderPath, directoryService, fileService, messageService, dialogService)
+        private readonly ParametersChangesTracker<StructureMainParametersModel> _mainParametersChangesTracker = new();//-
+        private readonly ParametersChangesTracker<StructureExtraParametersModel> _extraParametersChangesTracker = new();//-
+        #endregion
+
+        private double _structureProgress;
+        public double StructureProgress
+        {
+            get => _structureProgress;
+            set { SetField(ref _structureProgress, value); }
+        }
+
+        private string _structureProgressText = "Not started";
+        public string StructureProgressText
+        {
+            get => _structureProgressText;
+            set { SetField(ref _structureProgressText, value); }
+        }
+
+        private bool _structureStopped;
+        public bool StructureStopped
+        {
+            get => _structureStopped;
+            set { SetField(ref _structureStopped, value); }
+        }
+        private bool _structureCompleted;
+
+        public StructureTabControlVM(WorkflowStateModel workflowStateModel, string fullProjectFolderPath, int coresCount, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, IWindowService windowService, LoggerService loggerService, IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> kRangeValidator) : base(workflowStateModel, SetProcessingStage.Structure, coresCount, fullProjectFolderPath, setConfigurationService, directoryService, fileService, messageService, dialogService, loggerService, pathValidator, parameterNameValidator, kRangeValidator)
         {
             _dataFileName = string.Empty;
 
+            _dataFileFullPath = string.Empty;
+            _savedDataFileFullPath = string.Empty;
+            _dataFileFormatModel = new();
+            _isNewDataFile = true;
+
             _setName = string.Empty;
-            _savedSetName = string.Empty;
 
-            _dataFileFullPath = dataFileFullPath;
-            _savedDataFileFullPath = dataFileFullPath;
-            _dataFileFormatModel = dataFileFormatModel;
-            _savedDataFileFormatModel = dataFileFormatModel;
+            _kFrom = 1;
+            _kTo = 3;
+            _iterations = 3;
 
-            _savedMainParameters = mainParametersModel;
-            _savedExtraParameters = extraParametersModel;
+            workflowStateModel.SetModelsList.CollectionChanged += (_, _) => RebuildComboBoxItems();
+            RebuildComboBoxItems();
+            SelectedComboBoxSet = SetModelsComboBoxList.LastOrDefault(); // здесь через сеттер устаеовятся _isCreatingNewSet и _wasSaved
 
-            _wasSaved = false;
-
-            LoadDataFileCommand = new RelayCommand(execute => LoadDataFile());
+            LoadDataFileCommand = new AsyncRelayCommand(execute => LoadDataFile());
             SaveChangesAsyncCommand = new AsyncRelayCommand(execute => SaveChangesAsync(), canExecute => CanSaveChanges());
             StartStructureAsyncCommand = new AsyncRelayCommand(execute => StartStructureAsync(), canExecute => CanStartStructure());
             StopStructureCommand = new RelayCommand(execute => StopStructure(), canExecute => CanStopStructure());
 
-            _setConfigurationService = setConfigurationService;
-            _structureInteractionService = new StructureInteractionService(directoryService, fileService);
+            _structureInteractionService = new StructureInteractionService(directoryService, fileService, _logger);
+            _structureInteractionService.ProgressChanged += value =>
+            {
+                if (_structureCompleted || StructureStopped) return;
+                if (value >= 100.0) return;
+
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    if (_structureCompleted || StructureStopped) return;
+                    StructureProgress = value;
+                    StructureProgressText = $"In progress... {value:F0}%";
+                });
+            };
+
             _windowService = windowService;
-            _pathTextValidator = pathTextValidator;
-
-            workflowStateModel.SetModelsList.CollectionChanged += (_, _) => RebuildComboBoxItems();
-            RebuildComboBoxItems(); // начальное состояние
-
-            ComboBoxSelectedItem = SetModelsComboBoxItems.LastOrDefault();
         }
 
         #region Data file properties
@@ -187,9 +225,9 @@ namespace GenotypeApplication.View_models
         public bool PhasedParam //
         {
             get => _phasedParam;
-            set 
-            { 
-                SetField(ref _phasedParam, value); 
+            set
+            {
+                SetField(ref _phasedParam, value);
             }
         }
         #endregion
@@ -208,9 +246,9 @@ namespace GenotypeApplication.View_models
                                   */
         {
             get => _linkageParam;
-            set 
+            set
             {
-                if (!SetField(ref _linkageParam, value)) return; 
+                if (!SetField(ref _linkageParam, value)) return;
 
                 if (value && DataFileFormatModel.Ploidy > 2) PhasedParam = true; /*
                                                                                   * When the linkage model is used with polyploids, PHASED=1 is required. + добавить валидацию при изменении PhasedParam
@@ -246,8 +284,8 @@ namespace GenotypeApplication.View_models
         public bool InferAlphaParam //
         {
             get => _inferAlphaParam;
-            set 
-            { 
+            set
+            {
                 if (SetField(ref _inferAlphaParam, value))
                     OnPropertyChanged(nameof(NotInferAlphaParam));
             }
@@ -280,7 +318,7 @@ namespace GenotypeApplication.View_models
         public bool InferLambdaParam //
         {
             get => _inferLambdaParam;
-            set 
+            set
             {
                 if (SetField(ref _inferLambdaParam, value))
                     OnPropertyChanged(nameof(NotInferLambdaParam));
@@ -509,57 +547,35 @@ namespace GenotypeApplication.View_models
         public string SetName
         {
             get => _setName;
-            set { SetField(ref _setName, value); }
+            set
+            {
+                if (SetField(ref _setName, value))
+                    ValidateProperty(value, _parameterNameValidator.Validate);
+            }
         }
         public int KFrom
         {
             get => _kFrom;
-            set { SetField(ref _kFrom, value); }
+            set
+            {
+                if (SetField(ref _kFrom, value))
+                    ValidateProperty((value, KTo, 0, int.MaxValue), _kRangeValidator.Validate);
+            }
         }
         public int KTo
         {
             get => _kTo;
-            set { SetField(ref _kTo, value); }
+            set
+            {
+                if (SetField(ref _kTo, value))
+                    ValidateProperty((KFrom, value, 0, int.MaxValue), _kRangeValidator.Validate);
+            }
         }
         public int Iterations
         {
             get => _iterations;
             set { SetField(ref _iterations, value); }
         }
-
-        public SetModel? ComboBoxSelectedItem
-        {
-            get => _comboBoxSelectedItem;
-            set
-            {   
-                if (SetField(ref _comboBoxSelectedItem, value))
-                {
-                    if (value == CreateNewSetPlaceholder)
-                    {
-                        if (!_isCreatingNewSet) ResetSetParameters();
-                        // Режим создания — очищаем поля, не трогаем SharedState
-                        _isCreatingNewSet = true;
-                        //SetName = string.Empty;
-                    }
-                    else if (value != null)
-                    {
-                        if (_savedSetName == value.Name)
-                        {
-                            //todo просто подгрузить параметры в интерфейс, без излишнего чтения файлов с параметрами
-                        }
-
-                        // Выбор существующего Set
-                        _isCreatingNewSet = false;
-                        CurrentSet = value; // -> уйдёт в SharedState.SelectSet
-                        LoadSelectedSetParameters(value);
-                    }
-                }
-            }
-        }
-
-        public static readonly SetModel CreateNewSetPlaceholder = new() { Name = "Create new set" };
-        public ObservableCollection<SetModel> SetModelsComboBoxItems { get; } = new();
-
         #endregion
 
         #region Commands properties
@@ -569,52 +585,133 @@ namespace GenotypeApplication.View_models
         public RelayCommand StopStructureCommand { get; }
         #endregion
 
+        private static readonly SetModel _createNewSetPlaceholder = new() { Name = "Create new set" };
+        public ObservableCollection<SetModel> SetModelsComboBoxList { get; } = new();
+
+        public SetModel? SelectedComboBoxSet
+        {
+            get => _selectedComboBoxSet;
+            set
+            {
+                if (SetField(ref _selectedComboBoxSet, value))
+                {
+                    if (value == _createNewSetPlaceholder)
+                    {
+                        if (!_isCreatingNewSet) ResetSetParameters();
+
+                        _isCreatingNewSet = true;
+                        SetName = string.Empty;
+                        _wasSaved = false;
+
+                        UIDispatcherHelper.RunOnUI(() =>
+                        {
+                            StructureProgressText = "Not started";
+                            StructureProgress = 0;
+                        });
+                        StructureStopped = false;
+                        _structureCompleted = false;
+                    }
+                    else if (value != null)
+                    {
+                        CurrentSet = value;
+                    }
+                }
+            }
+        }
+
         private void RebuildComboBoxItems()
         {
             UIDispatcherHelper.RunOnUI(() =>
             {
-                SetModelsComboBoxItems.Clear();
+                SetModelsComboBoxList.Clear();
 
                 foreach (SetModel item in FilteredSetModelsList)
-                    SetModelsComboBoxItems.Add(item);
+                    SetModelsComboBoxList.Add(item);
 
-                SetModelsComboBoxItems.Add(CreateNewSetPlaceholder);
+                SetModelsComboBoxList.Add(_createNewSetPlaceholder);
             });
         }
 
-
-        protected override void LoadSelectedSetParameters(SetModel? set)
+        protected override async Task LoadSelectedSetParametersAsync(SetModel? set) // вызывается только из сеттера CurrentSet базового класса
         {
-            // Когда Set приходит извне или из базового класса —
-            // синхронизируем ComboBoxSelectedItem
+            if (set == null) return;
+            if (!set.IsStructureProcessed) return;
 
-            //_comboBoxSelectedItem = set;
-            //OnPropertyChanged(nameof(ComboBoxSelectedItem));
+            var setName = set.Name;
+            var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
-            //if (set == null)
-            //{
-            //    ClearParametersUI();
-            //    return;
-            //}
+            try
+            {
+                var (dataFileFormatModel, strctureMainParametersModel, structureExtraParametersModel, fullInputFilePath, kStart, kEnd, iterations) = await _structureInteractionService.LoadConfiguration(fullSetFolderPath);
 
-            //todo загрузка параметров с нуля, начиная с чтения файлов через сервис
+                SetField(ref _selectedComboBoxSet, set, nameof(SelectedComboBoxSet));
 
-            //SetName = set.Name;
-            //// LoadMainParameters(set);
-            //// LoadExtraParameters(set);
+                DataFileFormatModel = dataFileFormatModel;
+                DataFileFullPath = fullInputFilePath;
+                _savedDataFileFullPath = DataFileFullPath;
+                DataFileName = Path.GetFileName(fullInputFilePath);
+                SetMainParameters(strctureMainParametersModel);
+                SetExtraParameters(structureExtraParametersModel);
 
-            //// Запоминаем состояние для отслеживания изменений
-            //_savedSetName = set.Name;
-            //_savedMainParameters = ;
-            //_savedExtraParameters = ;
-            //_isNewDataFile = false;
-            //_wasSaved = true;
+                SetName = setName;
+                _dataFileFormatChangesTracker.TakeModelSnapshot(dataFileFormatModel);
+                _mainParametersChangesTracker.TakeModelSnapshot(strctureMainParametersModel);
+                _extraParametersChangesTracker.TakeModelSnapshot(structureExtraParametersModel);
+                _isCreatingNewSet = false;
+                _isNewDataFile = false;
+                _wasSaved = true;
+
+                if (kEnd == 0 || kStart == 0 || iterations == 0)
+                {
+                    KFrom = 1;
+                    KTo = 3;
+                    Iterations = 3;
+
+                    UIDispatcherHelper.RunOnUI(() =>
+                    {
+                        StructureProgressText = "Not started";
+                        StructureProgress = 0;
+                    });
+                    StructureStopped = false;
+                    _structureCompleted = false;
+                    return;
+                }
+
+                KFrom = kStart;
+                KTo = kEnd;
+                Iterations = iterations;
+
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    StructureProgress = 100;
+                    StructureProgressText = "Completed";
+                });
+                StructureStopped = false;
+                _structureCompleted = true;
+
+                WorkflowState.SetPredefinedStructureParameters(iterations, kStart, kEnd, dataFileFormatModel.NumInds);
+            }
+            catch (ArgumentNullException ane)
+            {
+                _messageService.ShowError($"[Execution error]: Failed to load Structure parameters. Parameter {ane.ParamName} was null in StructureInteractionService -> LoadConfiguration().");
+            }
+            catch (DirectoryNotFoundException dnfe)
+            {
+                _messageService.ShowError($"Failed to load Structure parameters. {dnfe.Message}");
+
+            }
+            catch (FileNotFoundException fnfe)
+            {
+                _messageService.ShowError($"Failed to load Structure parameters. {fnfe.Message}");
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         private void ResetSetParameters()
         {
-            // возможно нужно сохранить текущее состояние??? - продумать
-
             var newStructureMainParameters = new StructureMainParametersModel();
             var newStructureExtraParameters = new StructureExtraParametersModel();
 
@@ -627,9 +724,12 @@ namespace GenotypeApplication.View_models
             Iterations = 3;
         }
 
-        private void LoadDataFile()
+        private async Task LoadDataFile()
         {
-            DataFileFormatVM dataFileParametersViewModel = new(_dialogService, _messageService, _pathTextValidator, _windowService);
+            DataFileFormatVM dataFileParametersViewModel = new(_dialogService, _messageService, _pathValidator, _windowService);
+
+            if (!string.IsNullOrWhiteSpace(DataFileFullPath) && !string.IsNullOrWhiteSpace(DataFileName) && DataFileFormatModel != null)
+                await dataFileParametersViewModel.LoadDataFileFormat(DataFileFormatModel, DataFileFullPath);
 
             bool? loadResult = _windowService.ShowDialogWindow<LoadDataFileWindow, DataFileFormatVM>(dataFileParametersViewModel);
 
@@ -640,7 +740,8 @@ namespace GenotypeApplication.View_models
 
                 DataFileName = Path.GetFileName(DataFileFullPath);
 
-                _isNewDataFile = true;
+                if (DataFileFullPath != _savedDataFileFullPath)
+                    _isNewDataFile = true;
             }
         }
 
@@ -658,26 +759,25 @@ namespace GenotypeApplication.View_models
                 8 - Новый файл, прежний набор параметров с прежним названием
             */
 
-            var newSetName = SetName;
-            if (string.IsNullOrWhiteSpace(newSetName)) return;
-
-            var dataFileFormatModel = new DataFileFormatModel();
-            var dataFileFullPath = DataFileFullPath;
-
-            if (string.IsNullOrWhiteSpace(dataFileFullPath) || DataFileFormatModel == null || dataFileFormatModel == DataFileFormatModel) return;
-            dataFileFormatModel = DataFileFormatModel;
-
-            string fullNewSetFolderPath = Path.Combine(_fullProjectFolderPath, newSetName);
-
-            bool isNameChanged = !_isCreatingNewSet && _savedSetName != newSetName;
-            if ((_isCreatingNewSet || isNameChanged) && _setConfigurationService.IsSetExist(fullNewSetFolderPath))
-            {
-                _messageService.ShowWarning($"Set with name \"{newSetName}\" already exists. Please choose a different name.");
-                return;
-            }
-
             try
             {
+                var newSetName = SetName;
+                if (string.IsNullOrWhiteSpace(newSetName)) return;
+
+                var dataFileFullPath = DataFileFullPath;
+
+                if (string.IsNullOrWhiteSpace(dataFileFullPath) || !_dataFileFormatChangesTracker.HasChanges(DataFileFormatModel)) return;
+                var dataFileFormatModel = DataFileFormatModel;
+
+                string fullNewSetFolderPath = Path.Combine(_fullProjectFolderPath, newSetName);
+
+                bool isNameChanged = !_isCreatingNewSet && CurrentSet?.Name != newSetName;
+                if ((_isCreatingNewSet || isNameChanged) && _setConfigurationService.IsSetExist(fullNewSetFolderPath))
+                {
+                    _messageService.ShowWarning($"Set with name \"{newSetName}\" already exists. Please choose a different name.");
+                    return;
+                }
+
                 _wasSaved = false;
 
                 var newMainParameters = GetMainParameters();
@@ -777,13 +877,16 @@ namespace GenotypeApplication.View_models
                 }
 
                 _wasSaved = true;
-                _savedSetName = newSetName;
                 _isNewDataFile = false;
-                _savedMainParameters = newMainParameters;
-                _savedExtraParameters = newExtraParameters;
-                _savedDataFileFormatModel = dataFileFormatModel;
+                _mainParametersChangesTracker.TakeModelSnapshot(newMainParameters);
+                _extraParametersChangesTracker.TakeModelSnapshot(newExtraParameters);
+                _dataFileFormatChangesTracker.TakeModelSnapshot(dataFileFormatModel);
                 _savedDataFileFullPath = dataFileFullPath;
                 _isCreatingNewSet = false;
+            }
+            catch (InvalidOperationException ioe)
+            {
+                _messageService.ShowError($"[Execution internal error]: Failed to save changes. {ioe.Message}");
             }
             catch (Exception)
             {
@@ -803,26 +906,24 @@ namespace GenotypeApplication.View_models
             return !string.IsNullOrWhiteSpace(SetName) &&
                    !string.IsNullOrWhiteSpace(DataFileFullPath) &&
 
-                   (mainParameters != _savedMainParameters ||
-                   extraParameters != _savedExtraParameters ||
-                   _savedSetName != SetName ||
-                   _isNewDataFile) && 
+                   (_mainParametersChangesTracker.HasChanges(mainParameters) ||
+                   _extraParametersChangesTracker.HasChanges(extraParameters) ||
+                   CurrentSet?.Name != SetName ||
+                   _isNewDataFile) &&
 
-                   !_structureInteractionService.IsRunning;
+                   !_structureInteractionService.IsRunning &&
+                   !HasErrors;
         }
 
         private async Task CreateNewSetAsync(string newSetName, string fullNewSetFolderPath, string dataFileFullPath, DataFileFormatModel dataFileFormatModel, StructureMainParametersModel newMainParameters, StructureExtraParametersModel newExtraParameters)
         {
             _setConfigurationService.Create(fullNewSetFolderPath);
-
             /*вынужденная мера такого присваивания, потому что иначе отработает LoadSelectedSetParameters(value); в сеттере свойства ExternalProgramTabVMBase.CurrentSet, что вызовет логику загрузки якобы уже сущетвующего набора параметров. а таким образом мы обходим данную логмку, т.к. теперь сеттер CurrentSet просто выйдет из присваивания: if (_currentSet == value) return;
              */
+            //SetField(ref _currentSet, newSet, null);
+            ////////////////////////////////////////////////////////// откат рп ситуации, уже есть обработка наличия флага IsProcessed в методе с загрузкрй, поэтому загрузка новых сет параметров будет скипаться
 
             var newSet = WorkflowState.CreateNewSet(newSetName);
-            SetField(ref _currentSet, newSet, null);
-            SetField(ref _comboBoxSelectedItem, newSet, nameof(ComboBoxSelectedItem));
-            WorkflowState.CurrentSet = newSet;
-            //////////////////////////////////////////////////////////
 
             await _setConfigurationService.SaveConfigFileAsync(fullNewSetFolderPath, newSet);
 
@@ -830,105 +931,133 @@ namespace GenotypeApplication.View_models
 
             _structureInteractionService.PrepareInputDataFile(fullNewSetFolderPath, dataFileFullPath);
 
-            await _structureInteractionService.PrepareParametersFile(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
+            await _structureInteractionService.PrepareParameterFiles(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
+
+            WorkflowState.CurrentSet = newSet;
+            SetField(ref _selectedComboBoxSet, newSet, nameof(SelectedComboBoxSet));
 
             _messageService.ShowInformation($"Set \"{newSetName}\" was successfully created.");
         }
         private async Task<bool> UpdateExistingSetAsync(string newSetName, string fullNewSetFolderPath, string dataFileFullPath, DataFileFormatModel dataFileFormatModel, StructureMainParametersModel newMainParameters, StructureExtraParametersModel newExtraParameters)
         {
-            string fullSavedSetFolderPath = Path.Combine(_fullProjectFolderPath, _savedSetName);
-
-            if (!_setConfigurationService.IsSetExist(fullSavedSetFolderPath))
+            try
             {
-                _messageService.ShowError($"Set with name \"{_savedSetName}\" was not found. Unable to save changes.");
-                return false;
-            }
+                if (CurrentSet == null) throw new InvalidOperationException("Current set is null on UpdateExistingSetAsync() step.");
 
-            /* 1. Новое назавание набора -> переименовать папку (по факту скопировать всё в новую папаку и удалить старую папку), переименовать конфиг-файл 
-                 2. Новые параметры или файл -> удалить старый файл, скопировать новый файл, перезаписать файл с параметрами */
-            
-            ArgumentNullException.ThrowIfNull(CurrentSet); //???
+                string fullSavedSetFolderPath = Path.Combine(_fullProjectFolderPath, CurrentSet.Name);
 
-            if (_savedSetName != newSetName)
-            {
-                CurrentSet.Name = newSetName;
-
-                _setConfigurationService.Rename(fullSavedSetFolderPath, fullNewSetFolderPath);
-
-                await _setConfigurationService.UpdateConfigFileAsync(fullSavedSetFolderPath, fullNewSetFolderPath, CurrentSet);
-            }
-
-            bool isParametersChanged = newMainParameters != _savedMainParameters ||
-                                       newExtraParameters != _savedExtraParameters ||
-                                       _isNewDataFile ||
-                                       _savedDataFileFormatModel != dataFileFormatModel;
-
-            if (isParametersChanged)
-            {
-
-             /* изменение параметров обработки (в том числе самих данных для обработки) приведёт к невалидности результатов уже проведённых дальнейших обработок (при их наличии). из этого вытекает, что не имеет практического смысла производить изменения параметров уже существующих обработок, поэтому, если пользователь изменил параметры обработки (или сами входные данные), то стоит просто создать новый набор с установленными параметрами.
-                 * 0 - проверить наличие проведённых дальнейших обработок:
-                    + при отсутствии просто пересоздать файл mainparams для structure и , при необходимости, заменить файл с данными для обработки
-                    + при присутствии проведённых дальнейших обработок (хотя бы для одного этапа) - описано ниже
-                 * 1 - уведомить пользователя о том, что изменения параметров приведут к невалидности уже проведённых дальнейших обработок.
-                 * 2 - при согласии создать новый набор, при несогласии вернуть параметры в прежнее состояние
-                 */
-
-                bool isProccessedByNextPrograms = CurrentSet.IsStructureHarvesterProcessed || CurrentSet.IsCLUMPPProcessed || CurrentSet.IsDistructProcessed;
-
-                if (isProccessedByNextPrograms)
+                if (!_setConfigurationService.IsSetExist(fullSavedSetFolderPath))
                 {
-                    var willCreateNewSet = _messageService.ShowQuetion("Changing the parameters will reset the processing progress made in later stages. Do you want to create a new set with the current settings?");
+                    _messageService.ShowError($"Set with name \"{CurrentSet.Name}\" was not found. Unable to save changes.");
+                    return false;
+                }
 
-                    if (willCreateNewSet)
+                /* 1. Новое назавание набора -> переименовать папку (по факту скопировать всё в новую папаку и удалить старую папку), переименовать конфиг-файл 
+                     2. Новые параметры или файл -> удалить старый файл, скопировать новый файл, перезаписать файл с параметрами */
+
+                if (CurrentSet.Name != newSetName)
+                {
+                    CurrentSet.Name = newSetName;
+
+                    _setConfigurationService.Rename(fullSavedSetFolderPath, fullNewSetFolderPath);
+
+                    await _setConfigurationService.UpdateConfigFileAsync(fullSavedSetFolderPath, fullNewSetFolderPath, CurrentSet);
+                }
+
+                bool isParametersChanged = _mainParametersChangesTracker.HasChanges(newMainParameters) ||
+                                           _extraParametersChangesTracker.HasChanges(newExtraParameters) ||
+                                           _isNewDataFile ||
+                                           _dataFileFormatChangesTracker.HasChanges(dataFileFormatModel);
+
+                if (isParametersChanged)
+                {
+
+                    /* изменение параметров обработки (в том числе самих данных для обработки) приведёт к невалидности результатов уже проведённых дальнейших обработок (при их наличии). из этого вытекает, что не имеет практического смысла производить изменения параметров уже существующих обработок, поэтому, если пользователь изменил параметры обработки (или сами входные данные), то стоит просто создать новый набор с установленными параметрами.
+                        * 0 - проверить наличие проведённых дальнейших обработок:
+                           + при отсутствии просто пересоздать файл mainparams для structure и , при необходимости, заменить файл с данными для обработки
+                           + при присутствии проведённых дальнейших обработок (хотя бы для одного этапа) - описано ниже
+                        * 1 - уведомить пользователя о том, что изменения параметров приведут к невалидности уже проведённых дальнейших обработок.
+                        * 2 - при согласии создать новый набор, при несогласии вернуть параметры в прежнее состояние
+                        */
+
+                    bool isProccessedByNextPrograms = CurrentSet.IsStructureHarvesterProcessed || CurrentSet.IsCLUMPPProcessed || CurrentSet.IsDistructProcessed;
+
+                    if (isProccessedByNextPrograms)
                     {
-                        _isCreatingNewSet = true;
-                        ComboBoxSelectedItem = SetModelsComboBoxItems.LastOrDefault();
-                        SetName = string.Empty;
+                        var willCreateNewSet = _messageService.ShowQuetion("Changing the parameters will reset the processing progress made in later stages. Do you want to create a new set with the current settings?");
+
+                        if (willCreateNewSet)
+                        {
+                            SelectedComboBoxSet = _createNewSetPlaceholder;
+                        }
+                        else
+                        {
+                            var savedMainParameters = _mainParametersChangesTracker.GetSnapshot();
+                            var savedExtraParameters = _extraParametersChangesTracker.GetSnapshot();
+                            var savedDataFileFormatModel = _dataFileFormatChangesTracker.GetSnapshot();
+
+                            if (savedMainParameters is null || savedExtraParameters is null || savedDataFileFormatModel is null) throw new InvalidOperationException("The saved data of the current parameter set is missing on UpdateExistingSetAsync() step.");
+
+                            SetMainParameters(savedMainParameters);
+                            SetExtraParameters(savedExtraParameters);
+
+                            _isNewDataFile = false;
+                            DataFileFullPath = _savedDataFileFullPath;
+                            DataFileFormatModel = savedDataFileFormatModel;
+                            _wasSaved = true;
+                            _isCreatingNewSet = false;
+                        }
+
+                        return false;
                     }
                     else
                     {
-                        SetMainParameters(_savedMainParameters);
-                        SetExtraParameters(_savedExtraParameters);
-                        _isNewDataFile = false;
-                        DataFileFullPath = _savedDataFileFullPath;
-                        DataFileFormatModel = _savedDataFileFormatModel;
-                        _wasSaved = true;
+                        _structureInteractionService.PrepareInputDataFile(fullNewSetFolderPath, dataFileFullPath, _savedDataFileFullPath);
+
+                        await _structureInteractionService.PrepareParameterFiles(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
                     }
-
-                    return false;
                 }
-                else
-                {
-
-                    _structureInteractionService.PrepareInputDataFile(fullNewSetFolderPath, dataFileFullPath, _savedDataFileFullPath);
-
-                    await _structureInteractionService.PrepareParametersFile(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
-                }
+                return true;
             }
-
-            return true;
+            catch (Exception) { throw; }
         }
 
         private async Task StartStructureAsync()
         {
-            if (!_wasSaved)
-                return;
-
-            if (CurrentSet == null) return;
+            if (!_wasSaved || CurrentSet == null || HasErrorsFor(nameof(KFrom)) || HasErrorsFor(nameof(KTo))) return;
 
             int kFrom = KFrom;
             int kTo = KTo;
             int iterations = Iterations;
 
-            var setName = _savedSetName;
+            var setName = CurrentSet.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
             try
             {
+                var dataFileFormatModel = _dataFileFormatChangesTracker.GetSnapshot();
+                if (dataFileFormatModel is null) return;
+
+                _structureCompleted = false;
+                StructureStopped = false;
+
+                StructureProgress = 0;
+                StructureProgressText = "In progress... 0%";
+
                 await _structureInteractionService.StartExecution(kFrom, kTo, iterations, fullSetFolderPath, _coresCount);
 
+                _structureCompleted = true;
                 WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
+                WorkflowState.SetPredefinedStructureParameters(iterations, kFrom, kTo, dataFileFormatModel.NumInds);
+
+                StructureProgress = 100;
+                StructureProgressText = "Completed";
+            }
+            catch (OperationCanceledException)
+            {
+
+                StructureProgressText = $"Stopped at {StructureProgress:F0}%";
+
             }
             catch (Exception)
             {
@@ -944,13 +1073,17 @@ namespace GenotypeApplication.View_models
         {
             return _wasSaved &&
                    CurrentSet != null &&
-                   !_structureInteractionService.IsRunning;
+                   !_structureInteractionService.IsRunning &&
+                   !HasErrorsFor(nameof(KFrom)) &&
+                   !HasErrorsFor(nameof(KTo));
         }
 
         private void StopStructure()
         {
             try
             {
+                StructureStopped = true;
+                StructureProgressText = $"Stopping...";
                 _structureInteractionService.StopExecution();
             }
             catch (Exception)
@@ -961,7 +1094,7 @@ namespace GenotypeApplication.View_models
         }
         private bool CanStopStructure()
         {
-            return _structureInteractionService.IsRunning;
+            return _structureInteractionService.IsRunning && !StructureStopped;
         }
 
         private StructureMainParametersModel GetMainParameters()
@@ -1098,6 +1231,14 @@ namespace GenotypeApplication.View_models
             RandomizeParam = extraParameters.RANDOMIZE;
             SeedParam = extraParameters.SEED;
             ReportThitRateParam = extraParameters.REPORTHITRATE;
+        }
+
+
+
+
+        protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
+        {
+            return;
         }
     }
 }

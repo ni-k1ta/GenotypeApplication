@@ -14,6 +14,7 @@ namespace GenotypeApplication.Interfaces
         IEnumerable<string> ReadFile(string filePath);
         void CopyFile(string sourceFilePath, string targetFilePath);
         Task WriteAllLinesAsync(string filePath, IEnumerable<string> lines);
+        Task<IEnumerable<string>> ReadAllLinesAsync(string filePath);
         void DeleteFile(string filePath);
     }
 }

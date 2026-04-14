@@ -1,15 +1,18 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
+using GenotypeApplication.Interfaces.MVVM;
+using GenotypeApplication.Models.CLUMPP;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.MVVM.Infrastructure;
 using GenotypeApplication.Services.Application_configuration.External_program_interaction;
+using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.MVVM;
 using GenotypeApplication.Services.Parsers;
+using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using OxyPlot;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Windows;
 
 namespace GenotypeApplication.View_models
 {
@@ -34,13 +37,34 @@ namespace GenotypeApplication.View_models
 
         private readonly StructureHarvesterInteractionService _structureHarvesterInteractionService;
 
-        public StructureHarvesterTabControlVM(WorkflowStateModel workflowStateModel, int coresCount, string fullProjectFolderPath, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService) : base(workflowStateModel, SetProcessingStage.StructureHarvester, coresCount, fullProjectFolderPath, directoryService, fileService, messageService, dialogService)
+
+        private double _structureHarvesterProgress;
+        public double StructureHarvesterProgress
+        {
+            get => _structureHarvesterProgress;
+            set { SetField(ref _structureHarvesterProgress, value); }
+        }
+
+        private string _structureHarvesterProgressText = "Not started";
+        public string StructureHarvesterProgressText
+        {
+            get => _structureHarvesterProgressText;
+            set { SetField(ref _structureHarvesterProgressText, value); }
+        }
+        private bool _structureHarvesterIsIndeterminate;
+        public bool StructureHarvesterIsIndeterminate
+        {
+            get => _structureHarvesterIsIndeterminate;
+            set { SetField(ref _structureHarvesterIsIndeterminate, value); }
+        }
+
+        public StructureHarvesterTabControlVM(WorkflowStateModel workflowStateModel, int coresCount, string fullProjectFolderPath, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, LoggerService loggerService, IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> kRangeValidator) : base(workflowStateModel, SetProcessingStage.StructureHarvester, coresCount, fullProjectFolderPath, setConfigurationService, directoryService, fileService, messageService, dialogService, loggerService, pathValidator, parameterNameValidator, kRangeValidator)
         {
 
             StartStructureHarvesterAsyncCommand = new AsyncRelayCommand(execute => StartStructureHarvesterAsync(), canExecute => CanStartStructureHarvester());
             LoadChartsAsyncCommand = new AsyncRelayCommand(execute => LoadChartsAsync(), canExecute => CanLoadCharts());
 
-            _structureHarvesterInteractionService = new StructureHarvesterInteractionService(directoryService, fileService);
+            _structureHarvesterInteractionService = new StructureHarvesterInteractionService(directoryService, fileService, _logger);
 
             workflowStateModel.StateRefreshed += RebuildGraphComboBoxItems;
             workflowStateModel.SetModelsList.CollectionChanged += (_, _) => RebuildGraphComboBoxItems();
@@ -93,22 +117,31 @@ namespace GenotypeApplication.View_models
         }
         #endregion
 
-        private void RebuildGraphComboBoxItems()
+        private async void RebuildGraphComboBoxItems()
         {
+            var itemsToAdd = new List<SetModel>();
+
+            foreach (SetModel item in FilteredSetModelsList)
+            {
+                if (item.IsAvailableForStage(SetProcessingStage.CLUMPP))
+                {
+                    var (evanno, _) = await _structureHarvesterInteractionService.LoadConfiguration(Path.Combine(_fullProjectFolderPath, item.Name));
+                    if (evanno) itemsToAdd.Add(item);
+                }
+            }
+
             UIDispatcherHelper.RunOnUI(() =>
             {
                 GraphSetModelsComboBoxItems.Clear();
-                foreach (SetModel item in WorkflowState.SetModelsList)
+                foreach (var item in itemsToAdd)
                 {
-                    if (item.IsProcessedForStage(ProcessingStage))
-                        GraphSetModelsComboBoxItems.Add(item);
+                    GraphSetModelsComboBoxItems.Add(item);
                 }
 
-                //если выбранный Set пропал из списка — сбросить
                 if (_graphSelectedSetModel != null &&
                     !GraphSetModelsComboBoxItems.Contains(_graphSelectedSetModel))
                 {
-                    GraphSelectedSetModel = null;
+                    GraphSelectedSetModel = GraphSetModelsComboBoxItems.FirstOrDefault();
                 }
             });
         }
@@ -118,9 +151,21 @@ namespace GenotypeApplication.View_models
         public AsyncRelayCommand LoadChartsAsyncCommand { get; }
         #endregion
 
-        protected override void LoadSelectedSetParameters(SetModel? set)
+        protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
+            if (set == null) return;
+            if (!set.IsStructureHarvesterProcessed) return;
 
+            var setName = set.Name;
+            var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+
+            var (evanno, clumpp) = await _structureHarvesterInteractionService.LoadConfiguration(fullSetFolderPath);
+
+            EvannoParam = evanno;
+            CLUMPPOutputParam = clumpp;
+
+            var popCount = _structureHarvesterInteractionService.GetPopulationsCountFromResults(fullSetFolderPath);
+            if (popCount > 0) WorkflowState.SetPredefinedPopCount(popCount);
         }
 
         private async Task StartStructureHarvesterAsync()
@@ -137,9 +182,19 @@ namespace GenotypeApplication.View_models
                 var evannoParam = EvannoParam;
                 var clumppOutputParam = CLUMPPOutputParam;
 
+                StructureHarvesterIsIndeterminate = true;
+                StructureHarvesterProgressText = "In progress...";
                 await _structureHarvesterInteractionService.StartExecution(fullCurrentSetFolderPath, evannoParam, clumppOutputParam);
 
                 WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
+
+                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
+
+                var popCount = _structureHarvesterInteractionService.GetPopulationsCountFromResults(fullCurrentSetFolderPath);
+                if (popCount > 0) WorkflowState.SetPredefinedPopCount(popCount);
+                StructureHarvesterIsIndeterminate = false;
+                StructureHarvesterProgress = 100;
+                StructureHarvesterProgressText = "Completed";
             }
             catch (Exception)
             {
@@ -149,14 +204,14 @@ namespace GenotypeApplication.View_models
         }
         private bool CanStartStructureHarvester()
         {
-            return CurrentSet != null && !_structureHarvesterInteractionService.IsRunning;
+            return CurrentSet != null &&
+                !_structureHarvesterInteractionService.IsRunning;
         }
 
         private async Task LoadChartsAsync()
         {
             try
             {
-
                 if (GraphSelectedSetModel == null) return;
 
                 var selectedSetName = GraphSelectedSetModel.Name;
@@ -166,7 +221,7 @@ namespace GenotypeApplication.View_models
 
                 if (data.Count == 0)
                 {
-                    //todo
+                    _messageService.ShowError("No results were found for data processing using the evanno method. Plotting is not possible.");
                     return;
                 }
 
@@ -185,6 +240,19 @@ namespace GenotypeApplication.View_models
         private bool CanLoadCharts()
         {
             return GraphSelectedSetModel != null;
+        }
+
+
+
+
+
+
+
+
+
+        protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
+        {
+            return;
         }
     }
 }

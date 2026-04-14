@@ -1,11 +1,16 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
+using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models.CLUMPP;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.MVVM.Infrastructure;
 using GenotypeApplication.Services.Application_configuration.External_program_interaction;
+using GenotypeApplication.Services.Application_configuration.External_programs_interaction;
+using GenotypeApplication.Services.Application_configuration.Logger;
+using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
 
@@ -14,7 +19,6 @@ namespace GenotypeApplication.View_models
     public class CLUMPPTabControlVM : ExternalProgramTabVMBase
     {
         private bool _isCreatingNewConfiguration;
-        private string _savedConfigurationName;
         private bool _wasSaved;
 
         private int _kFrom;
@@ -24,25 +28,19 @@ namespace GenotypeApplication.View_models
         private string _configurationName;
 
         private bool _isPop;
-        private bool _savedIsPop;
         private bool _isIndv;
-        private bool _savedIsIndv;
 
         private int _popsCount;
-        private int _savedPopsCount;
         private int _indvsCount;
-        private int _savedIndvsCount;
 
-        //private int _k;
         private int _r;
         private bool _w;
         private bool _s; // 1 or 2
-        private int _repeats = 1000;
+        private int _repeats;
         private string _permutationFile;
         private bool _printEveryPerm;
         private bool _printRandomInputorder;
-        private bool _overrideWarnings;
-        private int _orderByRun = 1;
+        private int _orderByRun;
 
         private readonly Dictionary<int, string> _algorithms = new()
         {
@@ -68,35 +66,122 @@ namespace GenotypeApplication.View_models
         };
         private int _selectedPrintPermutedData = 1; //PRINT_PERMUTED_DATA value
 
-        private CLUMPPConfigurationModel? _selectedConfigurationParameters = new();
-        private ObservableCollection<CLUMPPConfigurationModel> _savedConfigurationParametersItems = new();
+        private CLUMPPConfigurationModel? _selectedComboBoxConfigurationParameters = new();
         #endregion
 
         private readonly CLUMPPInteractionService _clumppInteractionService;
 
-        public CLUMPPTabControlVM(WorkflowStateModel workflowState, int coresCount, string fullProjectFolderPath, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService) : base(workflowState, SetProcessingStage.CLUMPP, coresCount, fullProjectFolderPath, directoryService, fileService, messageService, dialogService)
+        private readonly ParametersChangesTracker<CLUMPPConfigurationModel> _changesTracker = new();
+        private (bool savedIsPop, int savedCPop, bool savedisIndv, int savedCIndv) _savedDataTypeParameters;
+
+        private double _clumppProgress;
+        public double CLUMPPProgress
         {
+            get => _clumppProgress;
+            set { SetField(ref _clumppProgress, value); }
+        }
+
+        private string _clumppProgressText = "Not started";
+        public string CLUMPPProgressText
+        {
+            get => _clumppProgressText;
+            set { SetField(ref _clumppProgressText, value); }
+        }
+
+        private bool _clumppStopped;
+        public bool CLUMPPStopped
+        {
+            get => _clumppStopped;
+            set { SetField(ref _clumppStopped, value); }
+        }
+        private bool _clumppCompleted;
+        public bool CLUMPPCompleted
+        {
+            get => _clumppCompleted;
+            set { SetField(ref _clumppCompleted, value); }
+        }
+
+        private bool _userSure;
+
+        public CLUMPPTabControlVM(WorkflowStateModel workflowState, int coresCount, string fullProjectFolderPath, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, LoggerService loggerService, IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> kRangeValidator) : base(workflowState, SetProcessingStage.CLUMPP, coresCount, fullProjectFolderPath, setConfigurationService, directoryService, fileService, messageService, dialogService, loggerService, pathValidator, parameterNameValidator, kRangeValidator)
+        {
+            _configurationName = string.Empty;
+
+            _isPop = false;
+            _isIndv = false;
+
+            _popsCount = 0;
+            _indvsCount = 0;
+
+            _savedDataTypeParameters = (false, 0, false, 0);
+
+            _kFrom = 2;
+            _kTo = 3;
+
+            _permutationFile = string.Empty;
+            WorkflowState.CLUMPPConfigurationModelsList.CollectionChanged += (_, _) => RebuildComboBoxItems();
+            RebuildComboBoxItems();
+            SelectedComboBoxConfigurationParameters = ConfigurationParametersComboBoxList.LastOrDefault(); // здесь через сеттер устаеовятся _isCreatingNewSet и _wasSaved
+
+            PropertyChanged += OnLimitedValuesChanged;
+
             SaveChangesAsyncCommand = new AsyncRelayCommand(execute => SaveChangesAsync(), canExecute => CanSaveChanges());
             StartCLUMPPAsyncCommand = new AsyncRelayCommand(execute => StartCLUMPPAsync(), canExecute => CanStartCLUMPP());
             StopCLUMPPCommand = new RelayCommand(execute => StopCLUMPP(), canExecute => CanStopCLUMPP());
+            SelectPermutationFileCommand = new RelayCommand(execute => SelectPermutationFile());
 
-            _clumppInteractionService = new CLUMPPInteractionService(directoryService, fileService);
+            _clumppInteractionService = new CLUMPPInteractionService(directoryService, fileService, _logger);
+            _clumppInteractionService.ProgressChanged += value =>
+            {
+                if (_clumppCompleted || CLUMPPStopped) return;
+                if (value >= 100) return;
 
-            RebuildConfigurationParametersItems();
-            SelectedConfigurationParameters = ConfigurationParametersItems.LastOrDefault();
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    if (_clumppCompleted || CLUMPPStopped) return;
+                    CLUMPPProgress = value;
+                    CLUMPPProgressText = $"In progress... {value:F0}%";
+                });
+            };
+        }
 
-            _isCreatingNewConfiguration = true;
+        private void OnLimitedValuesChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender == null) return;
+
+            if (e.PropertyName == nameof(PredefinedIterationsLimit))
+                R = PredefinedIterationsLimit;
+
+            if (e.PropertyName == nameof(PredefinedStructureKEnd))
+                KTo = PredefinedStructureKEnd;
+
+            if (e.PropertyName == nameof(PredefinedStructureKStart))
+                KFrom = PredefinedStructureKStart;
+
+            if (e.PropertyName == nameof(PredefinedIndvCount))
+                IndvsCount = PredefinedIndvCount;
+
+            if (e.PropertyName == nameof(PredefinedPopCount))
+                PopsCount = PredefinedPopCount;
         }
 
         public int KFrom
         {
             get => _kFrom;
-            set { SetField(ref _kFrom, value); }
+            set
+            {
+                if (SetField(ref _kFrom, value))
+                    ValidateProperty((value, KTo, int.Max(2, PredefinedStructureKStart), PredefinedStructureKEnd), _kRangeValidator.Validate);
+            }
         }
         public int KTo
         {
             get => _kTo;
-            set { SetField(ref _kTo, value); }
+            set
+            {
+                if (SetField(ref _kTo, value))
+                    ValidateProperty((KFrom, value, int.Max(2, PredefinedStructureKStart), PredefinedStructureKEnd), _kRangeValidator.Validate);
+            }
         }
 
         #region Configuration parameters properties
@@ -120,11 +205,6 @@ namespace GenotypeApplication.View_models
             get => _indvsCount;
             set { SetField(ref _indvsCount, value); }
         }
-        //public int K//
-        //{
-        //    get => _k;
-        //    set { SetField(ref _k, value); }
-        //}
         public int R//
         {
             get => _r;
@@ -160,11 +240,7 @@ namespace GenotypeApplication.View_models
             get => _printRandomInputorder;
             set { SetField(ref _printRandomInputorder, value); }
         }
-        public bool OverrideWarnings//
-        {
-            get => _overrideWarnings;
-            set { SetField(ref _overrideWarnings, value); }
-        }
+
         public int OrderByRun//
         {
             get => _orderByRun;
@@ -197,62 +273,157 @@ namespace GenotypeApplication.View_models
             get => _configurationName;
             set { SetField(ref _configurationName, value); }
         }
-        public CLUMPPConfigurationModel? SelectedConfigurationParameters
+        public CLUMPPConfigurationModel? SelectedComboBoxConfigurationParameters
         {
-            get => _selectedConfigurationParameters;
+            get => _selectedComboBoxConfigurationParameters;
             set
-            { 
-                if (SetField(ref _selectedConfigurationParameters, value))
+            {
+                if (SetField(ref _selectedComboBoxConfigurationParameters, value))
                 {
-                    if (value == CreateNewSetPlaceholder)
+                    if (value == _createNewSetPlaceholder)
                     {
-                        if (!_isCreatingNewConfiguration) return; //todo
-                        
+                        if (!_isCreatingNewConfiguration) ResetParameters();
+
                         _isCreatingNewConfiguration = true;
+                        _wasSaved = false;
+                        ConfigurationName = string.Empty;
+
+                        UIDispatcherHelper.RunOnUI(() =>
+                        {
+                            CLUMPPProgressText = "Not started";
+                            CLUMPPProgress = 0;
+                        });
+                        CLUMPPStopped = false;
+                    }
+                    else if (value != null)
+                    {
+                        CurrentCLUMPPConfigurationModel = value;
                     }
                 }
             }
         }
-        public ObservableCollection<CLUMPPConfigurationModel> ConfigurationParametersItems { get; } = new();
-        public static readonly CLUMPPConfigurationModel CreateNewSetPlaceholder = new() { ParametersName = "Create new" };
+        public ObservableCollection<CLUMPPConfigurationModel> ConfigurationParametersComboBoxList { get; } = new();
+        private static readonly CLUMPPConfigurationModel _createNewSetPlaceholder = new() { ParametersName = "Create new" };
         #endregion
 
         #region Commands properties
         public ICommand SaveChangesAsyncCommand { get; }
         public AsyncRelayCommand StartCLUMPPAsyncCommand { get; }
         public RelayCommand StopCLUMPPCommand { get; }
+        public ICommand SelectPermutationFileCommand { get; }
         #endregion
 
-        private void RebuildConfigurationParametersItems()
+        private void SelectPermutationFile()
+        {
+            PermutationFile = _dialogService.SelectFile(PathConstants.DEFAULT_DOCUMENTS_PATH);
+        }
+
+        private void RebuildComboBoxItems()
         {
             UIDispatcherHelper.RunOnUI(() =>
             {
-                ConfigurationParametersItems.Clear();
+                ConfigurationParametersComboBoxList.Clear();
 
-                foreach (CLUMPPConfigurationModel item in _savedConfigurationParametersItems)
-                    ConfigurationParametersItems.Add(item);
+                foreach (CLUMPPConfigurationModel item in FilteredCLUMPPConfigurationModelsList)
+                    ConfigurationParametersComboBoxList.Add(item);
 
-                ConfigurationParametersItems.Add(CreateNewSetPlaceholder);
+                ConfigurationParametersComboBoxList.Add(_createNewSetPlaceholder);
             });
         }
 
-        protected override void LoadSelectedSetParameters(SetModel? set)
+        private void ResetParameters()
         {
-            
+            var newConfiguration = new CLUMPPConfigurationModel();
+
+            ConfigurationName = string.Empty;
+            SetConfigurationParameters(newConfiguration, false, PredefinedPopCount, false, PredefinedIndvCount);
+
+            KFrom = PredefinedStructureKStart;
+            KTo = PredefinedStructureKEnd;
         }
+
+        protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
+        {
+            if (set == null) return;
+            if (!set.IsCLUMPPProcessed) return;
+
+            var setName = set.Name;
+            var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+
+            try
+            {
+                var configurations = await _clumppInteractionService.LoadConfigurationsListAsync(fullSetFolderPath);
+
+                WorkflowState.LoadCLUMPPConfigurationModelsList(configurations);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
+        {
+            if (configuration == null || CurrentSet == null) return;
+            if (!configuration.IsProcessed) return;
+
+            var setName = CurrentSet.Name;
+            var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+
+            try
+            {
+                var (configurationModel, isPop, isIndv, kStart, kEnd) = await _clumppInteractionService.LoadConfiguration(fullSetFolderPath, configuration.ParametersName);
+
+                SetField(ref _selectedComboBoxConfigurationParameters, configurationModel, nameof(SelectedComboBoxConfigurationParameters));
+
+                SetConfigurationParameters(configurationModel, isPop, PredefinedPopCount, isIndv, PredefinedIndvCount);
+
+                IsPop = isPop;
+                IsIndv = isIndv;
+
+                _isCreatingNewConfiguration = false;
+                _wasSaved = true;
+
+                _changesTracker.TakeModelSnapshot(configurationModel);
+                _savedDataTypeParameters = (isPop, PredefinedPopCount, isIndv, PredefinedIndvCount);
+
+                if (kEnd == 0 || kStart == 0)
+                {
+                    KFrom = 2;
+                    KTo = 3;
+
+                    UIDispatcherHelper.RunOnUI(() =>
+                    {
+                        CLUMPPProgressText = "Not started";
+                        CLUMPPProgress = 0;
+                    });
+                    CLUMPPStopped = false;
+
+                    return;
+                }
+
+                KFrom = kStart;
+                KTo = kEnd;
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    CLUMPPProgress = 100;
+                    CLUMPPProgressText = "Completed";
+                });
+                CLUMPPStopped = false;
+
+                WorkflowState.SetPredefinedCLUMPPParameters(kStart, kEnd);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
 
         private (CLUMPPConfigurationModel, bool IsPop, int PopCount, bool IsIndv, int IndvCount) GetConfigurationParameters()
         {
             return (new CLUMPPConfigurationModel
             {
                 ParametersName = ConfigurationName,
-                //DATATYPE,
-                //INDFILE
-                //POPFILE
-                //OUTFILE
-                //MISCFILE
-                //K = K,
-                //C
                 R = R,
                 M = SelectedAlgorithm,
                 W = W,
@@ -261,12 +432,8 @@ namespace GenotypeApplication.View_models
                 REPEATS = Repeats,
                 PERMUTATIONFILE = PermutationFile,
                 PRINT_PERMUTED_DATA = SelectedPrintPermutedData,
-                //PERMUTED_DATAFILE
                 PRINT_EVERY_PERM = PrintEveryPerm,
-                //EVERY_PERMFILE
                 PRINT_RANDOM_INPUTORDER = PrintRandomInputorder,
-                //RANDOM_INPUTORDERFILE
-                OVERRIDE_WARNINGS = OverrideWarnings,
                 ORDER_BY_RUN = OrderByRun
             }, IsPop, PopsCount, IsIndv, IndvsCount);
         }
@@ -291,52 +458,94 @@ namespace GenotypeApplication.View_models
             SelectedPrintPermutedData = model.PRINT_PERMUTED_DATA;
             PrintEveryPerm = model.PRINT_EVERY_PERM;
             PrintRandomInputorder = model.PRINT_RANDOM_INPUTORDER;
-            OverrideWarnings = model.OVERRIDE_WARNINGS;
             OrderByRun = model.ORDER_BY_RUN;
         }
 
         private async Task SaveChangesAsync()
         {
-            if (CurrentSet == null) return;
-            var newParametersName = ConfigurationName;
-            if (string.IsNullOrWhiteSpace(newParametersName)) return;
+            var (configuration, isPop, popCount, isIndv, indvCount) = GetConfigurationParameters();
+
+            if (CurrentSet == null ||
+                HasErrors ||
+                (!_changesTracker.HasChanges(configuration) && _savedDataTypeParameters == (isPop, popCount, isIndv, indvCount)) ||
+                string.IsNullOrWhiteSpace(configuration.ParametersName) ||
+                ((isIndv && indvCount == 0) || (isPop && popCount == 0)) ||
+                configuration.R == 0)
+                return;
 
             var currentSetName = CurrentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
 
-            _clumppInteractionService.PrepareCLUMPPDirectory(fullCurrentSetFolderPath);
-
-            bool isNameChanged = !_isCreatingNewConfiguration && _savedConfigurationName != newParametersName;
-            if ((_isCreatingNewConfiguration || isNameChanged) && _clumppInteractionService.IsConfigurationExist(fullCurrentSetFolderPath, newParametersName))
+            bool isNameChanged = !_isCreatingNewConfiguration && CurrentCLUMPPConfigurationModel?.ParametersName != configuration.ParametersName;
+            if ((_isCreatingNewConfiguration || isNameChanged) && _clumppInteractionService.IsConfigurationExist(fullCurrentSetFolderPath, configuration.ParametersName))
             {
-                _messageService.ShowWarning($"Configuration with name \"{newParametersName}\" already exists. Please choose a different name.");
+                _messageService.ShowWarning($"Configuration with name \"{configuration.ParametersName}\" already exists. Please choose a different name.");
                 return;
             }
 
             try
             {
-                _wasSaved = false;
+                if (configuration.GREEDY_OPTION == 1 && !IsCLUMPPFullSearchOptimal.Calculate(KTo, configuration.R))
+                {
+                    var result = _messageService.ShowQuetion("With the current values of K and number of iterations (R), FullSearch computations may take a considerable amount of time. Consider reducing the maximum K value or switching the method to Greedy / LargeKGreedy (for K ≥ 15). Are you sure you want to continue with the current settings?");
 
-                var (configurationParameters, isPop, popCount, isIndv, indvCount)= GetConfigurationParameters();
+                    if (result == false) return;
+
+                    _userSure = true;
+                }
+
+                if (isPop && popCount != PredefinedPopCount)
+                {
+                    var result = _messageService.ShowExpandedQuetion("Changing value of populations may cause CLUMPP to malfunction. Are you sure you want to proceed with the current value? (“No” - restore default value and continue.)");
+
+                    if (result == false)
+                    {
+                        popCount = PredefinedPopCount;
+                        PopsCount = popCount;
+                    }
+                    else if (result == null) return;
+                }
+                if (isIndv && indvCount != PredefinedIndvCount)
+                {
+                    var result = _messageService.ShowExpandedQuetion("Changing value of individuals may cause CLUMPP to malfunction. Are you sure you want to proceed with the current value? (“No” - restore default value and continue.)");
+
+                    if (result == false)
+                    {
+                        indvCount = PredefinedIndvCount;
+                        IndvsCount = indvCount;
+                    }
+                    else if (result == null) return;
+                }
+                if (configuration.R != PredefinedIterationsLimit)
+                {
+                    var result = _messageService.ShowExpandedQuetion("Changing value of iterations over K may cause CLUMPP to malfunction. Are you sure you want to proceed with the current value? (“No” - restore default value and continue.)");
+
+                    if (result == false)
+                    {
+                        configuration.R = PredefinedIterationsLimit;
+                        R = PredefinedIterationsLimit;
+                    }
+                    else if (result == null) return;
+                }
+
+                _wasSaved = false;
 
                 if (_isCreatingNewConfiguration)
                 {
-                    await CreateNewConfigurationAsync(configurationParameters, fullCurrentSetFolderPath, isPop, popCount, isIndv, indvCount);
+                    await CreateNewConfigurationAsync(configuration, fullCurrentSetFolderPath, isPop, popCount, isIndv, indvCount);
                 }
                 else
                 {
-                    bool shouldBeSaved = await UpdateExistingConfigurationAsync(configurationParameters, fullCurrentSetFolderPath);
+                    bool shouldBeSaved = await UpdateExistingConfigurationAsync(configuration, fullCurrentSetFolderPath, isPop, popCount, isIndv, indvCount);
 
                     if (!shouldBeSaved) return;
                 }
 
+                _changesTracker.TakeModelSnapshot(configuration);
+                _savedDataTypeParameters = (isPop, popCount, isIndv, indvCount);
+
                 _wasSaved = true;
-                _savedConfigurationName = newParametersName;
                 _isCreatingNewConfiguration = false;
-                _savedIndvsCount = indvCount;
-                _savedIsIndv = isIndv;
-                _savedIsPop = isPop;
-                _savedPopsCount = popCount;
             }
             catch (Exception)
             {
@@ -350,45 +559,141 @@ namespace GenotypeApplication.View_models
         }
         private bool CanSaveChanges()
         {
-            return CurrentSet != null && !string.IsNullOrWhiteSpace(ConfigurationName);
+            var (configurationParameters, isPops, popCount, isIndv, indvCount) = GetConfigurationParameters();
+
+            return CurrentSet != null &&
+                   !HasErrors &&
+                   !string.IsNullOrWhiteSpace(configurationParameters.ParametersName) &&
+                   (_changesTracker.HasChanges(configurationParameters) || _savedDataTypeParameters != (isPops, popCount, isIndv, indvCount)) &&
+                   ((isIndv && indvCount != 0) || (isPops && popCount != 0)) &&
+                   configurationParameters.R != 0;
         }
         private async Task CreateNewConfigurationAsync(CLUMPPConfigurationModel configurationModel, string fullCurrentSetFolderPath, bool isPop, int popCount, bool isIndv, int indvCount)
         {
+            _clumppInteractionService.PrepareCLUMPPDirectory(fullCurrentSetFolderPath);
+
             await _clumppInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, configurationModel, isPop, popCount, isIndv, indvCount);
 
-            _savedConfigurationParametersItems.Add(configurationModel);
-            RebuildConfigurationParametersItems();
-            SelectedConfigurationParameters = configurationModel;
+            WorkflowState.AddNewCLUMPPConfiguration(configurationModel);
+            SetField(ref _currentCLUMPPConfigurationModel, configurationModel, null);
+            SetField(ref _selectedComboBoxConfigurationParameters, configurationModel, nameof(SelectedComboBoxConfigurationParameters));
+            WorkflowState.CurrentCLUMPPConfigurationModel = configurationModel;
 
             _messageService.ShowInformation($"Configuration \"{configurationModel.ParametersName}\" was successfully created.");
         }
-        private async Task<bool> UpdateExistingConfigurationAsync(CLUMPPConfigurationModel configurationParametersModel, string fullCurrentSetFolderPath)
+        private async Task<bool> UpdateExistingConfigurationAsync(CLUMPPConfigurationModel configurationModel, string fullCurrentSetFolderPath, bool isPop, int popCount, bool isIndv, int indvCount)
         {
-            return false;
+            try
+            {
+                if (CurrentSet == null) throw new InvalidOperationException("Current set is null on UpdateExistingConfigurationAsync() step.");
+                if (CurrentCLUMPPConfigurationModel == null) throw new InvalidOperationException("Current configuration is null on UpdateExistingConfigurationAsync() step.");
+
+                if (!_clumppInteractionService.IsConfigurationExist(fullCurrentSetFolderPath, CurrentCLUMPPConfigurationModel.ParametersName))
+                {
+                    _messageService.ShowError($"Configuration with name \"{CurrentCLUMPPConfigurationModel.ParametersName}\" was not found. Unable to save changes.");
+                    return false;
+                }
+
+                if (CurrentCLUMPPConfigurationModel.ParametersName != configurationModel.ParametersName)
+                {
+                    CurrentCLUMPPConfigurationModel.ParametersName = configurationModel.ParametersName;
+
+                    await _clumppInteractionService.RenameConfiguration(fullCurrentSetFolderPath, CurrentCLUMPPConfigurationModel.ParametersName, configurationModel.ParametersName);
+                }
+
+                if (_changesTracker.HasChanges(configurationModel))
+                {
+                    if (CurrentCLUMPPConfigurationModel.IsProcessed)
+                    {
+                        var willCreateNewConfiguration = _messageService.ShowQuetion("Changing the parameters will reset the processing progress made in later stages. Do you want to create a new configuration with the current settings?");
+
+                        if (willCreateNewConfiguration)
+                        {
+                            SelectedComboBoxConfigurationParameters = _createNewSetPlaceholder;
+                        }
+                        else
+                        {
+                            var savedConfiguration = _changesTracker.GetSnapshot();
+
+                            if (savedConfiguration is null) throw new InvalidOperationException("Saved configuration snapshot is null on UpdateExistingConfigurationAsync() step.");
+
+                            SetConfigurationParameters(savedConfiguration, isPop, popCount, isIndv, indvCount);
+
+                            _isCreatingNewConfiguration = false;
+                            _wasSaved = true;
+                        }
+                        return false;
+                    }
+                    else
+                    {
+                        await _clumppInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, configurationModel, isPop, popCount, isIndv, indvCount);
+                    }
+                }
+                return true;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
         private async Task StartCLUMPPAsync()
         {
-            if (!_wasSaved)
+            if (!_wasSaved ||
+                _clumppInteractionService.IsRunning ||
+                CurrentCLUMPPConfigurationModel == null ||
+                CurrentSet == null ||
+                HasErrorsFor(nameof(KFrom)) ||
+                HasErrorsFor(nameof(KTo)) ||
+                ((!IsPop || IsPop != _savedDataTypeParameters.savedIsPop) &&
+                (!IsIndv || IsIndv != _savedDataTypeParameters.savedisIndv)))
                 return;
-
-            if (CurrentSet == null) return;
-            if (SelectedConfigurationParameters == null) return;
 
             int kFrom = KFrom;
             int kTo = KTo;
-            var configurationName = _savedConfigurationName;
-            var isPop = _savedIsPop;
-            var isIndv = _savedIsIndv;
+            var configurationName = CurrentCLUMPPConfigurationModel.ParametersName;
+            var isPop = IsPop;
+            var isIndv = IsIndv;
+
+            if (!_userSure && CurrentCLUMPPConfigurationModel.GREEDY_OPTION == 1 && !IsCLUMPPFullSearchOptimal.Calculate(kTo, CurrentCLUMPPConfigurationModel.R))
+            {
+                var result = _messageService.ShowQuetion("With the current values of K and number of iterations (R), FullSearch computations may take a considerable amount of time. Consider reducing the maximum K value or switching the method to Greedy / LargeKGreedy (for K ≥ 15). Are you sure you want to continue with the current settings?");
+
+                if (result == false) return;
+            }
 
             var currentSetName = CurrentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
 
             try
             {
+                _clumppCompleted = false;
+                CLUMPPStopped = false;
+
+                CLUMPPProgress = 0;
+                CLUMPPProgressText = "In progress... 0%";
+
                 await _clumppInteractionService.StartExecution(configurationName, isPop, isIndv, kFrom, kTo, fullCurrentSetFolderPath, _coresCount);
 
+                _clumppCompleted = true;
                 WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
+                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
+
+                WorkflowState.SetPredefinedCLUMPPParameters(kFrom, kTo);
+
+                bool hasPopResults = _clumppInteractionService.HasPopResults(fullCurrentSetFolderPath, configurationName);
+
+                WorkflowState.MarkCLUMPPConfigurationProcessed(CurrentCLUMPPConfigurationModel, hasPopResults);
+
+                CLUMPPProgress = 100;
+                CLUMPPProgressText = "Completed";
+
+                _userSure = false;
+            }
+            catch (OperationCanceledException)
+            {
+                CLUMPPProgressText = $"Stopped at {CLUMPPProgress:F0}%";
             }
             catch (Exception)
             {
@@ -402,11 +707,29 @@ namespace GenotypeApplication.View_models
         }
         private bool CanStartCLUMPP()
         {
-            return true;
+            return _wasSaved &&
+                   !_clumppInteractionService.IsRunning &&
+                   CurrentSet != null &&
+                   CurrentCLUMPPConfigurationModel != null &&
+                   !HasErrorsFor(nameof(KFrom)) &&
+                   !HasErrorsFor(nameof(KTo)) &&
+                   ((IsPop && IsPop == _savedDataTypeParameters.savedIsPop) ||
+                    (IsIndv && IsIndv == _savedDataTypeParameters.savedisIndv));
         }
 
         private void StopCLUMPP()
         {
+            try
+            {
+                CLUMPPStopped = true;
+                CLUMPPProgressText = $"Stopping...";
+                _clumppInteractionService.StopExecution();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
         private bool CanStopCLUMPP()
         {

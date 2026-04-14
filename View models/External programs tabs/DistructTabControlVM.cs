@@ -1,11 +1,17 @@
-﻿using GenotypeApplication.Constants;
+﻿using GenotypeApplication.Application_windows;
+using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
+using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models;
+using GenotypeApplication.Models.CLUMPP;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.MVVM.Infrastructure;
 using GenotypeApplication.Services.Application_configuration.External_program_interaction;
+using GenotypeApplication.Services.Application_configuration.Logger;
+using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
 
@@ -20,16 +26,12 @@ namespace GenotypeApplication.View_models
         #region Configuration parameters
         private string _parametersName;
 
-        //private string _infile_popq = string.Empty;
-        //private string _infile_indivq = string.Empty;
         private string _infile_label_atop = string.Empty;
         private string _infile_label_below = string.Empty;
         private string _infile_clust_perm = string.Empty;
-        //private string _outfile = string.Empty;
 
         private int _kFrom;
         private int _kTo;
-        //private int _k;
 
         private int _numpops;
         private int _numinds;
@@ -51,7 +53,6 @@ namespace GenotypeApplication.View_models
             { 3, "Reverse vertical" }
         };
         private int _selectedOrientation = 0;
-        //private int _orientation;
 
         private double _xorigin;
         private double _yorigin;
@@ -69,35 +70,66 @@ namespace GenotypeApplication.View_models
         private bool _print_color_brewer;
         #endregion
 
+        private ParametersChangesTracker<DistructConfigurationModel> _changesTracker = new();
         private DistructInteractionService _distructInteractionService;
+        private readonly IWindowService _windowService;
 
-        public DistructTabControlVM(WorkflowStateModel workflowState, int coresCount, string fullProjectFolderPath, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService) : base(workflowState, SetProcessingStage.Distruct, coresCount, fullProjectFolderPath, directoryService, fileService, messageService, dialogService)
+        public DistructTabControlVM(WorkflowStateModel workflowState, int coresCount, string fullProjectFolderPath, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, LoggerService loggerService, IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> kRangeValidator, IWindowService windowService) : base(workflowState, SetProcessingStage.Distruct, coresCount, fullProjectFolderPath, setConfigurationService, directoryService, fileService, messageService, dialogService, loggerService, pathValidator, parameterNameValidator, kRangeValidator)
         {
+            _parametersName = string.Empty;
+            _savedConfigurationName = string.Empty;
 
-            _distructInteractionService = new DistructInteractionService(directoryService, fileService);
+            _kFrom = 2;
+            _kTo = 3;
+
+            RebuildConfigurationParametersItems();
+            SelectedConfigurationParameters = ConfigurationParametersItems.LastOrDefault();
+
+            PropertyChanged += OnLimitedValuesChanged;
 
             SaveChangesAsyncCommand = new AsyncRelayCommand(execute => SaveChangesAsync(), canExecute => CanSaveChanges());
             StartDistructAsyncCommand = new AsyncRelayCommand(execute => StartDistructAsync(), canExecute => CanStartDistruct());
             StopDistructCommand = new RelayCommand(execute => StopDistruct(), canExecute => CanStopDistruct());
+            SelectLabelsAtopFileCommand = new RelayCommand(execute => SelectLabelsAtopFile());
+            SelectLabelsBelowFileCommand = new RelayCommand(execute => SelectLabelsBelowFile());
+            ConfigureColorPaletteCommand = new RelayCommand(execute => ConfigureColorPalette());
+            _windowService = windowService;
 
 
-            _isCreatingNewConfiguration = true;
+            _distructInteractionService = new DistructInteractionService(directoryService, fileService, _logger);
 
-            RebuildConfigurationParametersItems();
-            SelectedConfigurationParameters = ConfigurationParametersItems.LastOrDefault();
+            _distructInteractionService.ProgressChanged += value =>
+            {
+                if (_distructCompleted || DistructStopped) return;
+                if (value >= 100) return;
+
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    if (_distructCompleted || DistructStopped) return;
+                    DistructProgress = value;
+                    DistructProgressText = $"In progress... {value:F0}%";
+                });
+            };
+        }
+
+        private void OnLimitedValuesChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender == null) return;
+
+            if (e.PropertyName == nameof(PredefinedCLUMPPKEnd))
+                KTo = PredefinedCLUMPPKEnd;
+
+            if (e.PropertyName == nameof(PredefinedCLUMPPKStart))
+                KFrom = PredefinedCLUMPPKStart;
+
+            if (e.PropertyName == nameof(PredefinedIndvCount))
+                NUMINDS = PredefinedIndvCount;
+
+            if (e.PropertyName == nameof(PredefinedPopCount))
+                NUMPOPS = PredefinedPopCount;
         }
 
         #region Configuration parameters properties
-        //public string INFILE_POPQ
-        //{
-        //    get => _infile_popq;
-        //    set { SetField(ref _infile_popq, value); }
-        //}
-        //public string INFILE_INDIVQ
-        //{
-        //    get => _infile_indivq;
-        //    set { SetField(ref _infile_indivq, value); }
-        //}
         public string INFILE_LABEL_ATOP //
         {
             get => _infile_label_atop;
@@ -113,27 +145,25 @@ namespace GenotypeApplication.View_models
             get => _infile_clust_perm;
             set { SetField(ref _infile_clust_perm, value); }
         }
-        //public string OUTFILE
-        //{
-        //    get => _outfile;
-        //    set { SetField(ref _outfile, value); }
-        //}
 
         public int KFrom
         {
             get => _kFrom;
-            set { SetField(ref _kFrom, value); }
+            set
+            {
+                if (SetField(ref _kFrom, value))
+                    ValidateProperty((value, KTo, PredefinedCLUMPPKStart, PredefinedCLUMPPKEnd), _kRangeValidator.Validate);
+            }
         }
         public int KTo
         {
             get => _kTo;
-            set { SetField(ref _kTo, value); }
+            set
+            {
+                if (SetField(ref _kTo, value))
+                    ValidateProperty((KFrom, value, PredefinedCLUMPPKStart, PredefinedCLUMPPKEnd), _kRangeValidator.Validate);
+            }
         }
-        //public int K
-        //{
-        //    get => _k;
-        //    set { SetField(ref _k, value); }
-        //}
 
         public int NUMPOPS//
         {
@@ -197,11 +227,8 @@ namespace GenotypeApplication.View_models
             get => _selectedOrientation;
             set { SetField(ref _selectedOrientation, value); }
         }
-        //public int ORIENTATION
-        //{
-        //    get => _orientation;
-        //    set { SetField(ref _orientation, value); }
-        //}
+
+
         public double XORIGIN //
         {
             get => _xorigin;
@@ -272,18 +299,41 @@ namespace GenotypeApplication.View_models
             get => _print_color_brewer;
             set { SetField(ref _print_color_brewer, value); }
         }
+        #endregion
 
         private DistructConfigurationModel? _selectedConfigurationParameters = new();
         private ObservableCollection<DistructConfigurationModel> _savedConfigurationParametersItems = new();
-        #endregion
 
         #region Commands properties
         public ICommand SaveChangesAsyncCommand { get; }
         public AsyncRelayCommand StartDistructAsyncCommand { get; }
         public RelayCommand StopDistructCommand { get; }
+        public ICommand SelectLabelsAtopFileCommand { get; }
+        public ICommand SelectLabelsBelowFileCommand { get; }
+        public ICommand ConfigureColorPaletteCommand { get; }
         #endregion
 
-        public string ParametersName
+        private void SelectLabelsAtopFile()
+        {
+            INFILE_LABEL_ATOP = _dialogService.SelectFile(PathConstants.DEFAULT_DOCUMENTS_PATH);
+        }
+        private void SelectLabelsBelowFile()
+        {
+            INFILE_LABEL_BELOW = _dialogService.SelectFile(PathConstants.DEFAULT_DOCUMENTS_PATH);
+        }
+        private void ConfigureColorPalette()
+        {
+            DistructColorsConfigurationVM distructColorsConfigurationVM = new(KTo, GRAYSCALE, _windowService);
+
+            bool? configurationResult = _windowService.ShowDialogWindow<DistructColorsConfigurationWindow, DistructColorsConfigurationVM>(distructColorsConfigurationVM);
+
+            if (configurationResult == true)
+            {
+
+            }
+        }
+
+        public string ConfigurationName
         {
             get => _parametersName;
             set { SetField(ref _parametersName, value); }
@@ -297,13 +347,44 @@ namespace GenotypeApplication.View_models
                 {
                     if (value == CreateNewSetPlaceholder)
                     {
-                        if (!_isCreatingNewConfiguration) return; //todo
+                        if (!_isCreatingNewConfiguration) ResetParameters();
 
                         _isCreatingNewConfiguration = true;
+                        _wasSaved = false;
+                        ConfigurationName = string.Empty;
+
+                        UIDispatcherHelper.RunOnUI(() =>
+                        {
+                            DistructProgressText = "Not started";
+                            DistructProgress = 0;
+                        });
+                        DistructStopped = false;
+                    }
+                    else if (value != null)
+                    {
+                        if (!IsValidDistructConfiguration(value))
+                        {
+                            _messageService.ShowWarning($"Distruct configuration folder with name \"{value.ParametersName}\" was not found.");
+
+                            _savedConfigurationParametersItems.Remove(value);
+                            RebuildConfigurationParametersItems();
+                            return;
+                        }
+
+                        _ = LoadSelectedDistructConfigurationAsync(value);
                     }
                 }
             }
         }
+
+        private bool IsValidDistructConfiguration(DistructConfigurationModel configuration)
+        {
+            if (CurrentSet == null || CurrentCLUMPPConfigurationModel == null) return false;
+            var setName = CurrentSet.Name;
+            var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+            return _distructInteractionService.IsConfigurationExist(fullSetFolderPath, CurrentCLUMPPConfigurationModel.ParametersName, configuration.ParametersName) && !_directoryService.IsDirectoryEmpty(Path.Combine(fullSetFolderPath, DistructConstants.DISTRUCT_FOLDER_NAME, CurrentCLUMPPConfigurationModel.ParametersName, configuration.ParametersName));
+        }
+
         public ObservableCollection<DistructConfigurationModel> ConfigurationParametersItems { get; } = new();
         public static readonly DistructConfigurationModel CreateNewSetPlaceholder = new() { ParametersName = "Create new" };
 
@@ -320,50 +401,184 @@ namespace GenotypeApplication.View_models
             });
         }
 
-        protected override void LoadSelectedSetParameters(SetModel? set)
+        private double _distructProgress;
+        public double DistructProgress
         {
-           
+            get => _distructProgress;
+            set { SetField(ref _distructProgress, value); }
         }
 
+        private string _distructProgressText = "Not started";
+        public string DistructProgressText
+        {
+            get => _distructProgressText;
+            set { SetField(ref _distructProgressText, value); }
+        }
 
+        private bool _distructStopped;
+        public bool DistructStopped
+        {
+            get => _distructStopped;
+            set { SetField(ref _distructStopped, value); }
+        }
+        private bool _distructCompleted;
+        public bool DistructCompleted
+        {
+            get => _distructCompleted;
+            set { SetField(ref _distructCompleted, value); }
+        }
+
+        protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
+        {
+            return;
+        }
+        protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
+        {
+            if (configuration == null || CurrentSet == null || !configuration.IsProcessed || !configuration.HasPopResults) return;
+
+            var setName = CurrentSet.Name;
+            var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+
+            try
+            {
+                var configurations = await _distructInteractionService.LoadConfigurationsListAsync(fullSetFolderPath, configuration.ParametersName);
+
+                _savedConfigurationParametersItems.Clear();
+
+                foreach (var config in configurations)
+                    _savedConfigurationParametersItems.Add(config);
+
+                RebuildConfigurationParametersItems();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        private async Task LoadSelectedDistructConfigurationAsync(DistructConfigurationModel? configuration)
+        {
+            if (configuration == null || CurrentSet == null || CurrentCLUMPPConfigurationModel == null) return;
+
+            var setName = CurrentSet.Name;
+            var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+
+            try
+            {
+                var (configurationModel, kFrom, kTo) = await _distructInteractionService.LoadConfigurationAsync(fullSetFolderPath, CurrentCLUMPPConfigurationModel.ParametersName, configuration.ParametersName);
+
+                SetConfigurationParameters(configurationModel);
+                _savedConfigurationName = configurationModel.ParametersName;
+
+                _isCreatingNewConfiguration = false;
+                _wasSaved = true;
+
+                if (kFrom == 0 || kTo == 0)
+                {
+                    KFrom = 2;
+                    KTo = 3;
+
+                    UIDispatcherHelper.RunOnUI(() =>
+                    {
+                        DistructProgressText = "Not started";
+                        DistructProgress = 0;
+                    });
+                    DistructStopped = false;
+                    return;
+                }
+
+                KFrom = kFrom;
+                KTo = kTo;
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    DistructProgress = 100;
+                    DistructProgressText = "Completed";
+                });
+                DistructStopped = false;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        private void ResetParameters()
+        {
+            var newConfiguration = new DistructConfigurationModel();
+
+            ConfigurationName = string.Empty;
+            SetConfigurationParameters(newConfiguration);
+
+            NUMINDS = PredefinedIndvCount;
+            NUMPOPS = PredefinedPopCount;
+
+            KFrom = PredefinedCLUMPPKStart;
+            KTo = PredefinedCLUMPPKEnd;
+        }
         private async Task SaveChangesAsync()
         {
-            if (CurrentSet == null) return;
-            var newParametersName = ParametersName;
-            if (string.IsNullOrWhiteSpace(newParametersName)) return;
+            var configuration = GetConfigurationParameters();
+
+            if (CurrentSet == null ||
+                CurrentCLUMPPConfigurationModel == null ||
+                HasErrors ||
+                string.IsNullOrEmpty(configuration.ParametersName))
+                return;
 
             var currentSetName = CurrentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
 
-            _distructInteractionService.PrepareDistructDirectory(fullCurrentSetFolderPath);
+            var clumppConfigurationName = CurrentCLUMPPConfigurationModel.ParametersName;
 
-            bool isNameChanged = !_isCreatingNewConfiguration && _savedConfigurationName != newParametersName;
-            if ((_isCreatingNewConfiguration || isNameChanged) && _distructInteractionService.IsConfigurationExist(fullCurrentSetFolderPath, newParametersName))
+            bool isNameChanged = !_isCreatingNewConfiguration && _savedConfigurationName != configuration.ParametersName;
+            if ((_isCreatingNewConfiguration || isNameChanged) && _distructInteractionService.IsConfigurationExist(fullCurrentSetFolderPath, clumppConfigurationName, configuration.ParametersName))
             {
-                _messageService.ShowWarning($"Configuration with name \"{newParametersName}\" already exists. Please choose a different name.");
+                _messageService.ShowWarning($"Configuration with name \"{configuration.ParametersName}\" already exists. Please choose a different name.");
                 return;
             }
 
             try
             {
-                _wasSaved = false;
+                if (configuration.NUMPOPS != PredefinedPopCount)
+                {
+                    var result = _messageService.ShowExpandedQuetion("Changing value of populations may cause Distruct to malfunction. Are you sure you want to proceed with the current value? (“No” - restore default value and continue.)");
 
-                var configurationParameters = GetConfigurationParameters();
+                    if (result == false)
+                    {
+                        configuration.NUMPOPS = PredefinedPopCount;
+                        NUMPOPS = PredefinedPopCount;
+                    }
+                    else if (result == null) return;
+                }
+                if (configuration.NUMINDS != PredefinedIndvCount)
+                {
+                    var result = _messageService.ShowExpandedQuetion("Changing value of individuals may cause Distruct to malfunction. Are you sure you want to proceed with the current value? (“No” - restore default value and continue.)");
+
+                    if (result == false)
+                    {
+                        configuration.NUMINDS = PredefinedIndvCount;
+                        NUMINDS = PredefinedIndvCount;
+                    }
+                    else if (result == null) return;
+                }
+
+                _wasSaved = false;
 
                 if (_isCreatingNewConfiguration)
                 {
-                    await CreateNewConfigurationAsync(configurationParameters, fullCurrentSetFolderPath);
+                    await CreateNewConfigurationAsync(configuration, clumppConfigurationName, fullCurrentSetFolderPath);
                 }
                 else
                 {
-                    bool shouldBeSaved = await UpdateExistingConfigurationAsync();
+                    bool shouldBeSaved = await UpdateExistingConfigurationAsync(configuration, clumppConfigurationName, fullCurrentSetFolderPath);
 
                     if (!shouldBeSaved) return;
                 }
 
                 _wasSaved = true;
-                _savedConfigurationName = newParametersName;
+                _savedConfigurationName = configuration.ParametersName;
                 _isCreatingNewConfiguration = false;
+                _changesTracker.TakeModelSnapshot(configuration);
             }
             catch (Exception)
             {
@@ -377,42 +592,83 @@ namespace GenotypeApplication.View_models
         }
         private bool CanSaveChanges()
         {
-            return true;
-        }
-        private async Task CreateNewConfigurationAsync(DistructConfigurationModel configurationModel, string fullCurrentSetFolderPath)
-        {
-            await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, configurationModel);
+            var configurationParameters = GetConfigurationParameters();
 
-            _savedConfigurationParametersItems.Add(configurationModel);
+            return CurrentSet != null &&
+                   CurrentCLUMPPConfigurationModel != null &&
+                   !HasErrors &&
+                   !string.IsNullOrEmpty(configurationParameters.ParametersName) &&
+                   _changesTracker.HasChanges(configurationParameters);
+        }
+        private async Task CreateNewConfigurationAsync(DistructConfigurationModel configuration, string clumppConfigurationName, string fullCurrentSetFolderPath)
+        {
+            _distructInteractionService.PrepareDistructDirectory(fullCurrentSetFolderPath);
+
+            await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, configuration);
+
+            _savedConfigurationParametersItems.Add(configuration);
             RebuildConfigurationParametersItems();
-            SelectedConfigurationParameters = configurationModel;
 
-            _messageService.ShowInformation($"Configuration \"{configurationModel.ParametersName}\" was successfully created.");
+            SetField(ref _selectedConfigurationParameters, configuration, nameof(SelectedConfigurationParameters));
+
+            _messageService.ShowInformation($"Configuration \"{configuration.ParametersName}\" was successfully created.");
         }
-        private async Task<bool> UpdateExistingConfigurationAsync()
+        private async Task<bool> UpdateExistingConfigurationAsync(DistructConfigurationModel configuration, string clumppConfigurationName, string fullCurrentSetFolderPath)
         {
-            return false;
+            if (CurrentSet == null) throw new InvalidOperationException("Current set is null on UpdateExistingConfigurationAsync() step.");
+
+            if (CurrentCLUMPPConfigurationModel == null) throw new InvalidOperationException("Current configuration is null on UpdateExistingConfigurationAsync() step.");
+
+            if (!_distructInteractionService.IsConfigurationExist(fullCurrentSetFolderPath, clumppConfigurationName, _savedConfigurationName))
+            {
+                _messageService.ShowError($"Configuration with name \"{_savedConfigurationName}\" was not found. Unable to save changes.");
+                return false;
+            }
+
+            if (_savedConfigurationName != configuration.ParametersName || _changesTracker.HasChanges(configuration))
+            {
+                await _distructInteractionService.RenameConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, _savedConfigurationName, configuration.ParametersName);
+            }
+
+            return true;
         }
 
 
         private async Task StartDistructAsync()
         {
-            if (!_wasSaved)
+            if (CurrentSet == null ||
+                CurrentCLUMPPConfigurationModel == null ||
+                !_wasSaved ||
+                _distructInteractionService.IsRunning ||
+                SelectedConfigurationParameters == null ||
+                HasErrorsFor(nameof(KFrom)) ||
+                HasErrorsFor(nameof(KTo)))
                 return;
-
-            if (CurrentSet == null) return;
-            if (SelectedConfigurationParameters == null) return;
 
             int kFrom = KFrom;
             int kTo = KTo;
             var configurationName = _savedConfigurationName;
+            var clumppConfigurationName = CurrentCLUMPPConfigurationModel.ParametersName;
 
             var currentSetName = CurrentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
 
             try
             {
+                _distructCompleted = false;
+                DistructStopped = false;
 
+                DistructProgress = 0;
+                DistructProgressText = "In progress... 0%";
+
+                await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, _coresCount);
+                _distructCompleted = true;
+
+                WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
+                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
+
+                DistructProgress = 100;
+                DistructProgressText = "Completed";
             }
             catch (Exception)
             {
@@ -426,11 +682,28 @@ namespace GenotypeApplication.View_models
         }
         private bool CanStartDistruct()
         {
-            return true;
+            return CurrentSet != null &&
+                   CurrentCLUMPPConfigurationModel != null &&
+                   _wasSaved &&
+                   !_distructInteractionService.IsRunning &&
+                   SelectedConfigurationParameters != null &&
+                   !HasErrorsFor(nameof(KFrom)) &&
+                   !HasErrorsFor(nameof(KTo));
         }
 
         private void StopDistruct()
         {
+            try
+            {
+                DistructStopped = true;
+                DistructProgressText = $"Stopping...";
+                _distructInteractionService.StopExecution();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
         private bool CanStopDistruct()
         {
@@ -441,7 +714,7 @@ namespace GenotypeApplication.View_models
         {
             return new DistructConfigurationModel
             {
-                ParametersName = ParametersName,
+                ParametersName = ConfigurationName,
                 INFILE_LABEL_ATOP = INFILE_LABEL_ATOP,
                 INFILE_LABEL_BELOW = INFILE_LABEL_BELOW,
                 INFILE_CLUST_PERM = INFILE_CLUST_PERM,
@@ -475,7 +748,7 @@ namespace GenotypeApplication.View_models
         }
         private void SetConfigurationParameters(DistructConfigurationModel configuration)
         {
-            ParametersName = configuration.ParametersName;
+            ConfigurationName = configuration.ParametersName;
             INFILE_LABEL_ATOP = configuration.INFILE_LABEL_ATOP;
             INFILE_LABEL_BELOW = configuration.INFILE_LABEL_BELOW;
             INFILE_CLUST_PERM = configuration.INFILE_CLUST_PERM;
