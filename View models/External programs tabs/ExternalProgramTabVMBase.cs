@@ -21,7 +21,7 @@ namespace GenotypeApplication.View_models.External_programs_tabs
         private bool _isSyncing; // защита от циклов
 
         public SetModel? CurrentSet 
-        {
+        {   
             get => _currentSet;
             set
             {

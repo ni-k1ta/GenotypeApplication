@@ -41,13 +41,9 @@ namespace GenotypeApplication.Models
             set => _infile_label_below = value;
         }
 
-        private string _infile_clust_perm = string.Empty;
+        private string _infile_clust_perm = "clust.perm";
         [DefineParameterModel("INFILE_CLUST_PERM")]
-        public string INFILE_CLUST_PERM
-        {
-            get => _infile_clust_perm;
-            set => _infile_clust_perm = value;
-        }
+        public string INFILE_CLUST_PERM => _infile_clust_perm;
 
         private const string _outfile = "K.ps";
         [DefineParameterModel("OUTFILE")]

@@ -12,7 +12,7 @@ namespace GenotypeApplication.Models.Distruct
     public class ClusterColorItem : ViewModelBase
     {
         private int _clusterIndex;
-        private string _colorName;
+        private string _colorName = string.Empty;
         private double _grayscaleValue;
 
         public int ClusterIndex
@@ -30,7 +30,11 @@ namespace GenotypeApplication.Models.Distruct
         public double GrayscaleValue
         {
             get => _grayscaleValue;
-            set { SetField(ref _grayscaleValue, value); }
+            set 
+            {
+                if (value > 1.0 || value < 0.0) return;
+                SetField(ref _grayscaleValue, value);
+            }
         }
     }
 }

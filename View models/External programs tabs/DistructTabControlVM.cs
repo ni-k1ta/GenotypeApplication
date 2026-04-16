@@ -4,6 +4,7 @@ using GenotypeApplication.Interfaces;
 using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models;
 using GenotypeApplication.Models.CLUMPP;
+using GenotypeApplication.Models.Distruct;
 using GenotypeApplication.Models.Project;
 using GenotypeApplication.MVVM.Infrastructure;
 using GenotypeApplication.Services.Application_configuration.External_program_interaction;
@@ -116,11 +117,11 @@ namespace GenotypeApplication.View_models
         {
             if (sender == null) return;
 
-            if (e.PropertyName == nameof(PredefinedCLUMPPKEnd))
-                KTo = PredefinedCLUMPPKEnd;
-
             if (e.PropertyName == nameof(PredefinedCLUMPPKStart))
                 KFrom = PredefinedCLUMPPKStart;
+
+            if (e.PropertyName == nameof(PredefinedCLUMPPKEnd))
+                KTo = PredefinedCLUMPPKEnd;
 
             if (e.PropertyName == nameof(PredefinedIndvCount))
                 NUMINDS = PredefinedIndvCount;
@@ -140,11 +141,8 @@ namespace GenotypeApplication.View_models
             get => _infile_label_below;
             set { SetField(ref _infile_label_below, value); }
         }
-        public string INFILE_CLUST_PERM //
-        {
-            get => _infile_clust_perm;
-            set { SetField(ref _infile_clust_perm, value); }
-        }
+
+        private ObservableCollection<ClusterColorItem> _clusterColorItems = new();
 
         public int KFrom
         {
@@ -152,7 +150,7 @@ namespace GenotypeApplication.View_models
             set
             {
                 if (SetField(ref _kFrom, value))
-                    ValidateProperty((value, KTo, PredefinedCLUMPPKStart, PredefinedCLUMPPKEnd), _kRangeValidator.Validate);
+                    ValidateKRange();
             }
         }
         public int KTo
@@ -161,8 +159,15 @@ namespace GenotypeApplication.View_models
             set
             {
                 if (SetField(ref _kTo, value))
-                    ValidateProperty((KFrom, value, PredefinedCLUMPPKStart, PredefinedCLUMPPKEnd), _kRangeValidator.Validate);
+                    ValidateKRange();
             }
+        }
+
+        private void ValidateKRange()
+        {
+            var args = (KFrom, KTo, int.Max(2, PredefinedStructureKStart), PredefinedStructureKEnd);
+            ValidateProperty(args, _kRangeValidator.Validate, nameof(KFrom));
+            ValidateProperty(args, _kRangeValidator.Validate, nameof(KTo));
         }
 
         public int NUMPOPS//
@@ -329,7 +334,7 @@ namespace GenotypeApplication.View_models
 
             if (configurationResult == true)
             {
-
+                _clusterColorItems = distructColorsConfigurationVM.Items;
             }
         }
 
@@ -661,7 +666,7 @@ namespace GenotypeApplication.View_models
                 DistructProgress = 0;
                 DistructProgressText = "In progress... 0%";
 
-                await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, _coresCount);
+                await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, _clusterColorItems, GRAYSCALE, _coresCount);
                 _distructCompleted = true;
 
                 WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
@@ -717,7 +722,6 @@ namespace GenotypeApplication.View_models
                 ParametersName = ConfigurationName,
                 INFILE_LABEL_ATOP = INFILE_LABEL_ATOP,
                 INFILE_LABEL_BELOW = INFILE_LABEL_BELOW,
-                INFILE_CLUST_PERM = INFILE_CLUST_PERM,
                 NUMPOPS = NUMPOPS,
                 NUMINDS = NUMINDS,
                 PRINT_INDIVS = PRINT_INDIVS,
@@ -751,7 +755,6 @@ namespace GenotypeApplication.View_models
             ConfigurationName = configuration.ParametersName;
             INFILE_LABEL_ATOP = configuration.INFILE_LABEL_ATOP;
             INFILE_LABEL_BELOW = configuration.INFILE_LABEL_BELOW;
-            INFILE_CLUST_PERM = configuration.INFILE_CLUST_PERM;
             NUMPOPS = configuration.NUMPOPS;
             NUMINDS = configuration.NUMINDS;
             PRINT_INDIVS = configuration.PRINT_INDIVS;

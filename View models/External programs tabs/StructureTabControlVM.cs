@@ -1063,7 +1063,7 @@ namespace GenotypeApplication.View_models
             {
                 //todo
                 throw;
-            }
+            }   
             finally
             {
                 StopStructureCommand.NotifyCanExecuteChanged();

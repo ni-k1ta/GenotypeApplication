@@ -12,5 +12,6 @@ namespace GenotypeApplication.Constants
         public const string DISTRUCT_FOLDER_NAME = "Distruct";
         public const string DISTRUCT_RESULTS_FOLDER_NAME = "Results";
         public const string DISTRUCT_OPTIONAL_FOLDER_NAME = "Optional";
+        public const string DISTRUCT_CLUST_PERM_FOLDER = "Color palette";
     }
 }

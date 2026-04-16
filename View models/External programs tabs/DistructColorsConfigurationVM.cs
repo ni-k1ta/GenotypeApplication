@@ -66,8 +66,6 @@ namespace GenotypeApplication.View_models.External_programs_tabs
 
         private async Task SaveConfigurationPaletteAsync()
         {
-
-
             if (_currentWindowRef != null && _currentWindowRef.TryGetTarget(out var window))
             {
                 _windowService.CloseDialogWindow(window, true);

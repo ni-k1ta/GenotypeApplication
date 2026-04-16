@@ -152,11 +152,11 @@ namespace GenotypeApplication.View_models
             if (e.PropertyName == nameof(PredefinedIterationsLimit))
                 R = PredefinedIterationsLimit;
 
-            if (e.PropertyName == nameof(PredefinedStructureKEnd))
-                KTo = PredefinedStructureKEnd;
-
             if (e.PropertyName == nameof(PredefinedStructureKStart))
                 KFrom = PredefinedStructureKStart;
+
+            if (e.PropertyName == nameof(PredefinedStructureKEnd))
+                KTo = PredefinedStructureKEnd;
 
             if (e.PropertyName == nameof(PredefinedIndvCount))
                 IndvsCount = PredefinedIndvCount;
@@ -171,7 +171,7 @@ namespace GenotypeApplication.View_models
             set
             {
                 if (SetField(ref _kFrom, value))
-                    ValidateProperty((value, KTo, int.Max(2, PredefinedStructureKStart), PredefinedStructureKEnd), _kRangeValidator.Validate);
+                    ValidateKRange();
             }
         }
         public int KTo
@@ -180,10 +180,16 @@ namespace GenotypeApplication.View_models
             set
             {
                 if (SetField(ref _kTo, value))
-                    ValidateProperty((KFrom, value, int.Max(2, PredefinedStructureKStart), PredefinedStructureKEnd), _kRangeValidator.Validate);
+                    ValidateKRange();
             }
         }
 
+        private void ValidateKRange()
+        {
+            var args = (KFrom, KTo, int.Max(2, PredefinedStructureKStart), PredefinedStructureKEnd);
+            ValidateProperty(args, _kRangeValidator.Validate, nameof(KFrom));
+            ValidateProperty(args, _kRangeValidator.Validate, nameof(KTo));
+        }
         #region Configuration parameters properties
         public bool IsPop
         {

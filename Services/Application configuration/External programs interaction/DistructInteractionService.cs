@@ -1,10 +1,13 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models;
+using GenotypeApplication.Models.Distruct;
 using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace GenotypeApplication.Services.Application_configuration.External_program_interaction
@@ -15,6 +18,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         private readonly string DISTRUCT_FOLDER_NAME = DistructConstants.DISTRUCT_FOLDER_NAME;
         private readonly string DISTRUCT_RESULTS_FOLDER_NAME = DistructConstants.DISTRUCT_RESULTS_FOLDER_NAME;
         private readonly string DISTRUCT_OPTIONAL_FOLDER_NAME = DistructConstants.DISTRUCT_OPTIONAL_FOLDER_NAME;
+        private readonly string DISTRUCT_CLUST_PERM_FOLDER = DistructConstants.DISTRUCT_CLUST_PERM_FOLDER;
 
         private readonly string EXTERNAL_PROGRAMS_FOLDER_PATH = PathConstants.EXTERNAL_PROGRAMS_DEFAULT_FOLDER_PATH;
 
@@ -89,13 +93,13 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     configurationModel.INFILE_LABEL_BELOW = Path.Combine(DISTRUCT_OPTIONAL_FOLDER_NAME, fileName);
                 }
 
-                if (!string.IsNullOrWhiteSpace(configurationModel.INFILE_CLUST_PERM))
-                {
-                    var fileName = Path.GetFileName(configurationModel.INFILE_CLUST_PERM);
-                    var targetPath = Path.Combine(fullOptionalFolderPath, fileName);
-                    _fileService.CopyFile(configurationModel.INFILE_CLUST_PERM, targetPath);
-                    configurationModel.INFILE_CLUST_PERM = Path.Combine(DISTRUCT_OPTIONAL_FOLDER_NAME, fileName);
-                }
+                //if (!string.IsNullOrWhiteSpace(configurationModel.INFILE_CLUST_PERM))
+                //{
+                //    var fileName = Path.GetFileName(configurationModel.INFILE_CLUST_PERM);
+                //    var targetPath = Path.Combine(fullOptionalFolderPath, fileName);
+                //    _fileService.CopyFile(configurationModel.INFILE_CLUST_PERM, targetPath);
+                //    configurationModel.INFILE_CLUST_PERM = Path.Combine(DISTRUCT_OPTIONAL_FOLDER_NAME, fileName);
+                //}
             }
 
             var fullConfigurationFilePath = Path.Combine(fullConfigurationFolderPath, configurationModel.ParametersName);
@@ -213,7 +217,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             return jobs;
         }
-        public async Task StartExecution(string configurationName, int kFrom, int kTo, string fullSetFolderPath, string clumppConfigurationName, int coresCount)
+        public async Task StartExecution(string configurationName, int kFrom, int kTo, string fullSetFolderPath, string clumppConfigurationName, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, int coresCount)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(clumppConfigurationName);
@@ -270,6 +274,8 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 job,
                 fullDistructExecutableFilePath,
                 fullConfigurationFolderPath,
+                clusterColors,
+                isGrayscale,
                 semaphore,
                 token,
                 () =>
@@ -292,7 +298,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 _cts = null;
             }
         }
-        private async Task RunSingleProcessAsync(DistructJob job, string executablePath, string workingDirectory, SemaphoreSlim semaphore, CancellationToken ct, Func<(int completed, int total)> reportProgress)
+        private async Task RunSingleProcessAsync(DistructJob job, string executablePath, string workingDirectory, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, SemaphoreSlim semaphore, CancellationToken ct, Func<(int completed, int total)> reportProgress)
         {
             await semaphore.WaitAsync(ct);
 
@@ -302,12 +308,35 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             {
                 ct.ThrowIfCancellationRequested();
 
+                string clustPermFilePath = string.Empty;
+                if (clusterColors != null && clusterColors.Count > 0)
+                {
+                    var sb = new StringBuilder();
+                    foreach (var item in clusterColors.Where(i => i.ClusterIndex <= job.K))
+                    {
+                        if (isGrayscale)
+                            sb.AppendLine($"{item.ClusterIndex} {item.GrayscaleValue:F3}");
+                        else
+                            sb.AppendLine($"{item.ClusterIndex} {item.ColorName}");
+                    }
+
+                    var clustersColorsFolderPath = Path.Combine(workingDirectory, DISTRUCT_CLUST_PERM_FOLDER);
+                    Directory.CreateDirectory(clustersColorsFolderPath);
+
+                    clustPermFilePath = Path.Combine(clustersColorsFolderPath, $"clust_k{job.K}.perm");
+                    File.WriteAllText(clustPermFilePath, sb.ToString());
+                }
+
                 var arguments =
                     $"-d {job.ParametersFileName}" +
                     $" -K {job.K}" +
                     $" -p {job.InputFilePopqPath}" +
                     $" -i {job.InputFileIndvqPath}" +
-                    $" -o {job.OutFilePath}";
+                    $" -o {job.OutFilePath}" +
+
+                    (string.IsNullOrWhiteSpace(clustPermFilePath) ?
+                        string.Empty : 
+                        $" -c {Path.Combine(DISTRUCT_CLUST_PERM_FOLDER, $"clust_k{job.K}.perm")}");
 
                 var startInfo = new ProcessStartInfo
                 {
