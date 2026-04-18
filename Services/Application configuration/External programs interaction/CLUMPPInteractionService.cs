@@ -116,7 +116,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 throw;
             }
         }
-        public async Task<(CLUMPPConfigurationModel configurationModel, bool isPop, bool isIndv, int kStart, int kEnd)> LoadConfiguration(string fullSetFolderPath, string? configurationName)
+        public async Task<(CLUMPPConfigurationModel configurationModel, bool isPop, bool isIndv, int kStart, int kEnd)> LoadConfiguration(string fullSetFolderPath, string configurationName)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
 
@@ -125,7 +125,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             string fullCLUMPPFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME);
             if (!_directoryService.IsDirectoryExist(fullCLUMPPFolderPath)) throw new DirectoryNotFoundException($"CLUMPP folder was not found in set folder: {fullCLUMPPFolderPath}");
 
-            string fullConfigurationFolderPath = Path.Combine(fullCLUMPPFolderPath, configurationName ?? string.Empty);
+            string fullConfigurationFolderPath = Path.Combine(fullCLUMPPFolderPath, configurationName);
 
             try
             {
@@ -179,6 +179,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 configurationModel.HasPopResults = Directory.EnumerateFiles(resultsPath, "*.popq").Any();
                 configurationModel.IsProcessed = found;
+                configurationModel.ParametersName = configurationName;
 
                 return (configurationModel, isPop, isIndv, kMin, kMax);
             }

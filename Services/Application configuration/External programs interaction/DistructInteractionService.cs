@@ -186,6 +186,8 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     }
                 }
 
+                configurationModel.ParametersName = configurationName;
+
                 return (configurationModel, kMin, kMax);
             }
             catch (Exception)

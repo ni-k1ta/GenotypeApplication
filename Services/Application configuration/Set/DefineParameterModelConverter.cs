@@ -36,7 +36,7 @@ namespace GenotypeApplication.Services.Set
                     Property = p,
                     Attribute = p.GetCustomAttribute<DefineParameterModelAttribute>()
                 })
-                .Where(x => x.Attribute != null)
+                .Where(x => x.Attribute != null && x.Property.CanWrite)
                 .ToDictionary(x => x.Attribute!.Name, x => x.Property);
 
             foreach (var line in lines)

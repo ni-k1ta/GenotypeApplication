@@ -10,8 +10,8 @@
         xmlns:oxy="http://oxyplot.org/wpf"
         mc:Ignorable="d"
         Title="MainWindow"
-        MinHeight="600"
-        MinWidth="800"
+        MinHeight="850"
+        MinWidth="1200"
         Width="1211"
         Height="850"
         UseLayoutRounding="True"
@@ -33,21 +33,36 @@
 
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="2" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="2" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <GridSplitter Grid.Column="1"
+                      Grid.RowSpan="3"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="Transparent" />
+        <GridSplitter Grid.Row="1"
+                      Grid.ColumnSpan="3"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="Transparent"
+                      ResizeDirection="Rows" />
 
         <TreeView x:Name="projectOverviewTreeView"
                   Grid.Row="0"
                   Grid.Column="0"
                   Margin="5"
-                  Width="250"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
+                  MinWidth="250"
                   Height="583.9"
                   ItemsSource="{Binding ProjectExplorer.RootNodes}">
 
@@ -75,7 +90,7 @@
             </TreeView.ItemTemplate>
         </TreeView>
 
-        <StackPanel Grid.Row="1"
+        <StackPanel Grid.Row="2"
                     Grid.Column="0"
                     Height="Auto"
                     Width="Auto"
@@ -189,8 +204,8 @@
         </StackPanel>
 
         <ListBox x:Name="logListBox"
-                 Grid.Column="1"
-                 Grid.Row="1"
+                 Grid.Column="2"
+                 Grid.Row="2"
                  Width="915"
                  VerticalAlignment="Stretch"
                  Margin="5,5,5,1"
@@ -234,7 +249,7 @@
         </ListBox>
 
         <TabControl x:Name="programsInteractionTabControl"
-                    Grid.Column="1"
+                    Grid.Column="2"
                     Grid.Row="0"
                     Margin="5"
                     HorizontalAlignment="Stretch"
@@ -1884,257 +1899,246 @@
                         </GroupBox>
                     </Grid>
 
-                    <StackPanel Orientation="Horizontal"
+                    <!--<StackPanel Orientation="Horizontal"
                                 Grid.Column="0"
                                 Grid.Row="2"
-                                Grid.ColumnSpan="2">
-                        <StackPanel Orientation="Vertical">
-                            <GroupBox x:Name="dataSettingsGroupBox"
-                                      Header="Data settings">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
+                                Grid.ColumnSpan="2">-->
+                        <Grid Grid.Column="0"
+                              Grid.Row="2"
+                              Grid.ColumnSpan="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
 
-                                    <StackPanel Orientation="Vertical"
-                                                Grid.Column="0">
-                                        <GroupBox x:Name="inputAtopLabelsFileSelectionGroupBox"
-                                                  Header="Input file of labels atop the figure"
-                                                  HorizontalAlignment="Stretch">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0"
+                                        Orientation="Vertical">
+                                <GroupBox x:Name="dataSettingsGroupBox"
+                                          Header="Data settings">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
 
-                                                <TextBox x:Name="inputAtopLabelsFilePathTextBox"
-                                                         Text="{Binding INFILE_LABEL_ATOP, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontWeight="Light"
-                                                         Grid.Column="0"
-                                                         HorizontalAlignment="Left"
-                                                         Width="130" />
-                                                <Button x:Name="selectInputAtopLabelsFileButton"
-                                                        Content="Select"
-                                                        Margin="10,0,0,0"
-                                                        Grid.Column="1"
-                                                        HorizontalAlignment="Right"
+                                        <StackPanel Orientation="Vertical"
+                                                    Grid.Column="0">
+                                            <GroupBox x:Name="inputAtopLabelsFileSelectionGroupBox"
+                                                      Header="Input file of labels atop the figure"
+                                                      HorizontalAlignment="Stretch">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBox x:Name="inputAtopLabelsFilePathTextBox"
+                                                             Text="{Binding INFILE_LABEL_ATOP, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontWeight="Light"
+                                                             Grid.Column="0"
+                                                             HorizontalAlignment="Left"
+                                                             Width="130" />
+                                                    <Button x:Name="selectInputAtopLabelsFileButton"
+                                                            Content="Select"
+                                                            Margin="10,0,0,0"
+                                                            Grid.Column="1"
+                                                            HorizontalAlignment="Right"
+                                                            Style="{StaticResource Rounded}"
+                                                            Command="{Binding SelectLabelsAtopFileCommand}" />
+                                                </Grid>
+                                            </GroupBox>
+
+                                            <GroupBox x:Name="inputBelowLabelsFileSelectionGroupBox"
+                                                      Header="Input file of labels below the figure"
+                                                      HorizontalAlignment="Stretch">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBox x:Name="inputBelowLabelsFilePathTextBox"
+                                                             Text="{Binding INFILE_LABEL_BELOW, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontWeight="Light"
+                                                             Grid.Column="0"
+                                                             HorizontalAlignment="Left"
+                                                             Width="130" />
+                                                    <Button x:Name="selectInputBelowLabelsFileButton"
+                                                            Content="Select"
+                                                            Margin="10,0,0,0"
+                                                            Grid.Column="1"
+                                                            HorizontalAlignment="Right"
+                                                            Style="{StaticResource Rounded}"
+                                                            Command="{Binding SelectLabelsBelowFileCommand}" />
+                                                </Grid>
+                                            </GroupBox>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Vertical"
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Right">
+                                            <GroupBox x:Name="clustersPermutationsInputFileSelectionGroupBox"
+                                                      Header="Configure the cluster color palette"
+                                                      HorizontalAlignment="Stretch">
+
+                                                <Button Content="Configure"
                                                         Style="{StaticResource Rounded}"
-                                                        Command="{Binding SelectLabelsAtopFileCommand}" />
-                                            </Grid>
-                                        </GroupBox>
+                                                        HorizontalAlignment="Stretch"
+                                                        Width="220"
+                                                        Command="{Binding ConfigureColorPaletteCommand}" />
+                                            </GroupBox>
 
-                                        <GroupBox x:Name="inputBelowLabelsFileSelectionGroupBox"
-                                                  Header="Input file of labels below the figure"
-                                                  HorizontalAlignment="Stretch">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
+                                            <DockPanel LastChildFill="False">
+                                                <Label x:Name="predefinedPopsLabel"
+                                                       Content="Number of predefined pops"
+                                                       DockPanel.Dock="Left" />
+                                                <xctk:IntegerUpDown x:Name="predefinedPopsIntUpDown"
+                                                                    Minimum="0"
+                                                                    Maximum="27000000"
+                                                                    Increment="1"
+                                                                    DockPanel.Dock="Right"
+                                                                    Margin="0,0,1,0"
+                                                                    Value="{Binding NUMPOPS, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
 
-                                                <TextBox x:Name="inputBelowLabelsFilePathTextBox"
-                                                         Text="{Binding INFILE_LABEL_BELOW, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontWeight="Light"
-                                                         Grid.Column="0"
-                                                         HorizontalAlignment="Left"
-                                                         Width="130" />
-                                                <Button x:Name="selectInputBelowLabelsFileButton"
-                                                        Content="Select"
-                                                        Margin="10,0,0,0"
-                                                        Grid.Column="1"
-                                                        HorizontalAlignment="Right"
-                                                        Style="{StaticResource Rounded}"
-                                                        Command="{Binding SelectLabelsBelowFileCommand}" />
-                                            </Grid>
-                                        </GroupBox>
-                                    </StackPanel>
-                                    <StackPanel Orientation="Vertical"
-                                                Grid.Column="1"
-                                                HorizontalAlignment="Right">
-                                        <GroupBox x:Name="clustersPermutationsInputFileSelectionGroupBox"
-                                                  Header="Configure the cluster color palette"
-                                                  HorizontalAlignment="Stretch">
-
-                                            <Button Content="Configure"
-                                                    Style="{StaticResource Rounded}"
-                                                    HorizontalAlignment="Stretch"
-                                                    Width="220"
-                                                    Command="{Binding ConfigureColorPaletteCommand}" />
-
-                                            <!--<Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBox x:Name="clustersPermutationsInputFilePathTextBox"
-                                                         Text="{Binding INFILE_CLUST_PERM, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontWeight="Light"
-                                                         Grid.Column="0"
-                                                         HorizontalAlignment="Left"
-                                                         Width="130" />
-                                                <Button x:Name="selectClustersPermutationsInputFileButton"
-                                                        Content="Select"
-                                                        Margin="10,0,0,0"
-                                                        Grid.Column="1"
-                                                        HorizontalAlignment="Left"
-                                                        Style="{StaticResource Rounded}"
-                                                        Command="{Binding SelectPermutationFileCommand}" />
-                                            </Grid>-->
-                                        </GroupBox>
-
-                                        <DockPanel LastChildFill="False">
-                                            <Label x:Name="predefinedPopsLabel"
-                                                   Content="Number of predefined pops"
-                                                   DockPanel.Dock="Left" />
-                                            <xctk:IntegerUpDown x:Name="predefinedPopsIntUpDown"
-                                                                Minimum="0"
-                                                                Maximum="27000000"
-                                                                Increment="1"
-                                                                DockPanel.Dock="Right"
-                                                                Margin="0,0,1,0"
-                                                                Value="{Binding NUMPOPS, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DockPanel>
-
-                                        <DockPanel LastChildFill="False">
-                                            <Label x:Name="predefinedIndividsLabel"
-                                                   Content="Number of predefined individuals"
-                                                   DockPanel.Dock="Left" />
-                                            <xctk:IntegerUpDown x:Name="predefinedIndividsIntUpDown"
-                                                                Minimum="0"
-                                                                Maximum="27000000"
-                                                                Increment="1"
-                                                                DockPanel.Dock="Right"
-                                                                Margin="0,0,1,0"
-                                                                Value="{Binding NUMINDS, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DockPanel>
-                                    </StackPanel>
-                                </Grid>
-                            </GroupBox>
-
-                            <GroupBox x:Name="figureAppearanceGroupBox"
-                                      Header="Figure appearance"
-                                      HorizontalAlignment="Stretch">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Orientation="Vertical"
-                                                Grid.Column="0"
-                                                VerticalAlignment="Bottom">
-                                        <DockPanel LastChildFill="False">
-                                            <Label x:Name="fontSizeLabel"
-                                                   Content="Size of font"
-                                                   DockPanel.Dock="Left" />
-                                            <xctk:DoubleUpDown x:Name="fontSizeDoubleUpDown"
-                                                               Minimum="0"
-                                                               Maximum="100"
-                                                               Increment="0.1"
-                                                               DockPanel.Dock="Right"
-                                                               Value="{Binding FONTHEIGHT, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DockPanel>
-                                        <DockPanel LastChildFill="False">
-                                            <Label x:Name="figureHeightLabel"
-                                                   Content="Height of the figure"
-                                                   DockPanel.Dock="Left" />
-                                            <xctk:DoubleUpDown x:Name="figureHeightDoubleUpDown"
-                                                               Minimum="0"
-                                                               Maximum="1000"
-                                                               Increment="0.1"
-                                                               DockPanel.Dock="Right"
-                                                               Value="{Binding BOXHEIGHT, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DockPanel>
-                                        <DockPanel LastChildFill="False">
-                                            <Label x:Name="textAbovePlacementDistLabel"
-                                                   Content="Distance above plot to place text"
-                                                   DockPanel.Dock="Left" />
-                                            <xctk:DoubleUpDown x:Name="textAbovePlacementDistDoubleUpDown"
-                                                               Minimum="0"
-                                                               Maximum="100"
-                                                               Increment="0.1"
-                                                               DockPanel.Dock="Right"
-                                                               Value="{Binding DIST_ABOVE, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DockPanel>
-                                    </StackPanel>
-
-                                    <StackPanel Orientation="Vertical"
-                                                Grid.Column="1"
-                                                Margin="5,0,0,0"
-                                                HorizontalAlignment="Stretch">
-                                        <DockPanel LastChildFill="False">
-                                            <Label x:Name="individWidthLabel"
-                                                   Content="Width of an individual"
-                                                   DockPanel.Dock="Left" />
-                                            <xctk:DoubleUpDown x:Name="individWidthDoubleUpDown"
-                                                               Minimum="0"
-                                                               Maximum="100"
-                                                               Increment="0.1"
-                                                               DockPanel.Dock="Right"
-                                                               Value="{Binding INDIVWIDTH, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DockPanel>
-                                        <DockPanel LastChildFill="False">
-                                            <Label x:Name="textBelowPlacementDistLabel"
-                                                   Content="Distance below plot to place text"
-                                                   DockPanel.Dock="Left" />
-                                            <xctk:DoubleUpDown x:Name="textBelowPlacementDistDoubleUpDown"
-                                                               Minimum="-100"
-                                                               Maximum="100"
-                                                               Increment="0.1"
-                                                               DockPanel.Dock="Right"
-                                                               Value="{Binding DIST_BELOW, UpdateSourceTrigger=PropertyChanged}" />
-                                        </DockPanel>
-                                        <Button Margin="0,5,0,0"
-                                                HorizontalAlignment="Center"
-                                                Width="210"
-                                                Content="Determine the optimal values"
-                                                Style="{StaticResource Rounded}"
-                                                Command="{Binding DetermineOptimalValuesCommand}" />
-                                    </StackPanel>
-                                </Grid>
-                            </GroupBox>
-                        </StackPanel>
-
-                        <GroupBox x:Name="pregeneratedImageGroupBox"
-                                  Header="Pre-generated image">
-                            <StackPanel Orientation="Vertical"
-                                        VerticalAlignment="Stretch">
-
-                                <GroupBox x:Name="pregeneratedImageKNumSelectionGroupBox"
-                                          Header="Select 'K' number"
-                                          HorizontalAlignment="Stretch">
-                                    <DockPanel LastChildFill="False">
-                                        <ComboBox x:Name="pregeneratedImageKNumComboBox"
-                                                  DockPanel.Dock="Left"
-                                                  ItemsSource="{Binding KForPreviewItems}"
-                                                  SelectedItem="{Binding SelectedKForPreview, UpdateSourceTrigger=PropertyChanged}" />
-                                        <Button x:Name="generateButton"
-                                                Content="Generate"
-                                                DockPanel.Dock="Right"
-                                                Style="{StaticResource Rounded}"
-                                                Command="{Binding GeneratePreviewCommand}" />
-                                    </DockPanel>
+                                            <DockPanel LastChildFill="False">
+                                                <Label x:Name="predefinedIndividsLabel"
+                                                       Content="Number of predefined individuals"
+                                                       DockPanel.Dock="Left" />
+                                                <xctk:IntegerUpDown x:Name="predefinedIndividsIntUpDown"
+                                                                    Minimum="0"
+                                                                    Maximum="27000000"
+                                                                    Increment="1"
+                                                                    DockPanel.Dock="Right"
+                                                                    Margin="0,0,1,0"
+                                                                    Value="{Binding NUMINDS, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </Grid>
                                 </GroupBox>
 
-                                <!--<TextBox Height="161.8"
-                                         Width="341.2"
-                                         Margin="0,5,0,0" />-->
+                                <GroupBox x:Name="figureAppearanceGroupBox"
+                                          Header="Figure appearance"
+                                          HorizontalAlignment="Stretch">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
 
-                                <Border Height="161.8"
-                                        Width="341.2"
-                                        Margin="0,5,0,0">
+                                        <StackPanel Orientation="Vertical"
+                                                    Grid.Column="0"
+                                                    VerticalAlignment="Bottom">
+                                            <DockPanel LastChildFill="False">
+                                                <Label x:Name="fontSizeLabel"
+                                                       Content="Size of font"
+                                                       DockPanel.Dock="Left" />
+                                                <xctk:DoubleUpDown x:Name="fontSizeDoubleUpDown"
+                                                                   Minimum="0"
+                                                                   Maximum="100"
+                                                                   Increment="0.1"
+                                                                   DockPanel.Dock="Right"
+                                                                   Value="{Binding FONTHEIGHT, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                            <DockPanel LastChildFill="False">
+                                                <Label x:Name="figureHeightLabel"
+                                                       Content="Height of the figure"
+                                                       DockPanel.Dock="Left" />
+                                                <xctk:DoubleUpDown x:Name="figureHeightDoubleUpDown"
+                                                                   Minimum="0"
+                                                                   Maximum="1000"
+                                                                   Increment="0.1"
+                                                                   DockPanel.Dock="Right"
+                                                                   Value="{Binding BOXHEIGHT, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                            <DockPanel LastChildFill="False">
+                                                <Label x:Name="textAbovePlacementDistLabel"
+                                                       Content="Distance above plot to place text"
+                                                       DockPanel.Dock="Left" />
+                                                <xctk:DoubleUpDown x:Name="textAbovePlacementDistDoubleUpDown"
+                                                                   Minimum="0"
+                                                                   Maximum="100"
+                                                                   Increment="0.1"
+                                                                   DockPanel.Dock="Right"
+                                                                   Value="{Binding DIST_ABOVE, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                        </StackPanel>
 
-                                    <Image x:Name="PsPreview"
-                                           Source="{Binding PreviewImage}"
-                                           Stretch="Uniform"
-                                           RenderOptions.BitmapScalingMode="HighQuality" />
-
-                                </Border>
+                                        <StackPanel Orientation="Vertical"
+                                                    Grid.Column="1"
+                                                    Margin="5,0,0,0"
+                                                    HorizontalAlignment="Stretch">
+                                            <DockPanel LastChildFill="False">
+                                                <Label x:Name="individWidthLabel"
+                                                       Content="Width of an individual"
+                                                       DockPanel.Dock="Left" />
+                                                <xctk:DoubleUpDown x:Name="individWidthDoubleUpDown"
+                                                                   Minimum="0"
+                                                                   Maximum="100"
+                                                                   Increment="0.1"
+                                                                   DockPanel.Dock="Right"
+                                                                   Value="{Binding INDIVWIDTH, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                            <DockPanel LastChildFill="False">
+                                                <Label x:Name="textBelowPlacementDistLabel"
+                                                       Content="Distance below plot to place text"
+                                                       DockPanel.Dock="Left" />
+                                                <xctk:DoubleUpDown x:Name="textBelowPlacementDistDoubleUpDown"
+                                                                   Minimum="-100"
+                                                                   Maximum="100"
+                                                                   Increment="0.1"
+                                                                   DockPanel.Dock="Right"
+                                                                   Value="{Binding DIST_BELOW, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DockPanel>
+                                            <Button Margin="0,5,0,0"
+                                                    HorizontalAlignment="Center"
+                                                    Width="210"
+                                                    Content="Determine the optimal values"
+                                                    Style="{StaticResource Rounded}"
+                                                    Command="{Binding DetermineOptimalValuesCommand}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </GroupBox>
                             </StackPanel>
-                        </GroupBox>
-                    </StackPanel>
+
+                            <GroupBox Grid.Column="1" x:Name="pregeneratedImageGroupBox"
+                                      Header="Pre-generated image"
+                                      HorizontalAlignment="Stretch">
+                                <StackPanel Orientation="Vertical"
+                                            VerticalAlignment="Stretch"
+                                            HorizontalAlignment="Stretch">
+
+                                    <GroupBox x:Name="pregeneratedImageKNumSelectionGroupBox"
+                                              Header="Select 'K' number"
+                                              HorizontalAlignment="Stretch">
+                                        <DockPanel LastChildFill="False">
+                                            <ComboBox x:Name="pregeneratedImageKNumComboBox"
+                                                      DockPanel.Dock="Left"
+                                                      ItemsSource="{Binding KForPreviewItems}"
+                                                      SelectedItem="{Binding SelectedKForPreview, UpdateSourceTrigger=PropertyChanged}" />
+                                            <Button x:Name="generateButton"
+                                                    Content="Generate"
+                                                    DockPanel.Dock="Right"
+                                                    Style="{StaticResource Rounded}"
+                                                    Command="{Binding GeneratePreviewCommand}" />
+                                        </DockPanel>
+                                    </GroupBox>
+
+                                    <Border Margin="0,5,0,0"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch">
+
+                                        <Image x:Name="PsPreview"
+                                               Source="{Binding PreviewImage}"
+                                               Stretch="Uniform"
+                                               RenderOptions.BitmapScalingMode="HighQuality" />
+
+                                    </Border>
+                                </StackPanel>
+                            </GroupBox>
+                        </Grid>
+
+
+                    <!--</StackPanel>-->
 
                     <DockPanel LastChildFill="False"
                                Grid.Column="0"
