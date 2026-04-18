@@ -170,7 +170,8 @@
                     VerticalAlignment="Bottom">
             <Button Content="Save"
                     Margin="0,0,5,5"
-                    Style="{StaticResource Rounded}" />
+                    Style="{StaticResource Rounded}"
+                    Command="{Binding SaveConfigurationPaletteAsyncCommand}"/>
         </StackPanel>
     </Grid>
 </Window>

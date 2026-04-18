@@ -15,21 +15,23 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace GenotypeApplication.View_models
 {
     public class DistructTabControlVM : ExternalProgramTabVMBase
     {
+        #region Status parameters
         private bool _isCreatingNewConfiguration;
         private string _savedConfigurationName;
         private bool _wasSaved;
+        #endregion
 
         #region Configuration parameters
         private string _parametersName;
 
         private string _infile_label_atop = string.Empty;
         private string _infile_label_below = string.Empty;
-        private string _infile_clust_perm = string.Empty;
 
         private int _kFrom;
         private int _kTo;
@@ -71,9 +73,25 @@ namespace GenotypeApplication.View_models
         private bool _print_color_brewer;
         #endregion
 
+        #region Additional parameters
+        private bool _isPDF;
+        private bool _isPNG;
+        private bool _isJPEG;
+        private bool _isBMP;
+        private int _selectedKForExport;
+        private List<int> _kForExportItems = new();
+        private bool _isExporting;
+
+        private int _selectedKForPreview;
+        private List<int> _kForPreviewItems = new();
+        private bool _isPreviewing;
+        #endregion
+
+        #region Services parameters
         private ParametersChangesTracker<DistructConfigurationModel> _changesTracker = new();
         private DistructInteractionService _distructInteractionService;
         private readonly IWindowService _windowService;
+        #endregion
 
         public DistructTabControlVM(WorkflowStateModel workflowState, int coresCount, string fullProjectFolderPath, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, LoggerService loggerService, IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> kRangeValidator, IWindowService windowService) : base(workflowState, SetProcessingStage.Distruct, coresCount, fullProjectFolderPath, setConfigurationService, directoryService, fileService, messageService, dialogService, loggerService, pathValidator, parameterNameValidator, kRangeValidator)
         {
@@ -94,6 +112,10 @@ namespace GenotypeApplication.View_models
             SelectLabelsAtopFileCommand = new RelayCommand(execute => SelectLabelsAtopFile());
             SelectLabelsBelowFileCommand = new RelayCommand(execute => SelectLabelsBelowFile());
             ConfigureColorPaletteCommand = new RelayCommand(execute => ConfigureColorPalette());
+            ExportCommand = new AsyncRelayCommand(execute => Export(), canExecute => CanExport());
+            GeneratePreviewCommand = new AsyncRelayCommand(execute => GeneratePreview(), canExecute => CanGeneratePreview());
+            DetermineOptimalValuesCommand = new RelayCommand(execute => DetermineOptimalValues());
+
             _windowService = windowService;
 
 
@@ -129,8 +151,19 @@ namespace GenotypeApplication.View_models
             if (e.PropertyName == nameof(PredefinedPopCount))
                 NUMPOPS = PredefinedPopCount;
         }
+        private void ValidateKRange()
+        {
+            var args = (KFrom, KTo, int.Max(2, PredefinedStructureKStart), PredefinedStructureKEnd);
+            ValidateProperty(args, _kRangeValidator.Validate, nameof(KFrom));
+            ValidateProperty(args, _kRangeValidator.Validate, nameof(KTo));
+        }
 
         #region Configuration parameters properties
+        public string ConfigurationName
+        {
+            get => _parametersName;
+            set { SetField(ref _parametersName, value); }
+        }
         public string INFILE_LABEL_ATOP //
         {
             get => _infile_label_atop;
@@ -150,7 +183,11 @@ namespace GenotypeApplication.View_models
             set
             {
                 if (SetField(ref _kFrom, value))
+                {
                     ValidateKRange();
+                    if (!HasErrorsFor(nameof(KFrom)) && !HasErrorsFor(nameof(KTo)))
+                        RebuildKForPreviewItems();
+                }
             }
         }
         public int KTo
@@ -159,15 +196,12 @@ namespace GenotypeApplication.View_models
             set
             {
                 if (SetField(ref _kTo, value))
+                {
                     ValidateKRange();
+                    if (!HasErrorsFor(nameof(KFrom)) && !HasErrorsFor(nameof(KTo)))
+                        RebuildKForPreviewItems();
+                }
             }
-        }
-
-        private void ValidateKRange()
-        {
-            var args = (KFrom, KTo, int.Max(2, PredefinedStructureKStart), PredefinedStructureKEnd);
-            ValidateProperty(args, _kRangeValidator.Validate, nameof(KFrom));
-            ValidateProperty(args, _kRangeValidator.Validate, nameof(KTo));
         }
 
         public int NUMPOPS//
@@ -230,9 +264,33 @@ namespace GenotypeApplication.View_models
         public int SelectedOrientation//
         {
             get => _selectedOrientation;
-            set { SetField(ref _selectedOrientation, value); }
+            set 
+            { 
+                if (SetField(ref _selectedOrientation, value))
+                {
+                //    if (value == 1)
+                //    {
+                //        XORIGIN = 360;
+                //        YORIGIN = 72;
+                //    }
+                //    else if (value == 2)
+                //    {
+                //        XORIGIN = 540;
+                //        YORIGIN = 504;
+                //    }
+                //    else if (value == 3)
+                //    {
+                //        XORIGIN = 288;
+                //        YORIGIN = 720;
+                //    }
+                //    else if (value == 0)
+                //    {
+                //        XORIGIN = 72;
+                //        YORIGIN = 288;
+                //    }
+                }
+            }
         }
-
 
         public double XORIGIN //
         {
@@ -306,9 +364,6 @@ namespace GenotypeApplication.View_models
         }
         #endregion
 
-        private DistructConfigurationModel? _selectedConfigurationParameters = new();
-        private ObservableCollection<DistructConfigurationModel> _savedConfigurationParametersItems = new();
-
         #region Commands properties
         public ICommand SaveChangesAsyncCommand { get; }
         public AsyncRelayCommand StartDistructAsyncCommand { get; }
@@ -316,6 +371,240 @@ namespace GenotypeApplication.View_models
         public ICommand SelectLabelsAtopFileCommand { get; }
         public ICommand SelectLabelsBelowFileCommand { get; }
         public ICommand ConfigureColorPaletteCommand { get; }
+        public ICommand ExportCommand { get; }
+        public ICommand GeneratePreviewCommand { get; }
+        public ICommand DetermineOptimalValuesCommand { get; }
+
+        #endregion
+
+        private void DetermineOptimalValues()
+        {
+            double plotWidth = NUMINDS * INDIVWIDTH;
+            double margin = 28;
+
+            switch (SelectedOrientation)
+            {
+                case 0: // rotate 0 — вправо и вверх
+                    XORIGIN = margin;
+                    YORIGIN = margin;
+                    break;
+
+                case 1: // rotate 90 — вверх и влево
+                    XORIGIN = BOXHEIGHT + margin;
+                    YORIGIN = margin;
+                    break;
+
+                case 2: // rotate 180 — влево и вниз
+                    XORIGIN = plotWidth + margin;
+                    YORIGIN = BOXHEIGHT + margin;
+                    break;
+
+                case 3: // rotate 270 — вниз и вправо
+                    XORIGIN = margin;
+                    YORIGIN = plotWidth + margin;
+                    break;
+            }
+        }
+
+        #region Additional parameters properties
+        public bool IsPDF
+        {
+            get => _isPDF;
+            set { SetField(ref _isPDF, value); }
+        }
+        public bool IsPNG
+        {
+            get => _isPNG;
+            set { SetField(ref _isPNG, value); }
+        }
+        public bool IsJPEG
+        {
+            get => _isJPEG;
+            set { SetField(ref _isJPEG, value); }
+        }
+        public bool IsBMP
+        {
+            get => _isBMP;
+            set { SetField(ref _isBMP, value); }
+        }
+        public int SelectedKForExport
+        {
+            get => _selectedKForExport;
+            set { SetField(ref _selectedKForExport, value); }
+        }
+        public List<int> KForExportItems
+        {
+            get => _kForExportItems;
+            set { SetField(ref _kForExportItems, value); }
+        }
+
+        public int SelectedKForPreview
+        {
+            get => _selectedKForPreview;
+            set { SetField(ref _selectedKForPreview, value); }
+        }
+        public List<int> KForPreviewItems
+        {
+            get => _kForPreviewItems;
+            set { SetField(ref _kForPreviewItems, value); }
+        }
+        #endregion
+
+        #region Rebuilders methods
+        private void ResetParameters()
+        {
+            var newConfiguration = new DistructConfigurationModel();
+
+            ConfigurationName = string.Empty;
+            SetConfigurationParameters(newConfiguration);
+
+            NUMINDS = PredefinedIndvCount;
+            NUMPOPS = PredefinedPopCount;
+
+            KFrom = PredefinedCLUMPPKStart;
+            KTo = PredefinedCLUMPPKEnd;
+        }
+        private void RebuildConfigurationParametersItems()
+        {
+            UIDispatcherHelper.RunOnUI(() =>
+            {
+                ConfigurationParametersItems.Clear();
+
+                foreach (DistructConfigurationModel item in _savedConfigurationParametersItems)
+                    ConfigurationParametersItems.Add(item);
+
+                ConfigurationParametersItems.Add(CreateNewSetPlaceholder);
+            });
+        }
+        private void RebuildKForExportItems(int kFrom, int kTo)
+        {
+            List<int> items = new();
+            for (int i = kFrom; i <= kTo; i++)
+                items.Add(i);
+
+            UIDispatcherHelper.RunOnUI(() =>
+            {
+                KForExportItems = items;
+                if (!KForExportItems.Contains(SelectedKForExport))
+                    SelectedKForExport = KForExportItems.FirstOrDefault();
+            });
+        }
+        private void RebuildKForPreviewItems()
+        {
+            List<int> items = new();
+            for (int i = KFrom; i <= KTo; i++)
+                items.Add(i);
+            UIDispatcherHelper.RunOnUI(() =>
+            {
+                KForPreviewItems = items;
+                if (!KForPreviewItems.Contains(SelectedKForPreview))
+                    SelectedKForPreview = KForPreviewItems.FirstOrDefault();
+            });
+        }
+        #endregion
+
+        #region Preview region
+        private BitmapImage? _previewImage;
+        public BitmapImage? PreviewImage
+        {
+            get => _previewImage;
+            set
+            {
+                _previewImage = value;
+                OnPropertyChanged(nameof(PreviewImage));
+            }
+        }
+
+        private async Task GeneratePreview()
+        {
+            if (CurrentSet == null || CurrentCLUMPPConfigurationModel == null) return;
+
+            var configurationName = _savedConfigurationName;
+            var clumppConfigurationName = CurrentCLUMPPConfigurationModel.ParametersName;
+
+            var currentSetName = CurrentSet.Name;
+            var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
+
+            try
+            {
+                _isPreviewing = true;
+                PreviewImage = null;
+                BitmapImage btmImage = new();
+
+                btmImage = await _distructInteractionService.GeneratePreviewForKAsync(fullCurrentSetFolderPath, clumppConfigurationName, configurationName, SelectedKForPreview, _clusterColorItems, GRAYSCALE);
+
+                PreviewImage = btmImage;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            finally
+            {
+                _isPreviewing = false;
+            }
+        }
+        private bool CanGeneratePreview()
+        {
+            return CurrentSet != null &&
+                   CurrentCLUMPPConfigurationModel != null &&
+                   SelectedConfigurationParameters != null &&
+                   _wasSaved &&
+                   !_isPreviewing;
+        }
+        #endregion
+
+        #region Export region
+        private async Task Export()
+        {
+            if (CurrentSet == null || CurrentCLUMPPConfigurationModel == null) return;
+
+            var configurationName = _savedConfigurationName;
+            var clumppConfigurationName = CurrentCLUMPPConfigurationModel.ParametersName;
+
+            var currentSetName = CurrentSet.Name;
+            var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
+
+            var (format, k) = GetExportOptions();
+            if (format == DistructConstants.OutputFormat.None) return;
+
+            var configuration = _changesTracker.GetSnapshot();
+            if (configuration == null) return;
+
+            try
+            {
+                _isExporting = true;
+                await _distructInteractionService.ExportResultsAsync(fullCurrentSetFolderPath, clumppConfigurationName, configurationName, format, k, configuration.ORIENTATION);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _isExporting = false;
+            }
+        }
+        private bool CanExport()
+        {
+            return CurrentSet != null &&
+                   CurrentCLUMPPConfigurationModel != null &&
+                   SelectedConfigurationParameters != null &&
+                   _distructCompleted &&
+                   (IsPDF || IsPNG || IsJPEG || IsBMP) &&
+                   !_isExporting;
+        }
+        private (DistructConstants.OutputFormat format, int k) GetExportOptions()
+        {
+            DistructConstants.OutputFormat format = DistructConstants.OutputFormat.None;
+            if (IsPDF) format |= DistructConstants.OutputFormat.Pdf;
+            if (IsPNG) format |= DistructConstants.OutputFormat.Png;
+            if (IsJPEG) format |= DistructConstants.OutputFormat.Jpeg;
+            if (IsBMP) format |= DistructConstants.OutputFormat.Bmp;
+
+            return (format, SelectedKForExport);
+        }
         #endregion
 
         private void SelectLabelsAtopFile()
@@ -326,6 +615,7 @@ namespace GenotypeApplication.View_models
         {
             INFILE_LABEL_BELOW = _dialogService.SelectFile(PathConstants.DEFAULT_DOCUMENTS_PATH);
         }
+
         private void ConfigureColorPalette()
         {
             DistructColorsConfigurationVM distructColorsConfigurationVM = new(KTo, GRAYSCALE, _windowService);
@@ -338,11 +628,10 @@ namespace GenotypeApplication.View_models
             }
         }
 
-        public string ConfigurationName
-        {
-            get => _parametersName;
-            set { SetField(ref _parametersName, value); }
-        }
+        #region ComboBox of configuration parameters
+        private DistructConfigurationModel? _selectedConfigurationParameters = new();
+        private ObservableCollection<DistructConfigurationModel> _savedConfigurationParametersItems = new();
+
         public DistructConfigurationModel? SelectedConfigurationParameters
         {
             get => _selectedConfigurationParameters;
@@ -381,7 +670,6 @@ namespace GenotypeApplication.View_models
                 }
             }
         }
-
         private bool IsValidDistructConfiguration(DistructConfigurationModel configuration)
         {
             if (CurrentSet == null || CurrentCLUMPPConfigurationModel == null) return false;
@@ -389,23 +677,11 @@ namespace GenotypeApplication.View_models
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
             return _distructInteractionService.IsConfigurationExist(fullSetFolderPath, CurrentCLUMPPConfigurationModel.ParametersName, configuration.ParametersName) && !_directoryService.IsDirectoryEmpty(Path.Combine(fullSetFolderPath, DistructConstants.DISTRUCT_FOLDER_NAME, CurrentCLUMPPConfigurationModel.ParametersName, configuration.ParametersName));
         }
-
         public ObservableCollection<DistructConfigurationModel> ConfigurationParametersItems { get; } = new();
         public static readonly DistructConfigurationModel CreateNewSetPlaceholder = new() { ParametersName = "Create new" };
+        #endregion
 
-        private void RebuildConfigurationParametersItems()
-        {
-            UIDispatcherHelper.RunOnUI(() =>
-            {
-                ConfigurationParametersItems.Clear();
-
-                foreach (DistructConfigurationModel item in _savedConfigurationParametersItems)
-                    ConfigurationParametersItems.Add(item);
-
-                ConfigurationParametersItems.Add(CreateNewSetPlaceholder);
-            });
-        }
-
+        #region Progress parameters
         private double _distructProgress;
         public double DistructProgress
         {
@@ -432,7 +708,9 @@ namespace GenotypeApplication.View_models
             get => _distructCompleted;
             set { SetField(ref _distructCompleted, value); }
         }
+        #endregion
 
+        #region Load parameters methods
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
             return;
@@ -499,6 +777,7 @@ namespace GenotypeApplication.View_models
                     DistructProgressText = "Completed";
                 });
                 DistructStopped = false;
+                RebuildKForExportItems(KFrom, KTo);
             }
             catch (Exception)
             {
@@ -506,20 +785,9 @@ namespace GenotypeApplication.View_models
                 throw;
             }
         }
+        #endregion
 
-        private void ResetParameters()
-        {
-            var newConfiguration = new DistructConfigurationModel();
-
-            ConfigurationName = string.Empty;
-            SetConfigurationParameters(newConfiguration);
-
-            NUMINDS = PredefinedIndvCount;
-            NUMPOPS = PredefinedPopCount;
-
-            KFrom = PredefinedCLUMPPKStart;
-            KTo = PredefinedCLUMPPKEnd;
-        }
+        #region Save parameters methods
         private async Task SaveChangesAsync()
         {
             var configuration = GetConfigurationParameters();
@@ -630,15 +898,29 @@ namespace GenotypeApplication.View_models
                 return false;
             }
 
-            if (_savedConfigurationName != configuration.ParametersName || _changesTracker.HasChanges(configuration))
+            try
             {
-                await _distructInteractionService.RenameConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, _savedConfigurationName, configuration.ParametersName);
+                if (_savedConfigurationName != configuration.ParametersName)
+                {
+                    await _distructInteractionService.RenameConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, _savedConfigurationName, configuration.ParametersName);
+                }
+
+                if (_changesTracker.HasChanges(configuration))
+                {
+                    await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, configuration);
+                }
+
+                return true;
             }
+            catch (Exception)
+            {
 
-            return true;
+                throw;
+            }
         }
+        #endregion
 
-
+        #region Distruct execution methods
         private async Task StartDistructAsync()
         {
             if (CurrentSet == null ||
@@ -671,6 +953,7 @@ namespace GenotypeApplication.View_models
 
                 WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
                 await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
+                RebuildKForExportItems(KFrom, KTo);
 
                 DistructProgress = 100;
                 DistructProgressText = "Completed";
@@ -714,6 +997,7 @@ namespace GenotypeApplication.View_models
         {
             return _distructInteractionService.IsRunning;
         }
+        #endregion
 
         private DistructConfigurationModel GetConfigurationParameters()
         {

@@ -74,6 +74,7 @@ namespace GenotypeApplication.View_models
         private readonly ParametersChangesTracker<CLUMPPConfigurationModel> _changesTracker = new();
         private (bool savedIsPop, int savedCPop, bool savedisIndv, int savedCIndv) _savedDataTypeParameters;
 
+        #region Progress parameters
         private double _clumppProgress;
         public double CLUMPPProgress
         {
@@ -94,12 +95,14 @@ namespace GenotypeApplication.View_models
             get => _clumppStopped;
             set { SetField(ref _clumppStopped, value); }
         }
+
         private bool _clumppCompleted;
         public bool CLUMPPCompleted
         {
             get => _clumppCompleted;
             set { SetField(ref _clumppCompleted, value); }
         }
+        #endregion
 
         private bool _userSure;
 
@@ -190,6 +193,7 @@ namespace GenotypeApplication.View_models
             ValidateProperty(args, _kRangeValidator.Validate, nameof(KFrom));
             ValidateProperty(args, _kRangeValidator.Validate, nameof(KTo));
         }
+
         #region Configuration parameters properties
         public bool IsPop
         {
@@ -336,7 +340,6 @@ namespace GenotypeApplication.View_models
                 ConfigurationParametersComboBoxList.Add(_createNewSetPlaceholder);
             });
         }
-
         private void ResetParameters()
         {
             var newConfiguration = new CLUMPPConfigurationModel();
@@ -424,7 +427,6 @@ namespace GenotypeApplication.View_models
             }
         }
 
-
         private (CLUMPPConfigurationModel, bool IsPop, int PopCount, bool IsIndv, int IndvCount) GetConfigurationParameters()
         {
             return (new CLUMPPConfigurationModel
@@ -443,7 +445,6 @@ namespace GenotypeApplication.View_models
                 ORDER_BY_RUN = OrderByRun
             }, IsPop, PopsCount, IsIndv, IndvsCount);
         }
-
         private void SetConfigurationParameters(CLUMPPConfigurationModel model, bool isPop, int popCount, bool isIndv, int indvCount)
         {
             ConfigurationName = model.ParametersName;

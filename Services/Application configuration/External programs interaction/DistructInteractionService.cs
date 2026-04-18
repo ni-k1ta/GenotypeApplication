@@ -4,11 +4,15 @@ using GenotypeApplication.Models;
 using GenotypeApplication.Models.Distruct;
 using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
+using OxyPlot;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Media.Imaging;
+using static GenotypeApplication.Constants.DistructConstants;
 
 namespace GenotypeApplication.Services.Application_configuration.External_program_interaction
 {
@@ -70,8 +74,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             Directory.CreateDirectory(fullConfigurationFolderPath);
 
             if (!string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_ATOP) ||
-                !string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_BELOW) ||
-                !string.IsNullOrWhiteSpace(configurationModel.INFILE_CLUST_PERM))
+                !string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_BELOW))
             {
                 var fullOptionalFolderPath = Path.Combine(fullConfigurationFolderPath, DISTRUCT_OPTIONAL_FOLDER_NAME);
 
@@ -92,14 +95,6 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     _fileService.CopyFile(configurationModel.INFILE_LABEL_BELOW, targetPath);
                     configurationModel.INFILE_LABEL_BELOW = Path.Combine(DISTRUCT_OPTIONAL_FOLDER_NAME, fileName);
                 }
-
-                //if (!string.IsNullOrWhiteSpace(configurationModel.INFILE_CLUST_PERM))
-                //{
-                //    var fileName = Path.GetFileName(configurationModel.INFILE_CLUST_PERM);
-                //    var targetPath = Path.Combine(fullOptionalFolderPath, fileName);
-                //    _fileService.CopyFile(configurationModel.INFILE_CLUST_PERM, targetPath);
-                //    configurationModel.INFILE_CLUST_PERM = Path.Combine(DISTRUCT_OPTIONAL_FOLDER_NAME, fileName);
-                //}
             }
 
             var fullConfigurationFilePath = Path.Combine(fullConfigurationFolderPath, configurationModel.ParametersName);
@@ -217,6 +212,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             return jobs;
         }
+
         public async Task StartExecution(string configurationName, int kFrom, int kTo, string fullSetFolderPath, string clumppConfigurationName, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, int coresCount)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
@@ -230,7 +226,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var fullCLUMPPResultsFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME);
             bool hasCLUMPPResults = _directoryService.IsDirectoryExist(fullCLUMPPResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullCLUMPPResultsFolderPath);
             if (!hasCLUMPPResults)
-                throw new FileNotFoundException("Не найдены результаты работы CLUMPP"); //изменить
+                throw new FileNotFoundException("Не найдены результаты работы CLUMPP");
 
             var fullConfigurationCLUMPPFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName);
             if (!_directoryService.IsDirectoryExist(fullConfigurationCLUMPPFolderPath))
@@ -311,20 +307,10 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 string clustPermFilePath = string.Empty;
                 if (clusterColors != null && clusterColors.Count > 0)
                 {
-                    var sb = new StringBuilder();
-                    foreach (var item in clusterColors.Where(i => i.ClusterIndex <= job.K))
-                    {
-                        if (isGrayscale)
-                            sb.AppendLine($"{item.ClusterIndex} {item.GrayscaleValue:F3}");
-                        else
-                            sb.AppendLine($"{item.ClusterIndex} {item.ColorName}");
-                    }
-
                     var clustersColorsFolderPath = Path.Combine(workingDirectory, DISTRUCT_CLUST_PERM_FOLDER);
                     Directory.CreateDirectory(clustersColorsFolderPath);
 
-                    clustPermFilePath = Path.Combine(clustersColorsFolderPath, $"clust_k{job.K}.perm");
-                    File.WriteAllText(clustPermFilePath, sb.ToString());
+                    clustPermFilePath = CreateClustPermFile(clusterColors, job.K, isGrayscale, clustersColorsFolderPath);
                 }
 
                 var arguments =
@@ -336,7 +322,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                     (string.IsNullOrWhiteSpace(clustPermFilePath) ?
                         string.Empty : 
-                        $" -c {Path.Combine(DISTRUCT_CLUST_PERM_FOLDER, $"clust_k{job.K}.perm")}");
+                        $" -c \"{Path.Combine(DISTRUCT_CLUST_PERM_FOLDER, $"clust_k{job.K}.perm")}\"");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -423,6 +409,188 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             }
         }
 
+        private string CreateClustPermFile(ObservableCollection<ClusterColorItem> clusterColors, int k, bool isGrayscale, string outputFolderPath)
+        {
+            if (clusterColors == null || clusterColors.Count == 0)
+                return string.Empty;
+
+            var sb = new StringBuilder();
+            foreach (var item in clusterColors.Where(i => i.ClusterIndex <= k))
+            {
+                if (isGrayscale)
+                    sb.AppendLine($"{item.ClusterIndex} {item.GrayscaleValue:F3}");
+                else
+                    sb.AppendLine($"{item.ClusterIndex} {item.ColorName}");
+            }
+
+            var clustPermFilePath = Path.Combine(outputFolderPath, $"clust_k{k}.perm");
+            File.WriteAllText(clustPermFilePath, sb.ToString());
+            return clustPermFilePath;
+        }
+
+        public async Task<BitmapImage> GeneratePreviewForKAsync(string fullSetFolderPath, string clumppConfigurationName, string configurationName, int k, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale)
+        {
+            var fullCLUMPPResultsFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME);
+            bool hasCLUMPPResults = _directoryService.IsDirectoryExist(fullCLUMPPResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullCLUMPPResultsFolderPath);
+            if (!hasCLUMPPResults)
+                throw new FileNotFoundException("Не найдены результаты работы CLUMPP"); //изменить
+
+            var fullConfigurationCLUMPPFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName);
+            var fullConfigurationFolderPath = Path.Combine(fullConfigurationCLUMPPFolderPath, configurationName);
+            var fullResultsFolderPath = Path.Combine(fullConfigurationFolderPath, "tmp");
+            Directory.CreateDirectory(fullResultsFolderPath);
+
+            var fullDistructExecutableFilePath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, DISTRUCT_EXECUTABLE_FILE_NAME);
+
+            var job = new DistructJob(
+                    k,
+                    configurationName,
+                    Path.Combine("..", "..", "..", CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME, $"K{k}.popq"),
+                    Path.Combine("..", "..", "..", CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME, $"K{k}.indq"),
+                    Path.Combine("tmp", $"K{k}.ps")
+                    );
+
+            Process? process = null;
+
+            try
+            {
+                string clustPermFilePath = CreateClustPermFile(clusterColors, job.K, isGrayscale, fullResultsFolderPath);
+
+                var arguments =
+                    $"-d {job.ParametersFileName}" +
+                    $" -K {job.K}" +
+                    $" -p {job.InputFilePopqPath}" +
+                    $" -i {job.InputFileIndvqPath}" +
+                    $" -o {job.OutFilePath}" +
+
+                    (string.IsNullOrWhiteSpace(clustPermFilePath) ?
+                        string.Empty :
+                        $" -c {Path.Combine("tmp", $"clust_k{job.K}.perm")}");
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = fullDistructExecutableFilePath,
+                    Arguments = arguments,
+                    WorkingDirectory = fullConfigurationFolderPath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+
+                process.OutputDataReceived += (_, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(e.Data)) return;
+
+                    Debug.WriteLine($"[K={job.K}] {e.Data}");
+
+                    if (e.Data.StartsWith("Warning", StringComparison.OrdinalIgnoreCase))
+                    {
+                        //_logger.Warning($"[K={job.K}] {e.Data}");
+                    }
+                    else
+                    {
+                       // _logger.Info($"[K={job.K}] {e.Data}");
+                    }
+                };
+
+                process.ErrorDataReceived += (_, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(e.Data)) return;
+
+                    Debug.WriteLine($"[K={job.K}] ERROR: {e.Data}");
+
+                    //_logger.Error($"[K={job.K}] {e.Data}");
+                };
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                Debug.WriteLine($"Started [K={job.K}] PID={process.Id}");
+
+                await process.WaitForExitAsync();
+
+                Debug.WriteLine($"Finished [K={job.K}] ExitCode={process.ExitCode}");
+
+
+
+                string ghostscriptPath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, "gswin64c.exe");
+                if (!File.Exists(ghostscriptPath)) { throw new FileNotFoundException("Ghostscript executable not found.", ghostscriptPath); }
+
+                string inputFilePath = Path.Combine(fullResultsFolderPath, $"K{job.K}.ps");
+                string outputFileBaseName = Path.GetFileNameWithoutExtension(inputFilePath);
+
+                var bbox = await GetBoundingBoxAsync(ghostscriptPath, inputFilePath);
+
+                var settings = FormatMap.Get(DistructConstants.OutputFormat.Png);
+                var fileName = $"{outputFileBaseName}{settings.Extension}";
+                var outputFilePath = Path.Combine(fullResultsFolderPath, fileName);
+
+                var args = new List<string>
+                {
+                    "-dNOPAUSE",
+                    "-dBATCH",
+                    "-dSAFER",
+                    $"-sDEVICE={settings.Device}",
+                    $"-sOutputFile=\"{outputFilePath}\"",
+                    $"-dDEVICEWIDTHPOINTS={bbox.Width}",
+                    $"-dDEVICEHEIGHTPOINTS={bbox.Height}",
+                    "-dFIXEDMEDIA"
+                };
+
+                args.Add($"-r{300}");
+                args.Add($"\"{inputFilePath}\"");
+                var ghostlibArgs = string.Join(" ", args);
+
+                try
+                {
+                    await RunGhostscriptAsync(ghostscriptPath, ghostlibArgs);
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.UriSource = new Uri(outputFilePath);
+                bitmap.EndInit();
+                bitmap.Freeze();  // важно для MVVM!
+                return bitmap;
+            }
+            catch (OperationCanceledException) when (process is { HasExited: false })
+            {
+                //_logger.LogWarning(
+                //"Killing process: K={K}, Iteration={Iteration}", k, iteration);
+
+                try { process.Kill(entireProcessTree: true); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[K={job.K}] Failed to kill: {ex.Message}");
+
+                    // _logger.LogError(ex,
+                    //"Failed to kill process: K={K}, Iteration={Iteration}", k, iteration);
+                }
+
+                throw;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            finally
+            {
+                process?.Dispose();
+                _directoryService.DeleteDirectory(fullResultsFolderPath);
+            }
+        }
+
         public async Task RenameConfiguration(string fullCurrentSetFolderPath, string clumppConfigurationName, string oldConfigurationName, string newConfigurationName)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
@@ -432,6 +600,18 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             var fullOldConfigurationPath = Path.Combine(fullCurrentSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName, oldConfigurationName);
             var fullNewConfigurationPath = Path.Combine(fullCurrentSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName, newConfigurationName);
+
+            if (string.Equals(oldConfigurationName, newConfigurationName, StringComparison.OrdinalIgnoreCase)) { return; }
+
+            if (!Directory.Exists(fullOldConfigurationPath))
+            {
+                throw new DirectoryNotFoundException($"Исходная конфигурация не найдена: {fullOldConfigurationPath}");
+            }
+
+            if (Directory.Exists(fullNewConfigurationPath))
+            {
+                throw new IOException($"Конфигурация с именем {newConfigurationName} уже существует.");
+            }
 
             Directory.Move(fullOldConfigurationPath, fullNewConfigurationPath);
 
@@ -478,6 +658,159 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         {
             get { lock (_lock) return _isRunning; }
             private set { lock (_lock) _isRunning = value; }
+        }
+
+        public async Task ExportResultsAsync(string fullSetFolderPath, string clumppConfigurationName, string configurationName, DistructConstants.OutputFormat formats, int k, int orientation)
+        {
+            string ghostscriptPath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, "gswin64c.exe");
+            if (!File.Exists(ghostscriptPath)) { throw new FileNotFoundException("Ghostscript executable not found.", ghostscriptPath); }
+
+            string fullResultsFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName, configurationName, DISTRUCT_RESULTS_FOLDER_NAME);
+            string inputFilePath = Path.Combine(fullResultsFolderPath, $"K{k}.ps");
+            if (!File.Exists(inputFilePath)) { throw new FileNotFoundException("Input file not found.", inputFilePath); }
+
+            string outputFolderPath = Path.Combine(fullResultsFolderPath, "Exported");
+            Directory.CreateDirectory(outputFolderPath);
+
+            var bbox = await GetBoundingBoxAsync(ghostscriptPath, inputFilePath);
+
+            string outputFileBaseName = Path.GetFileNameWithoutExtension(inputFilePath);
+
+            foreach (DistructConstants.OutputFormat format in Enum.GetValues(typeof(DistructConstants.OutputFormat)))
+            {
+                // пропускаем None и форматы, которые не запрошены
+                if (format == OutputFormat.None)
+                    continue;
+
+                if (!formats.HasFlag(format))
+                    continue;
+
+                var settings = FormatMap.Get(format);
+                var fileName = $"{outputFileBaseName}{settings.Extension}";
+                var outputFilePath = Path.Combine(outputFolderPath, fileName);
+
+                var args = new List<string>
+                {
+                    "-dNOPAUSE",
+                    "-dBATCH",
+                    "-dSAFER",
+                    $"-sDEVICE={settings.Device}",
+                    $"-sOutputFile=\"{outputFilePath}\"",
+                    $"-dDEVICEWIDTHPOINTS={bbox.Width}",
+                    $"-dDEVICEHEIGHTPOINTS={bbox.Height}",
+                    "-dFIXEDMEDIA"
+                };
+
+                if (settings.Device == "pdfwrite") { args.Add("-dAutoRotatePages=/None"); }
+
+                // добавляем разрешение только для растровых форматов
+                if (settings.NeedsResolution) { args.Add($"-r{300}"); }
+                // входной файл идёт последним
+                args.Add($"\"{inputFilePath}\"");
+                var arguments = string.Join(" ", args);
+
+                try
+                {
+                    await RunGhostscriptAsync(ghostscriptPath, arguments);
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+            }
+        }
+        private async Task<(int Width, int Height)> GetBoundingBoxAsync(string ghostscriptPath, string inputFilePath)
+        {
+            var errorOutput = new StringBuilder();
+
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = ghostscriptPath,
+                    Arguments = $"-dNOPAUSE -dBATCH -dSAFER -sDEVICE=bbox \"{inputFilePath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true
+                },
+                EnableRaisingEvents = true
+            };
+
+            var tcs = new TaskCompletionSource<int>();
+            process.Exited += (s, e) => tcs.SetResult(process.ExitCode);
+            process.ErrorDataReceived += (s, e) =>
+            {
+                if (e.Data != null)
+                    errorOutput.AppendLine(e.Data);
+            };
+
+            process.Start();
+            process.BeginErrorReadLine();
+            await tcs.Task;
+            process.Dispose();
+
+            // Парсим HiResBoundingBox для точности
+            var output = errorOutput.ToString();
+            var match = Regex.Match(output, @"%%HiResBoundingBox:\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)");
+
+            if (!match.Success)
+                throw new Exception($"Could not determine BoundingBox: {output}");
+
+            //double x1 = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+            //double y1 = double.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+            double x2 = double.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
+            double y2 = double.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture);
+
+            int padding = 2;
+
+            int width = (int)Math.Ceiling(x2) + padding;
+            int height = (int)Math.Ceiling(y2) + padding;
+
+            return (width, height);
+        }
+        private async Task RunGhostscriptAsync(string exeFilePath, string arguments)
+        {
+            var errorOutput = new StringBuilder();
+
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = exeFilePath,
+                    Arguments = arguments,
+                    UseShellExecute = false,    // не открывать окно
+                    CreateNoWindow = true,      // без консольного окна
+                    RedirectStandardError = true // ловим ошибки
+                },
+                EnableRaisingEvents = true  // важно! без этого Exited не сработает
+            };
+
+            var tcs = new TaskCompletionSource<int>();
+            process.Exited += (s, e) =>
+            {
+                tcs.SetResult(process.ExitCode);
+            };
+
+            // собираем ошибки асинхронно, не блокируя поток
+            process.ErrorDataReceived += (s, e) =>
+            {
+                if (e.Data != null)
+                    errorOutput.AppendLine(e.Data);
+            };
+
+            process.Start();
+            process.BeginErrorReadLine();  // запускаем асинхронное чтение stderr
+
+            var exitCode = await tcs.Task;  // ждём завершения, не блокируя UI
+
+            process.Dispose();
+
+            if (exitCode != 0)
+            {
+                throw new Exception(
+                    $"Ghostscript завершился с ошибкой (код {exitCode}): {errorOutput}");
+            }
         }
     }
 }

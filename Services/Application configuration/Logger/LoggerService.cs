@@ -60,7 +60,12 @@ namespace GenotypeApplication.Services.Application_configuration.Logger
 
             foreach (var entry in toAdd)
                 Entries.Add(entry);
+
+            // скролл один раз после всей пачки
+            LogScrollRequested?.Invoke();
         }
+
+        public event Action? LogScrollRequested;
 
         private void WriteToFile(string programName, LogModel entry)
         {

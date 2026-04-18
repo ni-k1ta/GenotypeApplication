@@ -36,8 +36,8 @@ namespace GenotypeApplication.View_models
         #endregion
 
         private readonly StructureHarvesterInteractionService _structureHarvesterInteractionService;
-
-
+        
+        #region Progress parameters
         private double _structureHarvesterProgress;
         public double StructureHarvesterProgress
         {
@@ -57,6 +57,7 @@ namespace GenotypeApplication.View_models
             get => _structureHarvesterIsIndeterminate;
             set { SetField(ref _structureHarvesterIsIndeterminate, value); }
         }
+        #endregion
 
         public StructureHarvesterTabControlVM(WorkflowStateModel workflowStateModel, int coresCount, string fullProjectFolderPath, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, LoggerService loggerService, IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> kRangeValidator) : base(workflowStateModel, SetProcessingStage.StructureHarvester, coresCount, fullProjectFolderPath, setConfigurationService, directoryService, fileService, messageService, dialogService, loggerService, pathValidator, parameterNameValidator, kRangeValidator)
         {
@@ -241,13 +242,6 @@ namespace GenotypeApplication.View_models
         {
             return GraphSelectedSetModel != null;
         }
-
-
-
-
-
-
-
 
 
         protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)

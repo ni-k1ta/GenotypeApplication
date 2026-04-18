@@ -125,6 +125,7 @@ namespace GenotypeApplication.View_models
         private readonly ParametersChangesTracker<StructureExtraParametersModel> _extraParametersChangesTracker = new();//-
         #endregion
 
+        #region Progress parameters
         private double _structureProgress;
         public double StructureProgress
         {
@@ -145,7 +146,9 @@ namespace GenotypeApplication.View_models
             get => _structureStopped;
             set { SetField(ref _structureStopped, value); }
         }
+        
         private bool _structureCompleted;
+        #endregion
 
         public StructureTabControlVM(WorkflowStateModel workflowStateModel, string fullProjectFolderPath, int coresCount, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, IWindowService windowService, LoggerService loggerService, IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> kRangeValidator) : base(workflowStateModel, SetProcessingStage.Structure, coresCount, fullProjectFolderPath, setConfigurationService, directoryService, fileService, messageService, dialogService, loggerService, pathValidator, parameterNameValidator, kRangeValidator)
         {
@@ -631,6 +634,19 @@ namespace GenotypeApplication.View_models
                 SetModelsComboBoxList.Add(_createNewSetPlaceholder);
             });
         }
+        private void ResetSetParameters()
+        {
+            var newStructureMainParameters = new StructureMainParametersModel();
+            var newStructureExtraParameters = new StructureExtraParametersModel();
+
+            SetName = string.Empty;
+            SetMainParameters(newStructureMainParameters);
+            SetExtraParameters(newStructureExtraParameters);
+
+            KFrom = 1;
+            KTo = 3;
+            Iterations = 3;
+        }
 
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set) // вызывается только из сеттера CurrentSet базового класса
         {
@@ -709,21 +725,6 @@ namespace GenotypeApplication.View_models
                 throw;
             }
         }
-
-        private void ResetSetParameters()
-        {
-            var newStructureMainParameters = new StructureMainParametersModel();
-            var newStructureExtraParameters = new StructureExtraParametersModel();
-
-            SetName = string.Empty;
-            SetMainParameters(newStructureMainParameters);
-            SetExtraParameters(newStructureExtraParameters);
-
-            KFrom = 1;
-            KTo = 3;
-            Iterations = 3;
-        }
-
         private async Task LoadDataFile()
         {
             DataFileFormatVM dataFileParametersViewModel = new(_dialogService, _messageService, _pathValidator, _windowService);
@@ -1232,9 +1233,6 @@ namespace GenotypeApplication.View_models
             SeedParam = extraParameters.SEED;
             ReportThitRateParam = extraParameters.REPORTHITRATE;
         }
-
-
-
 
         protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
         {

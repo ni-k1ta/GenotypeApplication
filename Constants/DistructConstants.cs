@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace GenotypeApplication.Constants
+﻿namespace GenotypeApplication.Constants
 {
     public static class DistructConstants
     {
@@ -13,5 +7,15 @@ namespace GenotypeApplication.Constants
         public const string DISTRUCT_RESULTS_FOLDER_NAME = "Results";
         public const string DISTRUCT_OPTIONAL_FOLDER_NAME = "Optional";
         public const string DISTRUCT_CLUST_PERM_FOLDER = "Color palette";
+
+        [Flags]
+        public enum OutputFormat
+        {
+            None = 0,
+            Pdf = 1,
+            Png = 2,
+            Jpeg = 4,
+            Bmp = 8
+        }
     }
 }

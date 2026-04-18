@@ -359,6 +359,7 @@ namespace GenotypeApplication.View_models
             private set => SetField(ref _highlightMap, value);
         }
         #endregion
+        
         //public bool IsLiveHighlightEnabled
         //{
         //    get => _isLiveHighlightEnabled;

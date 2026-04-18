@@ -196,7 +196,15 @@
                  Margin="5,5,5,1"
                  ItemsSource="{Binding Logger.Entries}"
                  ScrollViewer.CanContentScroll="True"
-                 behaviors:ListBoxAutoScrollBehavior.Enabled="True">
+                 behaviors:ListBoxAutoScrollBehavior.ScrollSource="{Binding Logger}"
+                 VirtualizingPanel.IsVirtualizing="True">
+            <!--behaviors:ListBoxAutoScrollBehavior.Enabled="True"-->
+
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel VirtualizationMode="Recycling" />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
 
             <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -1836,20 +1844,23 @@
                                 <CheckBox x:Name="pdfCheckBox"
                                           Content="PDF"
                                           Grid.Row="0"
-                                          Grid.Column="0" />
+                                          Grid.Column="0"
+                                          IsChecked="{Binding IsPDF, UpdateSourceTrigger=PropertyChanged}" />
                                 <CheckBox x:Name="pngCheckBox"
                                           Content="PNG"
                                           Grid.Row="1"
-                                          Grid.Column="0" />
+                                          Grid.Column="0"
+                                          IsChecked="{Binding IsPNG, UpdateSourceTrigger=PropertyChanged}" />
                                 <CheckBox x:Name="jpegCheckBox"
                                           Content="JPEG"
                                           Grid.Row="0"
-                                          Grid.Column="1" />
+                                          Grid.Column="1"
+                                          IsChecked="{Binding IsJPEG, UpdateSourceTrigger=PropertyChanged}" />
                                 <CheckBox x:Name="bmpCheckBox"
                                           Content="BMP"
                                           Grid.Row="1"
-                                          Grid.Column="1" />
-
+                                          Grid.Column="1"
+                                          IsChecked="{Binding IsBMP, UpdateSourceTrigger=PropertyChanged}" />
                                 <GroupBox x:Name="exportKNumSelectionGroupBox"
                                           Header="Select 'K' number"
                                           Grid.Row="2"
@@ -1859,11 +1870,14 @@
                                           HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Vertical"
                                                 HorizontalAlignment="Center">
-                                        <ComboBox x:Name="exportKNumComboBox" />
+                                        <ComboBox x:Name="exportKNumComboBox"
+                                                  ItemsSource="{Binding KForExportItems}"
+                                                  SelectedItem="{Binding SelectedKForExport}" />
                                         <Button x:Name="exportButton"
                                                 Content="Export"
                                                 Margin="0,5,0,0"
-                                                Style="{StaticResource Rounded}" />
+                                                Style="{StaticResource Rounded}"
+                                                Command="{Binding ExportCommand}" />
                                     </StackPanel>
                                 </GroupBox>
                             </Grid>
@@ -1946,7 +1960,7 @@
                                                     Style="{StaticResource Rounded}"
                                                     HorizontalAlignment="Stretch"
                                                     Width="220"
-                                                    Command="{Binding ConfigureColorPaletteCommand}"/>
+                                                    Command="{Binding ConfigureColorPaletteCommand}" />
 
                                             <!--<Grid>
                                                 <Grid.ColumnDefinitions>
@@ -2048,7 +2062,6 @@
 
                                     <StackPanel Orientation="Vertical"
                                                 Grid.Column="1"
-                                                VerticalAlignment="Bottom"
                                                 Margin="5,0,0,0"
                                                 HorizontalAlignment="Stretch">
                                         <DockPanel LastChildFill="False">
@@ -2073,6 +2086,12 @@
                                                                DockPanel.Dock="Right"
                                                                Value="{Binding DIST_BELOW, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
+                                        <Button Margin="0,5,0,0"
+                                                HorizontalAlignment="Center"
+                                                Width="210"
+                                                Content="Determine the optimal values"
+                                                Style="{StaticResource Rounded}"
+                                                Command="{Binding DetermineOptimalValuesCommand}" />
                                     </StackPanel>
                                 </Grid>
                             </GroupBox>
@@ -2088,17 +2107,31 @@
                                           HorizontalAlignment="Stretch">
                                     <DockPanel LastChildFill="False">
                                         <ComboBox x:Name="pregeneratedImageKNumComboBox"
-                                                  DockPanel.Dock="Left" />
+                                                  DockPanel.Dock="Left"
+                                                  ItemsSource="{Binding KForPreviewItems}"
+                                                  SelectedItem="{Binding SelectedKForPreview, UpdateSourceTrigger=PropertyChanged}" />
                                         <Button x:Name="generateButton"
                                                 Content="Generate"
                                                 DockPanel.Dock="Right"
-                                                Style="{StaticResource Rounded}" />
+                                                Style="{StaticResource Rounded}"
+                                                Command="{Binding GeneratePreviewCommand}" />
                                     </DockPanel>
                                 </GroupBox>
 
-                                <TextBox Height="161.8"
+                                <!--<TextBox Height="161.8"
                                          Width="341.2"
-                                         Margin="0,5,0,0" />
+                                         Margin="0,5,0,0" />-->
+
+                                <Border Height="161.8"
+                                        Width="341.2"
+                                        Margin="0,5,0,0">
+
+                                    <Image x:Name="PsPreview"
+                                           Source="{Binding PreviewImage}"
+                                           Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="HighQuality" />
+
+                                </Border>
                             </StackPanel>
                         </GroupBox>
                     </StackPanel>
@@ -2127,6 +2160,7 @@
 
                         <StackPanel Orientation="Horizontal"
                                     DockPanel.Dock="Right">
+
                             <Button x:Name="saveDistructOptionsButton"
                                     Content="Save"
                                     Margin="0,0,58,0"
