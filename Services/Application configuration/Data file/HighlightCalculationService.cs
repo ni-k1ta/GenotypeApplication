@@ -1,12 +1,11 @@
-﻿using GenotypeApplication.Interfaces.Application_configuration;
-using GenotypeApplication.Models.Structure;
+﻿using GenotypeApplication.Models.Structure;
 using GenotypeApplication.Models.Structure.Data_file.Highlights;
 using System.Data;
 using System.Windows.Media;
 
 namespace GenotypeApplication.Services.Application_configuration.Data_file
 {
-    public class HighlightCalculationService : IHighlightCalculationService
+    public class HighlightCalculationService
     {
         private static readonly Color LabelColor = Colors.LimeGreen;
         private static readonly Color PopDataColor = Colors.DodgerBlue;

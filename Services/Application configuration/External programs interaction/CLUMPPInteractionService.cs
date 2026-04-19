@@ -110,11 +110,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 return configurations;
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
         }
         public async Task<(CLUMPPConfigurationModel configurationModel, bool isPop, bool isIndv, int kStart, int kEnd)> LoadConfiguration(string fullSetFolderPath, string configurationName)
         {
@@ -183,11 +179,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 return (configurationModel, isPop, isIndv, kMin, kMax);
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
         }
 
         public bool HasPopResults(string fullSetFolderPath, string configurationName)
@@ -256,7 +248,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var fullStructureHarvesterResultsFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME, STRUCTURE_HARVESTER_RESULTS_FOLDER_NAME);
             bool hasStructureHarvesterResults = _directoryService.IsDirectoryExist(fullStructureHarvesterResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullStructureHarvesterResultsFolderPath);
             if (!hasStructureHarvesterResults)
-                throw new FileNotFoundException("Не найдены результаты работы Structure Harvester"); //изменить
+                throw new FileNotFoundException("Structure Harvester results were not found.");
 
             var fullConfigurationFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME, configurationName);
             if (!_directoryService.IsDirectoryExist(fullConfigurationFolderPath))
@@ -273,6 +265,21 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                        kFrom, kTo, isPop, isIndv,
                        configurationName);
 
+            var hvFilesToReset = new HashSet<string>();
+
+            foreach (var job in jobs)
+            {
+                var hvFileName = $"K{job.K}_hv.txt";
+                var hvFilePath = Path.Combine(fullResultsFolderPath, hvFileName);
+                hvFilesToReset.Add(hvFilePath);
+            }
+
+            foreach (var path in hvFilesToReset)
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+
             _totalUnits = jobs.Count;
             int completedUnits = 0;
 
@@ -281,7 +288,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 _unitProgress.Clear();
             }
 
-            _cts = new CancellationTokenSource();
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(App.GlobalCts.Token);
             var token = _cts.Token;
             IsRunning = true;
 
@@ -303,11 +310,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 await Task.WhenAll(tasks);
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
             finally
             {
                 IsRunning = false;
@@ -411,11 +414,6 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                             }
                         }
                     }
-
-                    //if (e.Data.Contains("Press Return", StringComparison.OrdinalIgnoreCase))
-                    //{
-                    //    process.StandardInput.WriteLine();
-                    //}
                 };
 
                 process.ErrorDataReceived += (_, e) =>
@@ -431,38 +429,28 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 process.StandardInput.Close();
 
-                Debug.WriteLine($"Started [K={job.K}] PID={process.Id}");
-
                 await process.WaitForExitAsync(ct);
-
-                Debug.WriteLine($"Finished [K={job.K}] ExitCode={process.ExitCode}");
 
                 if (!string.IsNullOrWhiteSpace(highestHLine))
                 {
                     try
                     {
+
                         var hvFileName = $"K{job.K}_hv.txt";
                         var hvFilePath = Path.Combine(workingDirectory, CLUMPP_RESULTS_FOLDER_NAME, hvFileName);
 
-                        await File.WriteAllTextAsync(
-                            hvFilePath,
-                            highestHLine + Environment.NewLine,
-                            Encoding.UTF8
-                        );
+                        var label = job.DataType == "-p" ? "Pop" : "Ind";
+                        var lineToWrite = $"{label}: {highestHLine}{Environment.NewLine}";
+
+                        await File.AppendAllTextAsync(hvFilePath, lineToWrite, Encoding.UTF8, ct);
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[K={job.K}] Can't write H/G value: {ex.Message}");
-                        //_logger.Error($"[K={job.K}] {(job.type ? ("Can't write H value in new file: ") : ("Can't write G value in new file: "))} {ex.Message}");
+                        _logger.Error($"[K={job.K}] Can't write H/G value: {ex.Message}");
                     }
                 }
 
                 var (completed, total) = reportProgress();
-
-                //_logger.LogInformation(
-                //"Process finished: K={K}, Iteration={Iteration}, " +
-                //"ExitCode={ExitCode}, Progress={Completed}/{Total}",
-                //k, iteration, process.ExitCode, completed, total);
 
                 lock (_unitProgress)
                 {
@@ -472,25 +460,15 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             }
             catch (OperationCanceledException) when (process is { HasExited: false })
             {
-                //_logger.LogWarning(
-                //"Killing process: K={K}, Iteration={Iteration}", k, iteration);
-
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[K={job.K}] Failed to kill: {ex.Message}");
-
-                    // _logger.LogError(ex,
-                    //"Failed to kill process: K={K}, Iteration={Iteration}", k, iteration);
+                    _logger.Error($"Failed to kill process: K={job.K}: {ex.Message}");
                 }
 
                 throw;
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
             finally
             {
                 process?.Dispose();

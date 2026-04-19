@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.ComponentModel;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -19,6 +20,12 @@ namespace GenotypeApplication
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            App.GlobalCts.Cancel();
+            base.OnClosing(e);
         }
     }
 }

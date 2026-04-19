@@ -253,7 +253,7 @@ namespace GenotypeApplication.Models
             set => _print_infile_name = value;
         }
 
-        private bool _print_color_brewer = true;
+        private bool _print_color_brewer = false;
         [DefineParameterModel("PRINT_COLOR_BREWER")]
         public bool PRINT_COLOR_BREWER
         {

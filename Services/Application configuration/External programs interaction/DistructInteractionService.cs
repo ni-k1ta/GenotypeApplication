@@ -4,7 +4,6 @@ using GenotypeApplication.Models;
 using GenotypeApplication.Models.Distruct;
 using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
-using OxyPlot;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -56,7 +55,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             Directory.CreateDirectory(fullCLUMPPFolderPath);
         }
 
-        public async Task PrepareConfiguration(string fullCurrentSetFolderPath, string clumppConfigurationName, DistructConfigurationModel configurationModel)
+        public async Task PrepareConfiguration(string fullCurrentSetFolderPath, string clumppConfigurationName, DistructConfigurationModel configurationModel, string clustPermFilePath)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(clumppConfigurationName);
@@ -74,7 +73,8 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             Directory.CreateDirectory(fullConfigurationFolderPath);
 
             if (!string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_ATOP) ||
-                !string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_BELOW))
+                !string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_BELOW) || 
+                !string.IsNullOrWhiteSpace(clustPermFilePath))
             {
                 var fullOptionalFolderPath = Path.Combine(fullConfigurationFolderPath, DISTRUCT_OPTIONAL_FOLDER_NAME);
 
@@ -94,6 +94,13 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     var targetPath = Path.Combine(fullOptionalFolderPath, fileName);
                     _fileService.CopyFile(configurationModel.INFILE_LABEL_BELOW, targetPath);
                     configurationModel.INFILE_LABEL_BELOW = Path.Combine(DISTRUCT_OPTIONAL_FOLDER_NAME, fileName);
+                }
+
+                if (!string.IsNullOrWhiteSpace(clustPermFilePath))
+                {
+                    var fileName = Path.GetFileName(clustPermFilePath);
+                    var targetPath = Path.Combine(fullOptionalFolderPath, fileName);
+                    _fileService.CopyFile(clustPermFilePath, targetPath);
                 }
             }
 
@@ -130,11 +137,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 return configurations;
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
         }
         public async Task<(DistructConfigurationModel configuration, int kFrom, int kTo)> LoadConfigurationAsync(string fullSetFolderPath, string CLUMPPConfigurationName, string configurationName)
         {
@@ -160,7 +163,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 int kMin = int.MaxValue, kMax = 0;
                 bool found = false;
-                // Ищем K-файлы в Results
+
                 var resultsPath = Path.Combine(fullConfigurationFolderPath, DISTRUCT_RESULTS_FOLDER_NAME);
                 if (_directoryService.IsDirectoryExist(resultsPath) && !_directoryService.IsDirectoryEmpty(resultsPath))
                 {
@@ -190,11 +193,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 return (configurationModel, kMin, kMax);
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
         }
         private record DistructJob(int K, string ParametersFileName, string InputFilePopqPath, string InputFileIndvqPath, string OutFilePath);
         private List<DistructJob> BuildJobs(int kFrom, int kTo, string configurationName, string clumppConfigurationName)
@@ -215,7 +214,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             return jobs;
         }
 
-        public async Task StartExecution(string configurationName, int kFrom, int kTo, string fullSetFolderPath, string clumppConfigurationName, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, int coresCount)
+        public async Task StartExecution(string configurationName, int kFrom, int kTo, string fullSetFolderPath, string clumppConfigurationName, string clustPermFilePath, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, int coresCount)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(clumppConfigurationName);
@@ -260,7 +259,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 _unitProgress.Clear();
             }
 
-            _cts = new CancellationTokenSource();
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(App.GlobalCts.Token);
             var token = _cts.Token;
             IsRunning = true;
 
@@ -272,6 +271,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 job,
                 fullDistructExecutableFilePath,
                 fullConfigurationFolderPath,
+                clustPermFilePath,
                 clusterColors,
                 isGrayscale,
                 semaphore,
@@ -296,7 +296,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 _cts = null;
             }
         }
-        private async Task RunSingleProcessAsync(DistructJob job, string executablePath, string workingDirectory, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, SemaphoreSlim semaphore, CancellationToken ct, Func<(int completed, int total)> reportProgress)
+        private async Task RunSingleProcessAsync(DistructJob job, string executablePath, string workingDirectory, string clustPermFilePath, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, SemaphoreSlim semaphore, CancellationToken ct, Func<(int completed, int total)> reportProgress)
         {
             await semaphore.WaitAsync(ct);
 
@@ -306,13 +306,20 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             {
                 ct.ThrowIfCancellationRequested();
 
-                string clustPermFilePath = string.Empty;
-                if (clusterColors != null && clusterColors.Count > 0)
+                if (!string.IsNullOrWhiteSpace(clustPermFilePath))
                 {
-                    var clustersColorsFolderPath = Path.Combine(workingDirectory, DISTRUCT_CLUST_PERM_FOLDER);
-                    Directory.CreateDirectory(clustersColorsFolderPath);
+                    clustPermFilePath = Path.Combine(DISTRUCT_OPTIONAL_FOLDER_NAME, Path.GetFileName(clustPermFilePath));
+                }
+                else
+                {
+                    if (clusterColors != null && clusterColors.Count > 0)
+                    {
+                        var clustersColorsFolderPath = Path.Combine(workingDirectory, DISTRUCT_CLUST_PERM_FOLDER);
+                        Directory.CreateDirectory(clustersColorsFolderPath);
 
-                    clustPermFilePath = CreateClustPermFile(clusterColors, job.K, isGrayscale, clustersColorsFolderPath);
+                        clustPermFilePath = CreateClustPermFile(clusterColors, job.K, isGrayscale, clustersColorsFolderPath);
+                        clustPermFilePath = Path.Combine(DISTRUCT_CLUST_PERM_FOLDER, Path.GetFileName(clustPermFilePath));
+                    }
                 }
 
                 var arguments =
@@ -321,10 +328,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     $" -p {job.InputFilePopqPath}" +
                     $" -i {job.InputFileIndvqPath}" +
                     $" -o {job.OutFilePath}" +
-
-                    (string.IsNullOrWhiteSpace(clustPermFilePath) ?
-                        string.Empty : 
-                        $" -c \"{Path.Combine(DISTRUCT_CLUST_PERM_FOLDER, $"clust_k{job.K}.perm")}\"");
+                    $" -c \"{clustPermFilePath}\"";
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -377,33 +381,19 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     _unitProgress[job.K] = 100.0;
                     ReportTotalProgress();
                 }
-
-                //_logger.LogInformation(
-                //"Process finished: K={K}, Iteration={Iteration}, " +
-                //"ExitCode={ExitCode}, Progress={Completed}/{Total}",
-                //k, iteration, process.ExitCode, completed, total);
             }
             catch (OperationCanceledException) when (process is { HasExited: false })
             {
-                //_logger.LogWarning(
-                //"Killing process: K={K}, Iteration={Iteration}", k, iteration);
 
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[K={job.K}] Failed to kill: {ex.Message}");
-
-                    // _logger.LogError(ex,
-                    //"Failed to kill process: K={K}, Iteration={Iteration}", k, iteration);
+                    _logger.Error($"Failed to kill process: K={job.K}: {ex.Message}");
                 }
 
                 throw;
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
             finally
             {
                 process?.Dispose();
@@ -430,12 +420,15 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             return clustPermFilePath;
         }
 
-        public async Task<BitmapImage> GeneratePreviewForKAsync(string fullSetFolderPath, string clumppConfigurationName, string configurationName, int k, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale)
+        public async Task<BitmapImage> GeneratePreviewForKAsync(string fullSetFolderPath, string clumppConfigurationName, string configurationName, int k, string clustPermFilePath, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale)
         {
+            if (!string.IsNullOrWhiteSpace(clustPermFilePath) && !File.Exists(clustPermFilePath))
+                throw new FileNotFoundException("ClustPerm file was not found.", clustPermFilePath);
+
             var fullCLUMPPResultsFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME);
             bool hasCLUMPPResults = _directoryService.IsDirectoryExist(fullCLUMPPResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullCLUMPPResultsFolderPath);
             if (!hasCLUMPPResults)
-                throw new FileNotFoundException("Не найдены результаты работы CLUMPP"); //изменить
+                throw new FileNotFoundException("CLUMPP results were not found.");
 
             var fullConfigurationCLUMPPFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName);
             var fullConfigurationFolderPath = Path.Combine(fullConfigurationCLUMPPFolderPath, configurationName);
@@ -456,7 +449,11 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             try
             {
-                string clustPermFilePath = CreateClustPermFile(clusterColors, job.K, isGrayscale, fullResultsFolderPath);
+                if (string.IsNullOrEmpty(clustPermFilePath))
+                {
+                    clustPermFilePath = CreateClustPermFile(clusterColors, job.K, isGrayscale, fullResultsFolderPath);
+                    clustPermFilePath = Path.Combine("tmp", Path.GetFileName(clustPermFilePath));
+                }
 
                 var arguments =
                     $"-d {job.ParametersFileName}" +
@@ -467,7 +464,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                     (string.IsNullOrWhiteSpace(clustPermFilePath) ?
                         string.Empty :
-                        $" -c {Path.Combine("tmp", $"clust_k{job.K}.perm")}");
+                        $" -c \"{clustPermFilePath}\"");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -476,53 +473,22 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     WorkingDirectory = fullConfigurationFolderPath,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
+                    RedirectStandardOutput = false,
+                    RedirectStandardError = false
                 };
 
                 process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
-                process.OutputDataReceived += (_, e) =>
-                {
-                    if (string.IsNullOrWhiteSpace(e.Data)) return;
-
-                    Debug.WriteLine($"[K={job.K}] {e.Data}");
-
-                    if (e.Data.StartsWith("Warning", StringComparison.OrdinalIgnoreCase))
-                    {
-                        //_logger.Warning($"[K={job.K}] {e.Data}");
-                    }
-                    else
-                    {
-                       // _logger.Info($"[K={job.K}] {e.Data}");
-                    }
-                };
-
-                process.ErrorDataReceived += (_, e) =>
-                {
-                    if (string.IsNullOrWhiteSpace(e.Data)) return;
-
-                    Debug.WriteLine($"[K={job.K}] ERROR: {e.Data}");
-
-                    //_logger.Error($"[K={job.K}] {e.Data}");
-                };
-
                 process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                Debug.WriteLine($"Started [K={job.K}] PID={process.Id}");
-
-                await process.WaitForExitAsync();
-
-                Debug.WriteLine($"Finished [K={job.K}] ExitCode={process.ExitCode}");
-
+                await process.WaitForExitAsync(App.GlobalCts.Token);
 
 
                 string ghostscriptPath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, "gswin64c.exe");
-                if (!File.Exists(ghostscriptPath)) { throw new FileNotFoundException("Ghostscript executable not found.", ghostscriptPath); }
+                if (!File.Exists(ghostscriptPath)) { throw new FileNotFoundException("Ghostscript executable file not found.", ghostscriptPath); }
 
                 string inputFilePath = Path.Combine(fullResultsFolderPath, $"K{job.K}.ps");
+                if (!File.Exists(inputFilePath)) throw new FileNotFoundException("Input file not found.", inputFilePath);
+
                 string outputFileBaseName = Path.GetFileNameWithoutExtension(inputFilePath);
 
                 var bbox = await GetBoundingBoxAsync(ghostscriptPath, inputFilePath);
@@ -551,41 +517,25 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 {
                     await RunGhostscriptAsync(ghostscriptPath, ghostlibArgs);
                 }
-                catch (Exception)
-                {
-
-                    throw;
-                }
+                catch (Exception) { throw; }
 
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.UriSource = new Uri(outputFilePath);
                 bitmap.EndInit();
-                bitmap.Freeze();  // важно для MVVM!
+                bitmap.Freeze(); 
                 return bitmap;
             }
             catch (OperationCanceledException) when (process is { HasExited: false })
             {
-                //_logger.LogWarning(
-                //"Killing process: K={K}, Iteration={Iteration}", k, iteration);
 
                 try { process.Kill(entireProcessTree: true); }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[K={job.K}] Failed to kill: {ex.Message}");
-
-                    // _logger.LogError(ex,
-                    //"Failed to kill process: K={K}, Iteration={Iteration}", k, iteration);
-                }
+                catch (Exception) { throw; }
 
                 throw;
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
             finally
             {
                 process?.Dispose();
@@ -607,33 +557,37 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             if (!Directory.Exists(fullOldConfigurationPath))
             {
-                throw new DirectoryNotFoundException($"Исходная конфигурация не найдена: {fullOldConfigurationPath}");
+                throw new DirectoryNotFoundException($"Configuration was not found: {fullOldConfigurationPath}");
             }
 
             if (Directory.Exists(fullNewConfigurationPath))
             {
-                throw new IOException($"Конфигурация с именем {newConfigurationName} уже существует.");
+                throw new IOException($"Configuration with the name {newConfigurationName} already exist.");
             }
 
-            Directory.Move(fullOldConfigurationPath, fullNewConfigurationPath);
-
-            var fullOldConfigurationFilePath = Path.Combine(fullNewConfigurationPath, oldConfigurationName);
-            var newConfigurationFilePath = Path.Combine(fullNewConfigurationPath, newConfigurationName);
-
-            if (File.Exists(fullOldConfigurationFilePath))
+            try
             {
-                var configurationModel = new DistructConfigurationModel();
+                Directory.Move(fullOldConfigurationPath, fullNewConfigurationPath);
 
-                var parametersLines = await _fileService.ReadAllLinesAsync(fullOldConfigurationFilePath);
-                DefineParameterModelConverter.PopulateModelFromLines(configurationModel, parametersLines, "#define");
+                var fullOldConfigurationFilePath = Path.Combine(fullNewConfigurationPath, oldConfigurationName);
+                var newConfigurationFilePath = Path.Combine(fullNewConfigurationPath, newConfigurationName);
 
-                configurationModel.ParametersName = newConfigurationName;
+                if (File.Exists(fullOldConfigurationFilePath))
+                {
+                    var configurationModel = new DistructConfigurationModel();
 
-                var newParametersLines = DefineParameterModelConverter.GetFormatedLines(configurationModel, "#define").ToList();
-                await _fileService.WriteAllLinesAsync(newConfigurationFilePath, newParametersLines);
+                    var parametersLines = await _fileService.ReadAllLinesAsync(fullOldConfigurationFilePath);
+                    DefineParameterModelConverter.PopulateModelFromLines(configurationModel, parametersLines, "#define");
 
-                _fileService.DeleteFile(fullOldConfigurationFilePath);
+                    configurationModel.ParametersName = newConfigurationName;
+
+                    var newParametersLines = DefineParameterModelConverter.GetFormatedLines(configurationModel, "#define").ToList();
+                    await _fileService.WriteAllLinesAsync(newConfigurationFilePath, newParametersLines);
+
+                    _fileService.DeleteFile(fullOldConfigurationFilePath);
+                }
             }
+            catch (Exception) { throw; }
         }
 
         public bool IsConfigurationExist(string fullCurrentSetFolderPath, string clumppConfigurationName, string configurationName)
@@ -665,7 +619,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         public async Task ExportResultsAsync(string fullSetFolderPath, string clumppConfigurationName, string configurationName, DistructConstants.OutputFormat formats, int k, int orientation)
         {
             string ghostscriptPath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, "gswin64c.exe");
-            if (!File.Exists(ghostscriptPath)) { throw new FileNotFoundException("Ghostscript executable not found.", ghostscriptPath); }
+            if (!File.Exists(ghostscriptPath)) { throw new FileNotFoundException("Ghostscript executable file not found.", ghostscriptPath); }
 
             string fullResultsFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName, configurationName, DISTRUCT_RESULTS_FOLDER_NAME);
             string inputFilePath = Path.Combine(fullResultsFolderPath, $"K{k}.ps");
@@ -680,7 +634,6 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             foreach (DistructConstants.OutputFormat format in Enum.GetValues(typeof(DistructConstants.OutputFormat)))
             {
-                // пропускаем None и форматы, которые не запрошены
                 if (format == OutputFormat.None)
                     continue;
 
@@ -705,9 +658,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 if (settings.Device == "pdfwrite") { args.Add("-dAutoRotatePages=/None"); }
 
-                // добавляем разрешение только для растровых форматов
                 if (settings.NeedsResolution) { args.Add($"-r{300}"); }
-                // входной файл идёт последним
                 args.Add($"\"{inputFilePath}\"");
                 var arguments = string.Join(" ", args);
 
@@ -715,11 +666,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 {
                     await RunGhostscriptAsync(ghostscriptPath, arguments);
                 }
-                catch (Exception)
-                {
-
-                    throw;
-                }
+                catch (Exception) { throw; }
             }
         }
         private async Task<(int Width, int Height)> GetBoundingBoxAsync(string ghostscriptPath, string inputFilePath)
@@ -752,15 +699,12 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             await tcs.Task;
             process.Dispose();
 
-            // Парсим HiResBoundingBox для точности
             var output = errorOutput.ToString();
             var match = Regex.Match(output, @"%%HiResBoundingBox:\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)");
 
             if (!match.Success)
                 throw new Exception($"Could not determine BoundingBox: {output}");
 
-            //double x1 = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
-            //double y1 = double.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
             double x2 = double.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
             double y2 = double.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture);
 
@@ -781,11 +725,11 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 {
                     FileName = exeFilePath,
                     Arguments = arguments,
-                    UseShellExecute = false,    // не открывать окно
-                    CreateNoWindow = true,      // без консольного окна
-                    RedirectStandardError = true // ловим ошибки
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true
                 },
-                EnableRaisingEvents = true  // важно! без этого Exited не сработает
+                EnableRaisingEvents = true
             };
 
             var tcs = new TaskCompletionSource<int>();
@@ -794,7 +738,6 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 tcs.SetResult(process.ExitCode);
             };
 
-            // собираем ошибки асинхронно, не блокируя поток
             process.ErrorDataReceived += (s, e) =>
             {
                 if (e.Data != null)
@@ -802,9 +745,9 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             };
 
             process.Start();
-            process.BeginErrorReadLine();  // запускаем асинхронное чтение stderr
+            process.BeginErrorReadLine();
 
-            var exitCode = await tcs.Task;  // ждём завершения, не блокируя UI
+            var exitCode = await tcs.Task;
 
             process.Dispose();
 

@@ -47,13 +47,13 @@ namespace GenotypeApplication.Services.Set
                 Path.ChangeExtension(Path.GetFileName(fullSavedSetFolderPath), SET_CONFIGURATION_FILE_EXTENSION)
                 );
 
-            if (!File.Exists(fullSavedSetConfigFilePath)) throw new FileNotFoundException();
+            if (!File.Exists(fullSavedSetConfigFilePath)) throw new FileNotFoundException($"The configuration file with the set name \"{Path.GetFileName(fullSavedSetConfigFilePath)}\" was not found.");
 
             var fullNewSetConfigFilePath = Path.Combine(
                 fullNewSetFolderPath,
                  Path.ChangeExtension(Path.GetFileName(fullNewSetFolderPath), SET_CONFIGURATION_FILE_EXTENSION));
 
-            if (File.Exists(fullNewSetConfigFilePath)) throw new InvalidOperationException("The configuration file with the new set name already exists.");
+            if (File.Exists(fullNewSetConfigFilePath)) throw new FileNotFoundException("The configuration file with the new set name already exists.");
 
             File.Move(fullSavedSetConfigFilePath, fullNewSetConfigFilePath);
 

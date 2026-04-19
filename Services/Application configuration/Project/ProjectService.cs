@@ -5,10 +5,9 @@ using System.IO;
 
 namespace GenotypeApplication.Services.Project
 {
-    public class ProjectService : IProjectService
+    public class ProjectService
     {
         private readonly string PROJECT_FILE_EXTENSION = AppConstants.PROJECT_FILE_EXTENSION;
-        //private readonly string[] ADDITIONAL_PROGRAMS = AppConstants.ADDITIONAL_PROGRAMS;
 
         private readonly IDirectoryService _directoryService;
         private readonly IFileService _fileService;
@@ -25,12 +24,6 @@ namespace GenotypeApplication.Services.Project
 
             string fullProjectPath = Path.Combine(projectModel.Path, projectModel.Name);
             Directory.CreateDirectory(fullProjectPath);
-
-            //foreach (var program in ADDITIONAL_PROGRAMS)
-            //{
-            //    string fullAdditionalProgramPath = Path.Combine(fullProjectPath, program);
-            //    Directory.CreateDirectory(fullAdditionalProgramPath);
-            //}
 
             await SaveAsync(projectModel);
         }

@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace GenotypeApplication.Services.Project
 {
-    public class RecentProjectsService : IRecentProjectsService
+    public class RecentProjectsService
     {
         private readonly string RECENT_PROJECTS_FILE_DEFAULT_PATH = PathConstants.RECENT_PROJECTS_FILE_DEFAULT_PATH;
         private const int MAX_RECENT_PROJECTS = AppConstants.MAX_RECENT_PROJECTS;
@@ -26,12 +26,20 @@ namespace GenotypeApplication.Services.Project
 
         public void AddProject(ProjectParametersModel projectModel)
         {
-            AddOrUpdateProject(projectModel);
+            try
+            {
+                AddOrUpdateProject(projectModel);
+            }
+            catch (Exception) { throw; }
         }
 
         public void UpdateProject(ProjectParametersModel oldProjectModel, ProjectParametersModel newProjectModel)
         {
-            AddOrUpdateProject(newProjectModel, oldProjectModel);
+            try
+            {
+                AddOrUpdateProject(newProjectModel, oldProjectModel);
+            }
+            catch (Exception) { throw; }
         }
 
         private void AddOrUpdateProject(ProjectParametersModel projectModel, ProjectParametersModel? searchModel = null)
@@ -51,7 +59,11 @@ namespace GenotypeApplication.Services.Project
             while (_recentProjects.Count > MAX_RECENT_PROJECTS)
                 _recentProjects.RemoveAt(_recentProjects.Count - 1);
 
-            SaveToFile();
+            try
+            {
+                SaveToFile();
+            }
+            catch (Exception) { throw; }
         }
 
         public void RemoveProject(RecentProjectModel recentProject)
@@ -65,8 +77,11 @@ namespace GenotypeApplication.Services.Project
             {
                 if (!_recentProjects.Remove(recentProjectModel))
                     return;
-
-                SaveToFile();
+                try
+                {
+                    SaveToFile();
+                }
+                catch (Exception) { throw; }
             }
         }
 
@@ -80,15 +95,13 @@ namespace GenotypeApplication.Services.Project
                     var projects = JsonSerializer.Deserialize<List<RecentProjectModel>>(json);
                     return new ObservableCollection<RecentProjectModel>(projects ?? new List<RecentProjectModel>());
                 }
-            }
-            catch (Exception ex)
-            {
-                //todo
-                // Логирование ошибки
-                Console.WriteLine($"Error loading recent projects: {ex.Message}");
-            }
 
-            return new ObservableCollection<RecentProjectModel>();
+                return new ObservableCollection<RecentProjectModel>();
+            }
+            catch (Exception)
+            {
+                return new ObservableCollection<RecentProjectModel>();
+            }
         }
 
         private void SaveToFile()
@@ -103,9 +116,7 @@ namespace GenotypeApplication.Services.Project
             }
             catch (Exception ex)
             {
-                //todo
-                // Логирование ошибки
-                Console.WriteLine($"Error saving recent projects: {ex.Message}");
+                throw new IOException($"Error saving recent projects: {ex.Message}", ex);
             }
         }
     }

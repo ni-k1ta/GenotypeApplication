@@ -4,7 +4,7 @@ using System.IO;
 
 namespace GenotypeApplication.Services.Parsers
 {
-    public class DataTableParser : IDataTableService
+    public class DataTableParser
     {
         public DataTable Parse(string filePath)
         {

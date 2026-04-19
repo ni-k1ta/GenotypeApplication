@@ -22,10 +22,10 @@ namespace GenotypeApplication.View_models
 
         private readonly IDirectoryService _directoryService;
         private readonly IFileService _fileService;
-        private readonly IProjectService _projectService;
+        private readonly ProjectService _projectService;
         private readonly IDialogService _dialogService;
         private readonly IMessageService _messageService;
-        private readonly IRecentProjectsService _recentProjectsService;
+        private readonly RecentProjectsService _recentProjectsService;
         private readonly IValidator<string> _nameTextValidator;
         private readonly IValidator<string> _pathTextValidator;
         private readonly IWindowService _windowService;
@@ -54,7 +54,7 @@ namespace GenotypeApplication.View_models
         private bool _isNewProject;
         private bool _isSaving;
 
-        public ProjectParametersVM(IDirectoryService directoryService, IFileService fileService, IDialogService dialogService, IMessageService messageService, IRecentProjectsService recentProjectsService, IValidator<string> nameTextValidator, IValidator<string> pathTextValidator, IWindowService windowService)
+        public ProjectParametersVM(IDirectoryService directoryService, IFileService fileService, IDialogService dialogService, IMessageService messageService, RecentProjectsService recentProjectsService, IValidator<string> nameTextValidator, IValidator<string> pathTextValidator, IWindowService windowService)
         {
             _projectModel = new();
 
@@ -249,7 +249,15 @@ namespace GenotypeApplication.View_models
 
         private void RemoveRecentProject(object? parameter)
         {
-            if (parameter is RecentProjectModel recentProject) _recentProjectsService.RemoveProject(recentProject);
+            try
+            {
+                if (parameter is RecentProjectModel recentProject) _recentProjectsService.RemoveProject(recentProject);
+
+            }
+            catch (Exception ex)
+            {
+                _messageService.ShowError($"An error occurred while trying to remove the recent project: {ex.Message}");
+            }
         }
         private async Task OpenRecentProjectAsync(object? parameter)
         {
@@ -280,10 +288,9 @@ namespace GenotypeApplication.View_models
                 {
                     _projectService.Remove(fullProjectFolderPath);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    //todo
-                    throw;
+                    _messageService.ShowError($"An error occurred while trying to delete the project: {ex.Message}");
                 }
                 finally { RemoveRecentProject(recentProject); }
             }
@@ -409,10 +416,9 @@ namespace GenotypeApplication.View_models
                     _windowService.CloseWindow(window);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                //todo
-                throw;
+                _messageService.ShowError($"An error occurred while saving the project: {ex.Message}");
             }
             finally { _isSaving = false; }
         }
@@ -425,29 +431,33 @@ namespace GenotypeApplication.View_models
                 return false;
             }
 
-            var projectModel = ProjectParametersModel.Create(projectName, projectPath, isParallelEnabled, coresCount);
-            await _projectService.CreateAsync(projectModel);
-
-            _projectModel = projectModel;
-            ProjectCreatedAt = _projectModel.CreatedAt;
-            ProjectLastModified = _projectModel.LastModified;
-
-            if (ProjectIsParallelEnabled)
+            try
             {
-                if (_projectModel.CoresCount == _maxCores)
-                {
-                    IsAllCores = true;
-                }
-                else
-                {
-                    SelectedCores = _projectModel.CoresCount;
-                    IsSelectionCores = true;
-                }
-            }
-            else SelectedCores = 1;
+                var projectModel = ProjectParametersModel.Create(projectName, projectPath, isParallelEnabled, coresCount);
+                await _projectService.CreateAsync(projectModel);
 
-            _recentProjectsService.AddProject(_projectModel);
-            return true;
+                _projectModel = projectModel;
+                ProjectCreatedAt = _projectModel.CreatedAt;
+                ProjectLastModified = _projectModel.LastModified;
+
+                if (ProjectIsParallelEnabled)
+                {
+                    if (_projectModel.CoresCount == _maxCores)
+                    {
+                        IsAllCores = true;
+                    }
+                    else
+                    {
+                        SelectedCores = _projectModel.CoresCount;
+                        IsSelectionCores = true;
+                    }
+                }
+                else SelectedCores = 1;
+
+                _recentProjectsService.AddProject(_projectModel);
+                return true;
+            }
+            catch (Exception) { throw; }
         }
         private async Task UpdateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
         {

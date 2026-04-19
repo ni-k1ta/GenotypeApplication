@@ -32,6 +32,7 @@ namespace GenotypeApplication.View_models
 
         private string _infile_label_atop = string.Empty;
         private string _infile_label_below = string.Empty;
+        private string _infile_clust_perm = string.Empty;
 
         private int _kFrom;
         private int _kTo;
@@ -115,6 +116,7 @@ namespace GenotypeApplication.View_models
             ExportCommand = new AsyncRelayCommand(execute => Export(), canExecute => CanExport());
             GeneratePreviewCommand = new AsyncRelayCommand(execute => GeneratePreview(), canExecute => CanGeneratePreview());
             DetermineOptimalValuesCommand = new RelayCommand(execute => DetermineOptimalValues());
+            SelectClustPermFileCommand = new RelayCommand(execute => SelectClustPermFile());
 
             _windowService = windowService;
 
@@ -130,7 +132,7 @@ namespace GenotypeApplication.View_models
                 {
                     if (_distructCompleted || DistructStopped) return;
                     DistructProgress = value;
-                    DistructProgressText = $"In progress... {value:F0}%";
+                    DistructProgressText = $"[{_savedConfigurationName}] In progress... {value:F0}%";
                 });
             };
         }
@@ -173,6 +175,11 @@ namespace GenotypeApplication.View_models
         {
             get => _infile_label_below;
             set { SetField(ref _infile_label_below, value); }
+        }
+        public string INFILE_CLUST_PERM //
+        {
+            get => _infile_clust_perm;
+            set { SetField(ref _infile_clust_perm, value); }
         }
 
         private ObservableCollection<ClusterColorItem> _clusterColorItems = new();
@@ -264,30 +271,30 @@ namespace GenotypeApplication.View_models
         public int SelectedOrientation//
         {
             get => _selectedOrientation;
-            set 
-            { 
+            set
+            {
                 if (SetField(ref _selectedOrientation, value))
                 {
-                //    if (value == 1)
-                //    {
-                //        XORIGIN = 360;
-                //        YORIGIN = 72;
-                //    }
-                //    else if (value == 2)
-                //    {
-                //        XORIGIN = 540;
-                //        YORIGIN = 504;
-                //    }
-                //    else if (value == 3)
-                //    {
-                //        XORIGIN = 288;
-                //        YORIGIN = 720;
-                //    }
-                //    else if (value == 0)
-                //    {
-                //        XORIGIN = 72;
-                //        YORIGIN = 288;
-                //    }
+                    //    if (value == 1)
+                    //    {
+                    //        XORIGIN = 360;
+                    //        YORIGIN = 72;
+                    //    }
+                    //    else if (value == 2)
+                    //    {
+                    //        XORIGIN = 540;
+                    //        YORIGIN = 504;
+                    //    }
+                    //    else if (value == 3)
+                    //    {
+                    //        XORIGIN = 288;
+                    //        YORIGIN = 720;
+                    //    }
+                    //    else if (value == 0)
+                    //    {
+                    //        XORIGIN = 72;
+                    //        YORIGIN = 288;
+                    //    }
                 }
             }
         }
@@ -374,6 +381,7 @@ namespace GenotypeApplication.View_models
         public ICommand ExportCommand { get; }
         public ICommand GeneratePreviewCommand { get; }
         public ICommand DetermineOptimalValuesCommand { get; }
+        public ICommand SelectClustPermFileCommand { get; }
 
         #endregion
 
@@ -531,14 +539,14 @@ namespace GenotypeApplication.View_models
                 PreviewImage = null;
                 BitmapImage btmImage = new();
 
-                btmImage = await _distructInteractionService.GeneratePreviewForKAsync(fullCurrentSetFolderPath, clumppConfigurationName, configurationName, SelectedKForPreview, _clusterColorItems, GRAYSCALE);
+                btmImage = await _distructInteractionService.GeneratePreviewForKAsync(fullCurrentSetFolderPath, clumppConfigurationName, configurationName, SelectedKForPreview, INFILE_CLUST_PERM, _clusterColorItems, GRAYSCALE);
 
                 PreviewImage = btmImage;
             }
-            catch (Exception)
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
             {
-
-                throw;
+                _messageService.ShowError($"An error occurred while generating the preview image: {ex.Message}");
             }
             finally
             {
@@ -615,6 +623,10 @@ namespace GenotypeApplication.View_models
         {
             INFILE_LABEL_BELOW = _dialogService.SelectFile(PathConstants.DEFAULT_DOCUMENTS_PATH);
         }
+        private void SelectClustPermFile()
+        {
+            INFILE_CLUST_PERM = _dialogService.SelectFile(PathConstants.DEFAULT_DOCUMENTS_PATH);
+        }
 
         private void ConfigureColorPalette()
         {
@@ -646,13 +658,6 @@ namespace GenotypeApplication.View_models
                         _isCreatingNewConfiguration = true;
                         _wasSaved = false;
                         ConfigurationName = string.Empty;
-
-                        UIDispatcherHelper.RunOnUI(() =>
-                        {
-                            DistructProgressText = "Not started";
-                            DistructProgress = 0;
-                        });
-                        DistructStopped = false;
                     }
                     else if (value != null)
                     {
@@ -717,7 +722,7 @@ namespace GenotypeApplication.View_models
         }
         protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
         {
-            if (configuration == null || CurrentSet == null || !configuration.IsProcessed || !configuration.HasPopResults) return;
+            if (configuration == null || CurrentSet == null || !CurrentSet.IsDistructProcessed || !configuration.IsProcessed || !configuration.HasPopResults) return;
 
             var setName = CurrentSet.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
@@ -733,9 +738,9 @@ namespace GenotypeApplication.View_models
 
                 RebuildConfigurationParametersItems();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                _messageService.ShowError($"An error occurred while loading Distruct configurations: {ex.Message}");
             }
         }
         private async Task LoadSelectedDistructConfigurationAsync(DistructConfigurationModel? configuration)
@@ -762,7 +767,7 @@ namespace GenotypeApplication.View_models
 
                     UIDispatcherHelper.RunOnUI(() =>
                     {
-                        DistructProgressText = "Not started";
+                        DistructProgressText = $"[{_savedConfigurationName}] Not started";
                         DistructProgress = 0;
                     });
                     DistructStopped = false;
@@ -774,15 +779,14 @@ namespace GenotypeApplication.View_models
                 UIDispatcherHelper.RunOnUI(() =>
                 {
                     DistructProgress = 100;
-                    DistructProgressText = "Completed";
+                    DistructProgressText = $"[{_savedConfigurationName}] Completed";
                 });
                 DistructStopped = false;
                 RebuildKForExportItems(KFrom, KTo);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                _messageService.ShowError($"An error occurred while loading Distruct configuration with name \"{configuration.ParametersName}\": {ex.Message}");
             }
         }
         #endregion
@@ -853,10 +857,9 @@ namespace GenotypeApplication.View_models
                 _isCreatingNewConfiguration = false;
                 _changesTracker.TakeModelSnapshot(configuration);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                _messageService.ShowError($"An error occurred while saving the configuration \"{configuration.ParametersName}\": {ex.Message}");
             }
             finally
             {
@@ -875,22 +878,26 @@ namespace GenotypeApplication.View_models
         }
         private async Task CreateNewConfigurationAsync(DistructConfigurationModel configuration, string clumppConfigurationName, string fullCurrentSetFolderPath)
         {
-            _distructInteractionService.PrepareDistructDirectory(fullCurrentSetFolderPath);
+            try
+            {
+                _distructInteractionService.PrepareDistructDirectory(fullCurrentSetFolderPath);
 
-            await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, configuration);
+                await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, configuration, INFILE_CLUST_PERM);
 
-            _savedConfigurationParametersItems.Add(configuration);
-            RebuildConfigurationParametersItems();
+                _savedConfigurationParametersItems.Add(configuration);
+                RebuildConfigurationParametersItems();
 
-            SetField(ref _selectedConfigurationParameters, configuration, nameof(SelectedConfigurationParameters));
+                SetField(ref _selectedConfigurationParameters, configuration, nameof(SelectedConfigurationParameters));
 
-            _messageService.ShowInformation($"Configuration \"{configuration.ParametersName}\" was successfully created.");
+                _messageService.ShowInformation($"Configuration \"{configuration.ParametersName}\" was successfully created.");
+            }
+            catch (Exception) { throw; }
         }
         private async Task<bool> UpdateExistingConfigurationAsync(DistructConfigurationModel configuration, string clumppConfigurationName, string fullCurrentSetFolderPath)
         {
-            if (CurrentSet == null) throw new InvalidOperationException("Current set is null on UpdateExistingConfigurationAsync() step.");
+            if (CurrentSet == null) return false;
 
-            if (CurrentCLUMPPConfigurationModel == null) throw new InvalidOperationException("Current configuration is null on UpdateExistingConfigurationAsync() step.");
+            if (CurrentCLUMPPConfigurationModel == null) return false;
 
             if (!_distructInteractionService.IsConfigurationExist(fullCurrentSetFolderPath, clumppConfigurationName, _savedConfigurationName))
             {
@@ -907,16 +914,12 @@ namespace GenotypeApplication.View_models
 
                 if (_changesTracker.HasChanges(configuration))
                 {
-                    await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, configuration);
+                    await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, configuration, INFILE_CLUST_PERM);
                 }
 
                 return true;
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
         }
         #endregion
 
@@ -937,8 +940,8 @@ namespace GenotypeApplication.View_models
             var configurationName = _savedConfigurationName;
             var clumppConfigurationName = CurrentCLUMPPConfigurationModel.ParametersName;
 
-            var currentSetName = CurrentSet.Name;
-            var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
+            var setName = CurrentSet.Name;
+            var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
             try
             {
@@ -946,9 +949,9 @@ namespace GenotypeApplication.View_models
                 DistructStopped = false;
 
                 DistructProgress = 0;
-                DistructProgressText = "In progress... 0%";
+                DistructProgressText = $"[{_savedConfigurationName}] In progress... 0%";
 
-                await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, _clusterColorItems, GRAYSCALE, _coresCount);
+                await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, INFILE_CLUST_PERM, _clusterColorItems, GRAYSCALE, _coresCount);
                 _distructCompleted = true;
 
                 WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
@@ -956,12 +959,17 @@ namespace GenotypeApplication.View_models
                 RebuildKForExportItems(KFrom, KTo);
 
                 DistructProgress = 100;
-                DistructProgressText = "Completed";
+                DistructProgressText = $"[{_savedConfigurationName}] Completed";
             }
-            catch (Exception)
+            catch (OperationCanceledException)
             {
-
-                throw;
+                DistructProgressText = $"[{_savedConfigurationName}] Stopped at {DistructProgress:F0}%";
+            }
+            catch (Exception ex)
+            {
+                DistructStopped = true;
+                _messageService.ShowError($"An error occurred while running Distruct for set {setName}. {ex.Message}. See logs for details.");
+                DistructProgressText = $"[{setName}] Stopped by error at {DistructProgress:F0}%";
             }
             finally
             {
@@ -981,17 +989,9 @@ namespace GenotypeApplication.View_models
 
         private void StopDistruct()
         {
-            try
-            {
-                DistructStopped = true;
-                DistructProgressText = $"Stopping...";
-                _distructInteractionService.StopExecution();
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            DistructStopped = true;
+            DistructProgressText = $"[{_savedConfigurationName}] Stopping...";
+            _distructInteractionService.StopExecution();
         }
         private bool CanStopDistruct()
         {

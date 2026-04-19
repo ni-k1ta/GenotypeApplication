@@ -19,6 +19,14 @@ namespace GenotypeApplication.MVVM.TreeView
             ".cfg"
         };
 
+        private static readonly Dictionary<string, int> SetFolderOrder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Structure", 0 },
+            { "Structure Harvester", 1 },
+            { "CLUMPP", 2 },
+            { "Distruct", 3 }
+        };
+
         public bool IsExpanded
         {
             get => _isExpanded;
@@ -48,7 +56,12 @@ namespace GenotypeApplication.MVVM.TreeView
             {
                 // Папки — сначала, отсортированы по имени
                 var dirs = Directory.GetDirectories(FullPath)
-                    .OrderBy(d => Path.GetFileName(d))
+                    .OrderBy(d =>
+                    {
+                        var name = Path.GetFileName(d);
+                        return SetFolderOrder.TryGetValue(name, out int order) ? order : int.MaxValue;
+                    })
+                    .ThenBy(d => Path.GetFileName(d))
                     .Select(d => CreateDirectoryNode(d, expandAll));
 
                 // Файлы — после папок, отсортированы по имени

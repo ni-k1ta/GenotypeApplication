@@ -33,7 +33,21 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             "light_yellow", "brown", "light_blue", "olive_green", "peach",
             "sea_green", "yellow_green", "blue_purple", "blue_green", "gray",
             "dark_green", "light_gray", "red2", "light_blue2", "light_orange",
-            "dark_gray", "light_pink", "dark_brown", "dark_orange", "dark_purple"
+            "dark_gray", "light_pink", "dark_brown", "dark_orange", "dark_purple",
+
+            "color32", "color33", "color34", "color35", "color36",
+            "color37", "color38", "color39", "color40", "color41",
+            "color42", "color43", "color44", "color45", "color46",
+            "color47", "color48", "color49", "color50", "color51",
+            "color52", "color53", "color54", "color55", "color56",
+            "color57", "color58", "color59", "color60", "white",
+
+            "color101", "color102", "color103", "color104", "color105",
+            "color106", "color107", "color108", "color109", "color110",
+            "color111", "color112", "color113", "color114", "color115",
+            "color116", "color117", "color118", "color119", "color120",
+            "color121", "color122", "color123", "color124", "color125",
+            "color126", "color127", "color128", "color129", "color130"
         };
 
         public List<string> AvailableColors { get; } = new(DefaultColors);

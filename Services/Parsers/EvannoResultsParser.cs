@@ -23,48 +23,50 @@ namespace GenotypeApplication.Services.Parsers
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
 
-            var fullStructureHarvesterFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME);
-            var fullStructureHarvesterResultsFolderPath = Path.Combine(fullStructureHarvesterFolderPath, STRUCTURE_HARVESTER_RESULTS_FOLDER_NAME);
-
+            var fullStructureHarvesterResultsFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME, STRUCTURE_HARVESTER_RESULTS_FOLDER_NAME);
             if (!_directoryService.IsDirectoryExist(fullStructureHarvesterResultsFolderPath))
                 throw new DirectoryNotFoundException($"Structure Harvester results folder not found: {fullStructureHarvesterResultsFolderPath}");
 
-            var fullEvannoFilePath = Path.Combine(fullStructureHarvesterResultsFolderPath, "evanno.txt");
-
-            if (!File.Exists(fullEvannoFilePath))
-                throw new FileNotFoundException("Evanno file not found.", fullSetFolderPath);
-
-            var rows = new List<EvannoParametersModel>();
-
-            var lines = _fileService.ReadFile(fullEvannoFilePath)
-                .Where(line => !line.TrimStart().StartsWith("#"))
-                .ToList();
-
-            foreach (var line in lines)
+            try
             {
-                var parts = line.Split('\t');
+                var fullEvannoFilePath = Path.Combine(fullStructureHarvesterResultsFolderPath, "evanno.txt");
 
-                if (parts.Length < 7)
-                    continue;
+                if (!File.Exists(fullEvannoFilePath))
+                    throw new FileNotFoundException("Evanno file not found.", fullSetFolderPath);
 
-                if (parts[0].Trim().Equals("K", StringComparison.OrdinalIgnoreCase))
-                    continue;
+                var rows = new List<EvannoParametersModel>();
 
-                if (!int.TryParse(parts[0].Trim(), out int k))
-                    continue;
+                var lines = _fileService.ReadFile(fullEvannoFilePath)
+                    .Where(line => !line.TrimStart().StartsWith("#"))
+                    .ToList();
 
-                rows.Add(new EvannoParametersModel
+                foreach (var line in lines)
                 {
-                    K = k,
-                    MeanLnPK = ParseDouble(parts[2]),
-                    StdevLnPK = ParseDouble(parts[3]),
-                    LnPrimeK = ParseNullableDouble(parts[4]),
-                    LnDoublePrimeK = ParseNullableDouble(parts[5]),
-                    DeltaK = ParseNullableDouble(parts[6])
-                });
-            }
+                    var parts = line.Split('\t');
 
-            return rows;
+                    if (parts.Length < 7)
+                        continue;
+
+                    if (parts[0].Trim().Equals("K", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (!int.TryParse(parts[0].Trim(), out int k))
+                        continue;
+
+                    rows.Add(new EvannoParametersModel
+                    {
+                        K = k,
+                        MeanLnPK = ParseDouble(parts[2]),
+                        StdevLnPK = ParseDouble(parts[3]),
+                        LnPrimeK = ParseNullableDouble(parts[4]),
+                        LnDoublePrimeK = ParseNullableDouble(parts[5]),
+                        DeltaK = ParseNullableDouble(parts[6])
+                    });
+                }
+
+                return rows;
+            }
+            catch (Exception) { throw; }
         }
 
         private static double ParseDouble(string value)

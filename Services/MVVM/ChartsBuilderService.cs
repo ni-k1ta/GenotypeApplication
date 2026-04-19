@@ -151,14 +151,5 @@ namespace GenotypeApplication.Services.MVVM
 
             return model;
         }
-
-        //private static void ConfigureKAxis(PlotModel model, List<EvannoParametersModel> data)
-        //{
-        //    if (data.Count == 0) return;
-
-        //    var xAxis = model.Axes.First(a => a.Position == AxisPosition.Bottom);
-        //    xAxis.Minimum = data.Min(r => r.K) - 0.5;
-        //    xAxis.Maximum = data.Max(r => r.K) + 0.5;
-        //}
     }
 }

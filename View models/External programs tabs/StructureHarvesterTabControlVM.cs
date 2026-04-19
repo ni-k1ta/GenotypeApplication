@@ -51,6 +51,7 @@ namespace GenotypeApplication.View_models
             get => _structureHarvesterProgressText;
             set { SetField(ref _structureHarvesterProgressText, value); }
         }
+        
         private bool _structureHarvesterIsIndeterminate;
         public bool StructureHarvesterIsIndeterminate
         {
@@ -160,21 +161,39 @@ namespace GenotypeApplication.View_models
             var setName = set.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
-            var (evanno, clumpp) = await _structureHarvesterInteractionService.LoadConfiguration(fullSetFolderPath);
+            try
+            {
+                var (evanno, clumpp) = await _structureHarvesterInteractionService.LoadConfiguration(fullSetFolderPath);
 
-            EvannoParam = evanno;
-            CLUMPPOutputParam = clumpp;
+                EvannoParam = evanno;
+                CLUMPPOutputParam = clumpp;
 
-            var popCount = _structureHarvesterInteractionService.GetPopulationsCountFromResults(fullSetFolderPath);
-            if (popCount > 0) WorkflowState.SetPredefinedPopCount(popCount);
+                var popCount = _structureHarvesterInteractionService.GetPopulationsCountFromResults(fullSetFolderPath);
+                if (popCount > 0) WorkflowState.SetPredefinedPopCount(popCount);
+
+                if (clumpp || evanno)
+                {
+                    StructureHarvesterProgress = 100;
+                    StructureHarvesterProgressText = $"[{setName}] Completed";
+                }
+                else
+                {
+                    StructureHarvesterProgress = 0;
+                    StructureHarvesterProgressText = $"[{setName}] Not started";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error loading Structure Harvester parameters for set {setName}: {ex.Message}");
+            }
         }
 
         private async Task StartStructureHarvesterAsync()
         {
             if (CurrentSet == null) return;
 
-            var currentSetName = CurrentSet.Name;
-            var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
+            var setName = CurrentSet.Name;
+            var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
             try
             {
@@ -184,7 +203,7 @@ namespace GenotypeApplication.View_models
                 var clumppOutputParam = CLUMPPOutputParam;
 
                 StructureHarvesterIsIndeterminate = true;
-                StructureHarvesterProgressText = "In progress...";
+                StructureHarvesterProgressText = $"[{setName}] In progress...";
                 await _structureHarvesterInteractionService.StartExecution(fullCurrentSetFolderPath, evannoParam, clumppOutputParam);
 
                 WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
@@ -195,12 +214,12 @@ namespace GenotypeApplication.View_models
                 if (popCount > 0) WorkflowState.SetPredefinedPopCount(popCount);
                 StructureHarvesterIsIndeterminate = false;
                 StructureHarvesterProgress = 100;
-                StructureHarvesterProgressText = "Completed";
+                StructureHarvesterProgressText = $"[{setName}] Completed";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                _messageService.ShowError($"An error occurred while running Structure Harvester for set {setName}. {ex.Message}. See logs for details.");
+                StructureHarvesterProgressText = $"[{setName}] Stopped by error.";
             }
         }
         private bool CanStartStructureHarvester()
@@ -233,9 +252,9 @@ namespace GenotypeApplication.View_models
                 SecondDiffLKPlotModel = LnDoublePrimeK;
                 DeltaKPlotModel = DeltaK;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                //todo
+                _logger.Error($"Error loading charts for set {GraphSelectedSetModel?.Name}: {ex.Message}");
             }
         }
         private bool CanLoadCharts()

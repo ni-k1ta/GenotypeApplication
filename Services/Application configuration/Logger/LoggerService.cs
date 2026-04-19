@@ -24,7 +24,7 @@ namespace GenotypeApplication.Services.Application_configuration.Logger
         {
             _flushTimer = new DispatcherTimer(DispatcherPriority.Render)
             {
-                Interval = TimeSpan.FromMilliseconds(100) // flush 10 раз в секунду
+                Interval = TimeSpan.FromMilliseconds(100)
             };
             _flushTimer.Tick += FlushToUI;
             _flushTimer.Start();
@@ -61,7 +61,6 @@ namespace GenotypeApplication.Services.Application_configuration.Logger
             foreach (var entry in toAdd)
                 Entries.Add(entry);
 
-            // скролл один раз после всей пачки
             LogScrollRequested?.Invoke();
         }
 
@@ -88,7 +87,7 @@ namespace GenotypeApplication.Services.Application_configuration.Logger
             catch (Exception ex)
             {
                 UIDispatcherHelper.RunOnUI(() =>
-                    Entries.Add(new LogModel("LogService", $"Ошибка записи лога: {ex.Message}", LogLevel.Error)));
+                    Entries.Add(new LogModel("LogService", $"Log write error: {ex.Message}", LogLevel.Error)));
             }
         }
 

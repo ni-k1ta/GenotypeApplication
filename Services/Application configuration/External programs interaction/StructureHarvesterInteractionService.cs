@@ -42,14 +42,9 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
 
-            if (!_directoryService.IsDirectoryExist(fullSetFolderPath)) throw new DirectoryNotFoundException();
-
-            var fullStructureHarvesterFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME);
-            if (!_directoryService.IsDirectoryExist(fullStructureHarvesterFolderPath)) throw new DirectoryNotFoundException();
-
-            var fullStructureHarvesterResultsFolderPath = Path.Combine(fullStructureHarvesterFolderPath, STRUCTURE_HARVESTER_RESULTS_FOLDER_NAME);
+            var fullStructureHarvesterResultsFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME, STRUCTURE_HARVESTER_RESULTS_FOLDER_NAME);
             if (!_directoryService.IsDirectoryExist(fullStructureHarvesterResultsFolderPath))
-                throw new DirectoryNotFoundException();
+                throw new DirectoryNotFoundException($"Structure Harvester result folder for set {Path.GetFileName(fullSetFolderPath)} was not found.");
 
             bool evanno = File.Exists(Path.Combine(fullStructureHarvesterResultsFolderPath, "evanno.txt"));
 
@@ -63,7 +58,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             return (evanno, clumpp);
         }
 
-        public async Task StartExecution(string fullSetFolderPath, bool evannoParam, bool clumppOutputParam/*, CancellationToken ct*/) // <-- расскоментить
+        public async Task StartExecution(string fullSetFolderPath, bool evannoParam, bool clumppOutputParam)
         {
             var fullStructureFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_FOLDER_NAME);
             var fullStructureResultsFolderPath = Path.Combine(fullStructureFolderPath, STRUCTURE_RESULTS_FOLDER_NAME);
@@ -71,7 +66,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             bool hasStructureResults = _directoryService.IsDirectoryExist(fullStructureResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullStructureResultsFolderPath);
 
             if (!hasStructureResults)
-                throw new FileNotFoundException("Не найдены результаты работы Structure"); //изменить
+                throw new FileNotFoundException("Не найдены результаты работы Structure");
 
             var fullStructureHarvesterFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME);
             if (!_directoryService.IsDirectoryExist(fullStructureHarvesterFolderPath))
@@ -83,13 +78,16 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var fullStructureHarvesterExecutableFilePath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, STRUCTURE_HARVESTER_EXECUTABLE_FILE_NAME);
             if (!File.Exists(fullStructureHarvesterExecutableFilePath)) throw new FileNotFoundException();
 
+            var ct = CancellationTokenSource.CreateLinkedTokenSource(App.GlobalCts.Token);
+            var token = ct.Token;
+
             IsRunning = true;
 
             Process? process = null;
 
             try
             {
-                //ct.ThrowIfCancellationRequested(); <-- расскоментить
+                token.ThrowIfCancellationRequested(); 
 
                 var arguments = $"--dir=\"{fullStructureResultsFolderPath}\"" +
                             $" --out=\"{fullResultsFolderPath}\"" +
@@ -113,43 +111,31 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     if (e.Data is null) return;
 
                     _logger.Info($"{e.Data}");
-                    //OutputReceived?.Invoke(k, iteration, e.Data);
                 };
 
                 process.ErrorDataReceived += (_, e) =>
                 {
                     if (e.Data is null) return;
-                    //_logger.LogWarning(
-                    //"STDERR [K={K}, i={Iteration}]: {Line}", k, iteration, e.Data);
                     _logger.Error($"{e.Data}");
-                    //OutputReceived?.Invoke(k, iteration, $"[STDERR] {e.Data}");
                 };
 
                 process.Start();
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                await process.WaitForExitAsync(/*ct*/); // <-- расскоментить
+                await process.WaitForExitAsync(token);
             }
             catch (OperationCanceledException) when (process is { HasExited: false })
             {
-                //_logger.LogWarning(
-                //"Killing process: K={K}, Iteration={Iteration}", k, iteration);
-
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                    // _logger.LogError(ex,
-                    //"Failed to kill process: K={K}, Iteration={Iteration}", k, iteration);
+                    _logger.Error($"Failed to kill process: {ex.Message}");
                 }
 
                 throw;
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
             finally
             {
                 process?.Dispose();

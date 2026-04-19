@@ -1,12 +1,10 @@
 ﻿using GenotypeApplication.Constants;
 using GenotypeApplication.Interfaces;
-using GenotypeApplication.Interfaces.Application_configuration;
 using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models.Structure;
 using GenotypeApplication.Models.Structure.Data_file;
 using GenotypeApplication.Models.Structure.Data_file.Highlights;
 using GenotypeApplication.MVVM.Infrastructure;
-using GenotypeApplication.Services;
 using GenotypeApplication.Services.Application_configuration;
 using GenotypeApplication.Services.Application_configuration.Data_file;
 using GenotypeApplication.Services.Parsers;
@@ -52,9 +50,9 @@ namespace GenotypeApplication.View_models
 
         private readonly IDialogService _dialogService;
         private readonly IMessageService _messageService;
-        private readonly IDataTableService _dataTableParser;
-        private readonly IDataFormatDetectionService _dataFormatDetectionService;
-        private readonly IHighlightCalculationService _highlightCalculationService;
+        private readonly DataTableParser _dataTableParser;
+        private readonly DataFormatDetectionService _dataFormatDetectionService;
+        private readonly HighlightCalculationService _highlightCalculationService;
         private readonly IWindowService _windowService;
 
         private HighlightMapModel? _highlightMap;

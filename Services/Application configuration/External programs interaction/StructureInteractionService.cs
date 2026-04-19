@@ -41,6 +41,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         public void PrepareStructureDirectory(string fullCurrentSetFolderPath)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
+
             var fullStructureFolderPath = Path.Combine(fullCurrentSetFolderPath, STRUCTURE_FOLDER_NAME);
             Directory.CreateDirectory(fullStructureFolderPath);
         }
@@ -89,15 +90,12 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
 
-            if (!_directoryService.IsDirectoryExist(fullSetFolderPath)) throw new DirectoryNotFoundException($"Set folder \"{fullSetFolderPath}\" was not found.");
-
             var fullStructureFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_FOLDER_NAME);
-
-            if (!_directoryService.IsDirectoryExist(fullStructureFolderPath)) throw new DirectoryNotFoundException($"Structure folder \"{fullStructureFolderPath}\" was not found.");
+            if (!_directoryService.IsDirectoryExist(fullStructureFolderPath))
+                throw new DirectoryNotFoundException($"Structure folder \"{fullStructureFolderPath}\" was not found.");
 
             var fullStructureMainParametersFilePath = Path.Combine(fullStructureFolderPath, STRUCTURE_MAINPARAMETERS_FILE_NAME);
             var fullStructureExtraParametersFilePath = Path.Combine(fullStructureFolderPath, STRUCTURE_EXTRAPARAMETERS_FILE_NAME);
-
             if (!File.Exists(fullStructureMainParametersFilePath) || !File.Exists(fullStructureExtraParametersFilePath))
                 throw new FileNotFoundException($"Structure parameter files was not found by path \"{fullStructureFolderPath}\".");
 
@@ -114,11 +112,10 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 DefineParameterModelConverter.PopulateModelFromLines(structureMainParametersModel, mainParametersLines, "#define");
                 DefineParameterModelConverter.PopulateModelFromLines(structureExtraParametersModel, extraParametersLines, "#define");
 
-                var inputFileName = Directory.GetFiles(fullStructureFolderPath).Select(Path.GetFileName).FirstOrDefault(name =>
-                !string.Equals(name, STRUCTURE_MAINPARAMETERS_FILE_NAME, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(name, STRUCTURE_EXTRAPARAMETERS_FILE_NAME, StringComparison.OrdinalIgnoreCase));
+                var inputFileName = Directory.GetFiles(fullStructureFolderPath).Select(Path.GetFileName).FirstOrDefault(name => string.Equals(name, structureMainParametersModel.INFILE, StringComparison.OrdinalIgnoreCase));
 
-                if (string.IsNullOrEmpty(inputFileName)) throw new FileNotFoundException($"Input data file was not found in structure folder \"{fullStructureFolderPath}\".");
+                if (string.IsNullOrEmpty(inputFileName)) 
+                    throw new FileNotFoundException($"Input data file was not found in structure folder \"{fullStructureFolderPath}\".");
 
                 var fullInputFilePath = Path.Combine(fullStructureFolderPath, inputFileName);
 
@@ -156,10 +153,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 return (dataFileFormatModel, structureMainParametersModel, structureExtraParametersModel, fullInputFilePath, kStart, kEnd, iterations);
             }
-            catch (Exception)
-            {
-                throw;
-            }
+            catch (Exception) { throw; }
         }
 
         public async Task StartExecution(int kFrom, int kTo, int iterations, string fullSetFolderPath, int coresCount)
@@ -181,7 +175,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             Directory.CreateDirectory(fullResultsFolderPath);
 
             var fullStructureExecutableFilePath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, STRUCTURE_EXECUTABLE_FILE_NAME);
-            if (!File.Exists(fullStructureExecutableFilePath)) throw new FileNotFoundException();
+            if (!File.Exists(fullStructureExecutableFilePath)) throw new FileNotFoundException("Structure executable file not found.");
 
             var fullStructureOutFilePath = Path.Combine(fullResultsFolderPath, STRUCTURE_OUTPUT_FILE_DEFAULT_NAME);
 
@@ -198,7 +192,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 _unitProgress.Clear();
             }
 
-            _cts = new CancellationTokenSource();
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(App.GlobalCts.Token);
             var token = _cts.Token;
             IsRunning = true;
 
@@ -217,24 +211,13 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                () =>
                {
                    int completed = Interlocked.Increment(ref completedUnits);
-                   return (completed, _totalUnits); //нужно только для проброса выше (например во ViewModel для отображения прогресса - этим мы займёмся позже) и не используется нигде для непосредственно логики 
+                   return (completed, _totalUnits);
                }));
 
                 await Task.WhenAll(tasks);
-
-                //_logger.LogInformation("All {Total} units completed successfully.", totalUnits);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception)
-            {
-                //_logger.LogWarning(
-                //"Execution was cancelled. Completed {Completed}/{Total} units.",
-                //completedUnits, totalUnits);
-                throw;
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception) { throw; }
             finally
             {
                 IsRunning = false;
@@ -317,30 +300,18 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 var (completed, total) = reportProgress();
 
-                //_logger.LogInformation(
-                //"Process finished: K={K}, Iteration={Iteration}, " +
-                //"ExitCode={ExitCode}, Progress={Completed}/{Total}",
-                //k, iteration, process.ExitCode, completed, total);
-
                 lock (_unitProgress)
                 {
                     _unitProgress[(k, iteration)] = 100.0;
                     ReportTotalProgress();
                 }
-
-
-                //UnitCompleted?.Invoke(k, iteration, process.ExitCode, completed, total);
             }
             catch (OperationCanceledException) when (process is { HasExited: false })
             {
-                //_logger.LogWarning(
-                //"Killing process: K={K}, Iteration={Iteration}", k, iteration);
-
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                    // _logger.LogError(ex,
-                    //"Failed to kill process: K={K}, Iteration={Iteration}", k, iteration);
+                     _logger.Error($"Failed to kill Structure process: K={k}, Iteration={iteration} {ex.Message}");
                 }
 
                 throw;

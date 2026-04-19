@@ -6,7 +6,7 @@ namespace GenotypeApplication.MVVM.Validation
     public class NameTextValidator : IValidator<string>
     {
         private readonly Regex AllowedCharsRegex = new(@"^[a-zA-Z0-9()#№\-_]*$", RegexOptions.Compiled);
-        private const int MaxLength = 15;
+        private const int MaxLength = 30;
 
         public ValidationResult Validate(string? value)
         {

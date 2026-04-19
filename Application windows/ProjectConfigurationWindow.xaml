@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GenotypeApplication.Application_windows"
         xmlns:conv="clr-namespace:GenotypeApplication.MVVM.Converters"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
         Title="Project configuration"
         Height="414"
@@ -178,6 +179,13 @@
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                               BorderThickness="0">
 
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="MouseDoubleClick">
+                                <i:InvokeCommandAction Command="{Binding OpenRecentProjectCommand}"
+                                                       CommandParameter="{Binding SelectedRecentProject}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+
                         <ListView.Resources>
                             <Style TargetType="{x:Type ScrollBar}"
                                    BasedOn="{StaticResource ThinScrollBar}" />
@@ -256,11 +264,11 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
 
-                        <ListView.InputBindings>
+                        <!--<ListView.InputBindings>
                             <MouseBinding MouseAction="LeftDoubleClick"
                                           Command="{Binding OpenRecentProjectCommand}"
                                           CommandParameter="{Binding SelectedRecentProject}" />
-                        </ListView.InputBindings>
+                        </ListView.InputBindings>-->
                     </ListView>
                 </Grid>
             </GroupBox>

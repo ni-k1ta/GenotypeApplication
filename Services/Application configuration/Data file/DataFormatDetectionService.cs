@@ -1,5 +1,4 @@
 ﻿using GenotypeApplication.Interfaces;
-using GenotypeApplication.Interfaces.Application_configuration;
 using GenotypeApplication.Models.Structure;
 using GenotypeApplication.Models.Structure.Data_file;
 using GenotypeApplication.Services.Application_configuration.Data_file.Detectors;
@@ -10,7 +9,7 @@ using System.IO;
 
 namespace GenotypeApplication.Services.Application_configuration
 {
-    public class DataFormatDetectionService : IDataFormatDetectionService
+    public class DataFormatDetectionService
     {
         private readonly List<IFormatDetector> _detectors;
 

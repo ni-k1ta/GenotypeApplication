@@ -11,7 +11,6 @@ using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
 
@@ -20,17 +19,14 @@ namespace GenotypeApplication.View_models
     public class StructureTabControlVM : ExternalProgramTabVMBase
     {
         #region Data file parameters
+        private string _dataFileName;
+        private string _dataFileFullPath;
+        private string _savedDataFileFullPath;
+        private DataFileFormatModel _dataFileFormatModel;
 
-        private string _dataFileName;//
-        private string _dataFileFullPath;//
-        private string _savedDataFileFullPath;//
-        private DataFileFormatModel _dataFileFormatModel; //
+        private readonly ParametersChangesTracker<DataFileFormatModel> _dataFileFormatChangesTracker = new();
 
-        private readonly ParametersChangesTracker<DataFileFormatModel> _dataFileFormatChangesTracker = new();//-
-        //private DataFileFormatModel _savedDataFileFormatModel;
-
-        private bool _isNewDataFile;//
-
+        private bool _isNewDataFile;
         #endregion
 
         #region Main parameters
@@ -101,18 +97,16 @@ namespace GenotypeApplication.View_models
         #endregion
 
         #region Set parameters
+        private string _setName;
 
-        private string _setName;//
-        //private string _savedSetName;//
+        private int _kFrom;
+        private int _kTo;
+        private int _iterations;
 
-        private int _kFrom;//
-        private int _kTo;//
-        private int _iterations;//
+        private bool _isCreatingNewSet;
+        private bool _wasSaved;
 
-        private bool _isCreatingNewSet;//
-        private bool _wasSaved; // используется только для определения возможности запуска обработки, т.е. если текущий набор параметров был когда-либо сохранён (загруженный набор параметров тоже считается сохранённым, т.к. файлы для запуска обработки существуют), даже если после этого его параметры были изменены, то возможность запуска всё равно остаётся доступной, просто, если запуск произойдёт, будут использоваться неактуальные параметры
-
-        private SetModel? _selectedComboBoxSet;//
+        private SetModel? _selectedComboBoxSet;
         #endregion
 
         #region Services
@@ -146,7 +140,7 @@ namespace GenotypeApplication.View_models
             get => _structureStopped;
             set { SetField(ref _structureStopped, value); }
         }
-        
+
         private bool _structureCompleted;
         #endregion
 
@@ -177,14 +171,13 @@ namespace GenotypeApplication.View_models
             _structureInteractionService = new StructureInteractionService(directoryService, fileService, _logger);
             _structureInteractionService.ProgressChanged += value =>
             {
-                if (_structureCompleted || StructureStopped) return;
-                if (value >= 100.0) return;
+                if (StructureStopped || _structureCompleted || value >= 100.0) return;
 
                 UIDispatcherHelper.RunOnUI(() =>
                 {
-                    if (_structureCompleted || StructureStopped) return;
+                    if (StructureStopped || _structureCompleted) return;
                     StructureProgress = value;
-                    StructureProgressText = $"In progress... {value:F0}%";
+                    StructureProgressText = $"[{_setName}] In progress... {value:F0}%";
                 });
             };
 
@@ -195,17 +188,30 @@ namespace GenotypeApplication.View_models
         public DataFileFormatModel DataFileFormatModel
         {
             get => _dataFileFormatModel;
-            set { SetField(ref _dataFileFormatModel, value); }
+            set 
+            { 
+                if (SetField(ref _dataFileFormatModel, value))
+                {
+                    LocPriorEnable = value.PopData || value.LocData;
+                    LocIsPopParamEnable = value.PopData && value.LocData;
+                }
+            }
         }
         public string DataFileFullPath
         {
             get => _dataFileFullPath;
             set { SetField(ref _dataFileFullPath, value); }
         }
-        public string DataFileName // не длиннее 30 символов
+        public string DataFileName
         {
             get => _dataFileName;
-            set { SetField(ref _dataFileName, value); }
+            set 
+            { 
+                if (SetField(ref _dataFileName, value))
+                {
+                    _parameterNameValidator.Validate(value);
+                }
+            }
         }
         #endregion
 
@@ -230,6 +236,12 @@ namespace GenotypeApplication.View_models
             get => _phasedParam;
             set
             {
+                if (LinkageParam && DataFileFormatModel.Ploidy > 2 && !value)
+                {
+                    _messageService.ShowWarning("When the linkage model is used with polyploids, PHASED=true is required.");
+                    return;
+                }
+
                 SetField(ref _phasedParam, value);
             }
         }
@@ -241,26 +253,21 @@ namespace GenotypeApplication.View_models
             get => _noAdmixParam;
             set { SetField(ref _noAdmixParam, value); }
         }
-        public bool LinkageParam /* (!!!) - обдумать (возможно добавить предупреждение для пользователя, что при использование несовместимой модели PhaseInfo не будет учитываться)
-                                  * PHASEINFO
-                                  * The row(s) of genotype data for each individual are followed by a row of information about haplotype phase.
-                                  * This is for use with the linkage model only. See sections 2 and 3.1 for further details.
-                                  * Доступно только если есть MapDistances.
-                                  */
+        public bool LinkageParam
         {
             get => _linkageParam;
             set
             {
                 if (!SetField(ref _linkageParam, value)) return;
 
-                if (value && DataFileFormatModel.Ploidy > 2) PhasedParam = true; /*
-                                                                                  * When the linkage model is used with polyploids, PHASED=1 is required. + добавить валидацию при изменении PhasedParam
-                                                                                  */
+                if (value && DataFileFormatModel.Ploidy > 2) PhasedParam = true;
+                if (!value && DataFileFormatModel.PHASEINFO)
+                {
+                    _messageService.ShowWarning("PHASEINFO will not be used when the linkage model is turned off.");
+                }
             }
         }
-        public bool UsePopInfoParam /* (!!!) - обдумать (вероятно нужно ставить доступность в интерфейсе)
-                                     * Must have POPDATA=1.
-                                     */
+        public bool UsePopInfoParam
         {
             get => _usePopInfoParam;
             set { SetField(ref _usePopInfoParam, value); }
@@ -273,11 +280,36 @@ namespace GenotypeApplication.View_models
                                    * LOCISPOP
                                    * This option instructs the program to use the PopData column in the input file as location data when the LOCPRIOR model is turned on.
                                    * When LOCISPOP=0, the program requires a LocData column to use LOCPRIOR.
-                                   */
+                                   
+                                   - +вроде готово+ */
         {
             get => _locPriorParam;
-            set { SetField(ref _locPriorParam, value); }
+            set 
+            {
+                if (SetField(ref _locPriorParam, value))
+                {
+                    if (value)
+                    {
+                        if (DataFileFormatModel.LocData && !DataFileFormatModel.PopData)
+                        {
+                            LocIsPopParam = false;
+                        }
+                        else if (!DataFileFormatModel.LocData && DataFileFormatModel.PopData)
+                        {
+                            LocIsPopParam = true;
+                        }
+
+                    }
+                }
+            }
         }
+        private bool _locPriorEnable;
+        public bool LocPriorEnable 
+        { 
+            get => _locPriorEnable;
+            set { SetField(ref _locPriorEnable, value); } 
+        }
+
         public bool OnefstParam //
         {
             get => _onefstParam;
@@ -416,9 +448,7 @@ namespace GenotypeApplication.View_models
             get => _migrPriorParam;
             set { SetField(ref _migrPriorParam, value); }
         }
-        public bool PFromPopFlagOnlyParam /* (!!!) - обдумать (вероятно нужно ставить доступность в интерфейсе)
-                                           * To use  this, include a POPFLAG column
-                                           */
+        public bool PFromPopFlagOnlyParam
         {
             get => _pFromPopFlagOnlyParam;
             set { SetField(ref _pFromPopFlagOnlyParam, value); }
@@ -427,6 +457,12 @@ namespace GenotypeApplication.View_models
         {
             get => _locIsPopParam;
             set { SetField(ref _locIsPopParam, value); }
+        }
+        private bool _locIsPopParamEnable;
+        public bool LocIsPopParamEnable
+        {
+            get => _locIsPopParamEnable;
+            set { SetField(ref _locIsPopParamEnable, value); }
         }
         public double LocPriorInitParam //
         {
@@ -498,13 +534,7 @@ namespace GenotypeApplication.View_models
             get => _numBoxesParam;
             set { SetField(ref _numBoxesParam, value); }
         }
-        public bool StartAtPopInfoParam /*
-                                         * Use given populations as the initial condition for population origins.
-                                         * (Need POPDATA==1).
-                                         * This option provides a check that the Markov chain is converging properly in cases where you expected the inferred structure to match the input labels, and it did not.
-                                         * This option assumes that the PopData in the input file are between 1 and k where k ≤MAXPOPS.
-                                         * Individuals for whom the PopData are not in this range are initialized at random.
-                                         */
+        public bool StartAtPopInfoParam
         {
             get => _startAtPopInfoParam;
             set { SetField(ref _startAtPopInfoParam, value); }
@@ -524,10 +554,14 @@ namespace GenotypeApplication.View_models
             get => _computeProbParam;
             set { SetField(ref _computeProbParam, value); }
         }
-        public int AdmBurnInParam // ADMBURNIN < BURNIN
+        public int AdmBurnInParam
         {
             get => _admBurnInParam;
-            set { SetField(ref _admBurnInParam, value); }
+            set 
+            {
+                if (value >= BurnInParam) return;
+                SetField(ref _admBurnInParam, value); 
+            }
         }
         public bool RandomizeParam //
         {
@@ -605,14 +639,6 @@ namespace GenotypeApplication.View_models
                         _isCreatingNewSet = true;
                         SetName = string.Empty;
                         _wasSaved = false;
-
-                        UIDispatcherHelper.RunOnUI(() =>
-                        {
-                            StructureProgressText = "Not started";
-                            StructureProgress = 0;
-                        });
-                        StructureStopped = false;
-                        _structureCompleted = false;
                     }
                     else if (value != null)
                     {
@@ -648,7 +674,7 @@ namespace GenotypeApplication.View_models
             Iterations = 3;
         }
 
-        protected override async Task LoadSelectedSetParametersAsync(SetModel? set) // вызывается только из сеттера CurrentSet базового класса
+        protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
             if (set == null) return;
             if (!set.IsStructureProcessed) return;
@@ -685,7 +711,7 @@ namespace GenotypeApplication.View_models
 
                     UIDispatcherHelper.RunOnUI(() =>
                     {
-                        StructureProgressText = "Not started";
+                        StructureProgressText = $"[{_setName}] Not started";
                         StructureProgress = 0;
                     });
                     StructureStopped = false;
@@ -700,29 +726,24 @@ namespace GenotypeApplication.View_models
                 UIDispatcherHelper.RunOnUI(() =>
                 {
                     StructureProgress = 100;
-                    StructureProgressText = "Completed";
+                    StructureProgressText = $"[{_setName}] Completed";
                 });
                 StructureStopped = false;
                 _structureCompleted = true;
 
                 WorkflowState.SetPredefinedStructureParameters(iterations, kStart, kEnd, dataFileFormatModel.NumInds);
             }
-            catch (ArgumentNullException ane)
-            {
-                _messageService.ShowError($"[Execution error]: Failed to load Structure parameters. Parameter {ane.ParamName} was null in StructureInteractionService -> LoadConfiguration().");
-            }
             catch (DirectoryNotFoundException dnfe)
             {
                 _messageService.ShowError($"Failed to load Structure parameters. {dnfe.Message}");
-
             }
             catch (FileNotFoundException fnfe)
             {
                 _messageService.ShowError($"Failed to load Structure parameters. {fnfe.Message}");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                _messageService.ShowError($"Failed to load Structure parameters. {ex.Message}");
             }
         }
         private async Task LoadDataFile()
@@ -748,18 +769,6 @@ namespace GenotypeApplication.View_models
 
         private async Task SaveChangesAsync()
         {
-
-            /* Ситуации, которые могут настать при сохранении:
-                1 - Новый файл, новый набор параметров с новым названием 
-                2 - Новый файл, прежний набор параметров с новым названием 
-                3 - Новый файл, новый набор параметров с прежним названием
-                4 - Прежний файл, новый набор параметров с новым названием
-                5 - Прежний файл, новый набор параметров с прежним названием
-                6 - Прежний файл, прежний набор параметров с новым названием
-                7 - Прежний файл, прежний набор параметров с прежним названием - сохранение не требуется |
-                8 - Новый файл, прежний набор параметров с прежним названием
-            */
-
             try
             {
                 var newSetName = SetName;
@@ -787,91 +796,9 @@ namespace GenotypeApplication.View_models
                 if (_isCreatingNewSet)
                 {
                     await CreateNewSetAsync(newSetName, fullNewSetFolderPath, dataFileFullPath, dataFileFormatModel, newMainParameters, newExtraParameters);
-
-                    //_setConfigurationService.Create(fullNewSetFolderPath);
-
-                    //// вынужденная мера такого присваивания, потому что иначе отработает LoadSelectedSetParameters(value); в сеттере свойства ExternalProgramTabVMBase.CurrentSet, что вызовет логику загрузки якобы уже сущетвующего набора параметров. а таким образом мы обходим данную логмку, т.к. теперь сеттер CurrentSet просто выйдет из присваивания: if (_currentSet == value) return;
-                    //var newSet = WorkflowState.CreateNewSet(newSetName);
-                    //SetField(ref _currentSet, newSet);
-                    //SetField(ref _comboBoxSelectedItem, newSet);
-                    //WorkflowState.CurrentSet = newSet;
-                    ////////////////////////////////////////////////////////////
-
-                    //await _setConfigurationService.SaveConfigFileAsync(fullNewSetFolderPath, newSet);
-
-                    //_structureInteractionService.PrepareStructureDirectory(fullNewSetFolderPath);
-
-                    //_structureInteractionService.PrepareInputDataFile(fullNewSetFolderPath, dataFileFullPath);
-
-                    //await _structureInteractionService.PrepareParametersFile(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
-
-                    //_messageService.ShowInformation($"Set \"{newSetName}\" was successfully created.");
-
                 }
                 else
                 {
-
-                    /*string fullSavedSetFolderPath = Path.Combine(_fullProjectFolderPath, _savedSetName);
-
-                    if (!_setConfigurationService.IsSetExist(fullSavedSetFolderPath))
-                    {
-                        _messageService.ShowError($"Set with name \"{_savedSetName}\" was not found. Unable to save changes.");
-                        return;
-                    }
-                    /*1.Новое назавание набора -> переименовать папку(по факту скопировать всё в новую папаку и удалить старую папку), переименовать конфиг-файл
-                         2.Новые параметры или файл->удалить старый файл, скопировать новый файл, перезаписать файл с параметрами
-                    
-                    ArgumentNullException.ThrowIfNull(CurrentSet);
-
-                    if (_savedSetName != newSetName)
-                    {
-                        CurrentSet.Name = newSetName;
-
-                        _setConfigurationService.Rename(fullSavedSetFolderPath, fullNewSetFolderPath);
-
-                        await _setConfigurationService.UpdateConfigFileAsync(fullSavedSetFolderPath, fullNewSetFolderPath, CurrentSet);
-                    }
-
-                    if (newMainParameters != _savedMainParameters || newExtraParameters != _savedExtraParameters || _isNewDataFile || _savedDataFileFormatModel != dataFileFormatModel)
-                    {
-                        /* изменение параметров обработки (в том числе самих данных для обработки) приведёт к невалидности результатов уже проведённых дальнейших обработок (при их наличии). из этого вытекает, что не имеет практического смысла производить изменения параметров уже существующих обработок, поэтому, если пользователь изменил параметры обработки (или сами входные данные), то стоит просто создать новый набор с установленными параметрами.
-                         * 0 - проверить наличие проведённых дальнейших обработок:
-                            + при отсутствии просто пересоздать файл mainparams для structure и , при необходимости, заменить файл с данными для обработки
-                            + при присутствии проведённых дальнейших обработок (хотя бы для одного этапа) - описано ниже
-                         * 1 - уведомить пользователя о том, что изменения параметров приведут к невалидности уже проведённых дальнейших обработок.
-                         * 2 - при согласии создать новый набор, при несогласии вернуть параметры в прежнее состояние
-                         
-
-                        if (CurrentSet.IsStructureHarvesterProcessed || CurrentSet.IsCLUMPPProcessed || CurrentSet.IsDistructProcessed)
-                        {
-                            var result = _messageService.ShowQuetion("Changing the parameters will reset the processing progress made in later stages. Do you want to create a new set with the current settings?");
-
-                            if (result)
-                            {
-                                _isCreatingNewSet = true;
-                                ComboBoxSelectedItem = SetModelsComboBoxItems.LastOrDefault();
-                                SetName = string.Empty;
-                                return;
-                            }
-                            else
-                            {
-                                SetMainParameters(_savedMainParameters);
-                                SetExtraParameters(_savedExtraParameters);
-                                _isNewDataFile = false;
-                                DataFileFullPath = _savedDataFileFullPath;
-                                DataFileFormatModel = _savedDataFileFormatModel;
-                                _wasSaved = true;
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            _structureInteractionService.PrepareInputDataFile(fullNewSetFolderPath, dataFileFullPath, _savedDataFileFullPath);
-
-                            await _structureInteractionService.PrepareParametersFile(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
-                        }
-                    } */
-
                     bool shouldBeSaved = await UpdateExistingSetAsync(newSetName, fullNewSetFolderPath, dataFileFullPath, dataFileFormatModel, newMainParameters, newExtraParameters);
 
                     if (!shouldBeSaved) return;
@@ -885,14 +812,9 @@ namespace GenotypeApplication.View_models
                 _savedDataFileFullPath = dataFileFullPath;
                 _isCreatingNewSet = false;
             }
-            catch (InvalidOperationException ioe)
+            catch (Exception ex)
             {
-                _messageService.ShowError($"[Execution internal error]: Failed to save changes. {ioe.Message}");
-            }
-            catch (Exception)
-            {
-                //todo
-                throw;
+                _messageService.ShowError($"Failed to save changes. {ex.Message}");
             }
             finally
             {
@@ -918,32 +840,32 @@ namespace GenotypeApplication.View_models
 
         private async Task CreateNewSetAsync(string newSetName, string fullNewSetFolderPath, string dataFileFullPath, DataFileFormatModel dataFileFormatModel, StructureMainParametersModel newMainParameters, StructureExtraParametersModel newExtraParameters)
         {
-            _setConfigurationService.Create(fullNewSetFolderPath);
-            /*вынужденная мера такого присваивания, потому что иначе отработает LoadSelectedSetParameters(value); в сеттере свойства ExternalProgramTabVMBase.CurrentSet, что вызовет логику загрузки якобы уже сущетвующего набора параметров. а таким образом мы обходим данную логмку, т.к. теперь сеттер CurrentSet просто выйдет из присваивания: if (_currentSet == value) return;
-             */
-            //SetField(ref _currentSet, newSet, null);
-            ////////////////////////////////////////////////////////// откат рп ситуации, уже есть обработка наличия флага IsProcessed в методе с загрузкрй, поэтому загрузка новых сет параметров будет скипаться
+            try
+            {
+                _setConfigurationService.Create(fullNewSetFolderPath);
 
-            var newSet = WorkflowState.CreateNewSet(newSetName);
+                var newSet = WorkflowState.CreateNewSet(newSetName);
 
-            await _setConfigurationService.SaveConfigFileAsync(fullNewSetFolderPath, newSet);
+                await _setConfigurationService.SaveConfigFileAsync(fullNewSetFolderPath, newSet);
 
-            _structureInteractionService.PrepareStructureDirectory(fullNewSetFolderPath);
+                _structureInteractionService.PrepareStructureDirectory(fullNewSetFolderPath);
 
-            _structureInteractionService.PrepareInputDataFile(fullNewSetFolderPath, dataFileFullPath);
+                _structureInteractionService.PrepareInputDataFile(fullNewSetFolderPath, dataFileFullPath);
 
-            await _structureInteractionService.PrepareParameterFiles(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
+                await _structureInteractionService.PrepareParameterFiles(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
 
-            WorkflowState.CurrentSet = newSet;
-            SetField(ref _selectedComboBoxSet, newSet, nameof(SelectedComboBoxSet));
+                WorkflowState.CurrentSet = newSet;
+                SetField(ref _selectedComboBoxSet, newSet, nameof(SelectedComboBoxSet));
 
-            _messageService.ShowInformation($"Set \"{newSetName}\" was successfully created.");
+                _messageService.ShowInformation($"Set \"{newSetName}\" was successfully created.");
+            }
+            catch (Exception) { throw; }
         }
         private async Task<bool> UpdateExistingSetAsync(string newSetName, string fullNewSetFolderPath, string dataFileFullPath, DataFileFormatModel dataFileFormatModel, StructureMainParametersModel newMainParameters, StructureExtraParametersModel newExtraParameters)
         {
             try
             {
-                if (CurrentSet == null) throw new InvalidOperationException("Current set is null on UpdateExistingSetAsync() step.");
+                if (CurrentSet == null) return false;
 
                 string fullSavedSetFolderPath = Path.Combine(_fullProjectFolderPath, CurrentSet.Name);
 
@@ -952,9 +874,6 @@ namespace GenotypeApplication.View_models
                     _messageService.ShowError($"Set with name \"{CurrentSet.Name}\" was not found. Unable to save changes.");
                     return false;
                 }
-
-                /* 1. Новое назавание набора -> переименовать папку (по факту скопировать всё в новую папаку и удалить старую папку), переименовать конфиг-файл 
-                     2. Новые параметры или файл -> удалить старый файл, скопировать новый файл, перезаписать файл с параметрами */
 
                 if (CurrentSet.Name != newSetName)
                 {
@@ -972,15 +891,6 @@ namespace GenotypeApplication.View_models
 
                 if (isParametersChanged)
                 {
-
-                    /* изменение параметров обработки (в том числе самих данных для обработки) приведёт к невалидности результатов уже проведённых дальнейших обработок (при их наличии). из этого вытекает, что не имеет практического смысла производить изменения параметров уже существующих обработок, поэтому, если пользователь изменил параметры обработки (или сами входные данные), то стоит просто создать новый набор с установленными параметрами.
-                        * 0 - проверить наличие проведённых дальнейших обработок:
-                           + при отсутствии просто пересоздать файл mainparams для structure и , при необходимости, заменить файл с данными для обработки
-                           + при присутствии проведённых дальнейших обработок (хотя бы для одного этапа) - описано ниже
-                        * 1 - уведомить пользователя о том, что изменения параметров приведут к невалидности уже проведённых дальнейших обработок.
-                        * 2 - при согласии создать новый набор, при несогласии вернуть параметры в прежнее состояние
-                        */
-
                     bool isProccessedByNextPrograms = CurrentSet.IsStructureHarvesterProcessed || CurrentSet.IsCLUMPPProcessed || CurrentSet.IsDistructProcessed;
 
                     if (isProccessedByNextPrograms)
@@ -1043,7 +953,7 @@ namespace GenotypeApplication.View_models
                 StructureStopped = false;
 
                 StructureProgress = 0;
-                StructureProgressText = "In progress... 0%";
+                StructureProgressText = $"[{setName}] In progress... 0%";
 
                 await _structureInteractionService.StartExecution(kFrom, kTo, iterations, fullSetFolderPath, _coresCount);
 
@@ -1052,19 +962,18 @@ namespace GenotypeApplication.View_models
                 WorkflowState.SetPredefinedStructureParameters(iterations, kFrom, kTo, dataFileFormatModel.NumInds);
 
                 StructureProgress = 100;
-                StructureProgressText = "Completed";
+                StructureProgressText = $"[{setName}] Completed";
             }
             catch (OperationCanceledException)
             {
-
-                StructureProgressText = $"Stopped at {StructureProgress:F0}%";
-
+                StructureProgressText = $"[{setName}] Stopped at {StructureProgress:F0}%";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                //todo
-                throw;
-            }   
+                StructureStopped = true;
+                _messageService.ShowError($"An error occurred while running Structure for set {setName}. {ex.Message}. See logs for details.");
+                StructureProgressText = $"[{setName}] Stopped by error at {StructureProgress:F0}%";
+            }
             finally
             {
                 StopStructureCommand.NotifyCanExecuteChanged();
@@ -1081,17 +990,9 @@ namespace GenotypeApplication.View_models
 
         private void StopStructure()
         {
-            try
-            {
-                StructureStopped = true;
-                StructureProgressText = $"Stopping...";
-                _structureInteractionService.StopExecution();
-            }
-            catch (Exception)
-            {
-                //todo
-                throw;
-            }
+            StructureStopped = true;
+            StructureProgressText = $"[{_setName}] Stopping...";
+            _structureInteractionService.StopExecution();
         }
         private bool CanStopStructure()
         {
