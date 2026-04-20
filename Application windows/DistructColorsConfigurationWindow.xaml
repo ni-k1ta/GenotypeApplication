@@ -45,6 +45,11 @@
                     </ControlTemplate>
                 </ListBox.Template>
 
+                <ListBox.Resources>
+                    <Style TargetType="{x:Type ScrollBar}"
+                           BasedOn="{StaticResource ThinScrollBar}" />
+                </ListBox.Resources>
+
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding"

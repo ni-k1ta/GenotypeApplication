@@ -12,6 +12,11 @@ namespace GenotypeApplication.Models.Structure.Data_file.Highlights
 
         public IReadOnlyList<HighlightRegionModel> PhaseInfoRegions { get; }
 
+        // Заголовки: физический индекс столбца → текст
+        public IReadOnlyDictionary<int, string> ColumnHeaders { get; }
+
+        // Заголовки: физический индекс строки → текст
+        public IReadOnlyDictionary<int, string> RowHeaders { get; }
 
         public int? MissingValue { get; }
         public int? NotAmbiguousValue { get; }
@@ -26,7 +31,9 @@ namespace GenotypeApplication.Models.Structure.Data_file.Highlights
             int? missingValue,
             int? notAmbiguousValue,
             Color missingCellBorderColor,
-            Color notAmbiguousCellBorderColor)
+            Color notAmbiguousCellBorderColor,
+            IReadOnlyDictionary<int, string> columnHeaders,
+            IReadOnlyDictionary<int, string> rowHeaders)
         {
             ColumnRegions = columnRegions;
             RowRegions = rowRegions;
@@ -36,6 +43,9 @@ namespace GenotypeApplication.Models.Structure.Data_file.Highlights
             NotAmbiguousValue = notAmbiguousValue;
             MissingCellBorderColor = missingCellBorderColor;
             NotAmbiguousCellBorderColor = notAmbiguousCellBorderColor;
+
+            ColumnHeaders = columnHeaders;
+            RowHeaders = rowHeaders;
         }
     }
 }

@@ -5,6 +5,14 @@
         
         <Setter Property="Padding" Value="5"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
+
+        <Style.Triggers>
+            <Trigger Property="IsEnabled"
+                     Value="False">
+                <Setter Property="Foreground"
+                        Value="Gray" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

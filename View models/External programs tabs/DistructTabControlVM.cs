@@ -164,17 +164,29 @@ namespace GenotypeApplication.View_models
         public string ConfigurationName
         {
             get => _parametersName;
-            set { SetField(ref _parametersName, value); }
+            set 
+            { 
+                if (SetField(ref _parametersName, value))
+                    _parameterNameValidator.Validate(value);
+            }
         }
         public string INFILE_LABEL_ATOP //
         {
             get => _infile_label_atop;
-            set { SetField(ref _infile_label_atop, value); }
+            set 
+            { 
+                if (SetField(ref _infile_label_atop, value))
+                    _pathValidator.Validate(value);
+            }
         }
         public string INFILE_LABEL_BELOW //
         {
             get => _infile_label_below;
-            set { SetField(ref _infile_label_below, value); }
+            set 
+            { 
+                if (SetField(ref _infile_label_below, value))
+                    _pathValidator.Validate(value);
+            }
         }
         public string INFILE_CLUST_PERM //
         {
@@ -275,26 +287,9 @@ namespace GenotypeApplication.View_models
             {
                 if (SetField(ref _selectedOrientation, value))
                 {
-                    //    if (value == 1)
-                    //    {
-                    //        XORIGIN = 360;
-                    //        YORIGIN = 72;
-                    //    }
-                    //    else if (value == 2)
-                    //    {
-                    //        XORIGIN = 540;
-                    //        YORIGIN = 504;
-                    //    }
-                    //    else if (value == 3)
-                    //    {
-                    //        XORIGIN = 288;
-                    //        YORIGIN = 720;
-                    //    }
-                    //    else if (value == 0)
-                    //    {
-                    //        XORIGIN = 72;
-                    //        YORIGIN = 288;
-                    //    }
+                    OnPropertyChanged(nameof(PrintInfileNameEnabled));
+
+                    if (value != 0) PRINT_INFILE_NAME = false;
                 }
             }
         }
@@ -383,6 +378,10 @@ namespace GenotypeApplication.View_models
         public ICommand DetermineOptimalValuesCommand { get; }
         public ICommand SelectClustPermFileCommand { get; }
 
+        #endregion
+
+        #region Enable properties
+        public bool PrintInfileNameEnabled => SelectedOrientation == 0;
         #endregion
 
         private void DetermineOptimalValues()
@@ -760,6 +759,8 @@ namespace GenotypeApplication.View_models
                 _isCreatingNewConfiguration = false;
                 _wasSaved = true;
 
+                _changesTracker.TakeModelSnapshot(configurationModel);
+
                 if (kFrom == 0 || kTo == 0)
                 {
                     KFrom = 2;
@@ -771,6 +772,7 @@ namespace GenotypeApplication.View_models
                         DistructProgress = 0;
                     });
                     DistructStopped = false;
+                    _distructCompleted = false;
                     return;
                 }
 
@@ -782,6 +784,7 @@ namespace GenotypeApplication.View_models
                     DistructProgressText = $"[{_savedConfigurationName}] Completed";
                 });
                 DistructStopped = false;
+                _distructCompleted = true;
                 RebuildKForExportItems(KFrom, KTo);
             }
             catch (Exception ex)

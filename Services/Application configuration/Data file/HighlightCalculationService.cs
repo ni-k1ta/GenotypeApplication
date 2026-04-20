@@ -39,6 +39,9 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file
             var columns = CalculateColumns(parameters, headerRows, dataRows);
             var rows = CalculateRows(parameters, data);
 
+            var columnHeaders = BuildColumnHeaders(parameters, metadataCols, genotypeCols);
+            var rowHeaders = BuildRowHeaders(parameters, headerRows, dataRows);
+
             HighlightRegionModel? dataBlock = null;
             if (dataRows > 0 && genotypeCols > 0)
             {
@@ -63,7 +66,9 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file
                  missingValue: missingVal,
                  notAmbiguousValue: notAmbVal,
                  missingCellBorderColor: MissingCellColor,
-                 notAmbiguousCellBorderColor: NotAmbiguousCellColor);
+                 notAmbiguousCellBorderColor: NotAmbiguousCellColor,
+                 columnHeaders:columnHeaders,
+                 rowHeaders: rowHeaders);
         }
 
         private static int FindRowStartCol(DataTable? data, int rowIndex)
@@ -235,6 +240,80 @@ namespace GenotypeApplication.Services.Application_configuration.Data_file
             }
 
             return result;
+        }
+
+        private Dictionary<int, string> BuildColumnHeaders(
+        DataFileFormatModel p,
+        int metadataCols,
+        int genotypeCols)
+        {
+            var headers = new Dictionary<int, string>();
+            int cursor = 0;
+
+            if (p.Label) headers[cursor++] = "Label";
+            if (p.PopData) headers[cursor++] = "PopData";
+            if (p.PopFlag) headers[cursor++] = "PopFlag";
+            if (p.LocData) headers[cursor++] = "LocData";
+            if (p.Phenotype) headers[cursor++] = "Phenotype";
+
+            if (p.ExtraCols > 0)
+            {
+                for (int i = 0; i < p.ExtraCols; i++)
+                {
+                    headers[cursor++] = $"Extra{i + 1}";
+                }
+            }
+
+            // Столбцы данных
+            for (int i = 0; i < genotypeCols; i++)
+            {
+                headers[metadataCols + i] = $"Loc{i + 1}";
+            }
+
+            return headers;
+        }
+        private Dictionary<int, string> BuildRowHeaders(
+        DataFileFormatModel p,
+        int headerRows,
+        int dataRows)
+        {
+            var headers = new Dictionary<int, string>();
+            int cursor = 0;
+
+            if (p.MarkerNames) headers[cursor++] = "MarkerNames";
+            if (p.RecessiveAlleles) headers[cursor++] = "RecessiveAlleles";
+            if (p.MapDistances) headers[cursor++] = "MapDistances";
+
+            // Строки данных
+            if (p.OneRowPerInd)
+            {
+                for (int i = 0; i < p.NumInds; i++)
+                {
+                    int baseRow = headerRows + i * (p.PHASEINFO ? 2 : 1);
+                    headers[baseRow] = $"Ind{i + 1}";
+
+                    if (p.PHASEINFO)
+                        headers[baseRow + 1] = "PhaseInfo";
+                }
+            }
+            else
+            {
+                int blockSize = p.Ploidy + (p.PHASEINFO ? 1 : 0);
+                for (int i = 0; i < p.NumInds; i++)
+                {
+                    int baseRow = headerRows + i * blockSize;
+
+                    for (int j = 0; j < p.Ploidy; j++)
+                    {
+                        headers[baseRow + j] = $"Ind{i + 1}";
+                    }
+
+                    if (p.PHASEINFO)
+                        headers[baseRow + p.Ploidy] = "PhaseInfo";
+                }
+            }
+
+            return headers;
         }
     }
 }

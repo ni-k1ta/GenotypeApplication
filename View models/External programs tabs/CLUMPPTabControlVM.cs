@@ -238,7 +238,11 @@ namespace GenotypeApplication.View_models
         public string PermutationFile//
         {
             get => _permutationFile;
-            set { SetField(ref _permutationFile, value); }
+            set
+            { 
+                if (SetField(ref _permutationFile, value))
+                    _pathValidator.Validate(value);
+            }
         }
         public bool PrintEveryPerm//
         {
@@ -261,14 +265,29 @@ namespace GenotypeApplication.View_models
         public int SelectedAlgorithm//
         {
             get => _selectedAlgorithm;
-            set { SetField(ref _selectedAlgorithm, value); }
+            set 
+            { 
+                if (SetField(ref _selectedAlgorithm, value))
+                {
+                    OnPropertyChanged(nameof(GreedyOptionEnabled));
+                    OnPropertyChanged(nameof(RepeatsEnabled));
+                    OnPropertyChanged(nameof(PermutationFileEnabled));
+                }
+            }
         }
 
         public Dictionary<int, string> GreedyOptions => _greedyOptions;//
         public int SelectedGreedyOption//
         {
             get => _selectedGreedyOption;
-            set { SetField(ref _selectedGreedyOption, value); }
+            set 
+            { 
+                if (SetField(ref _selectedGreedyOption, value))
+                {
+                    OnPropertyChanged(nameof(RepeatsEnabled));
+                    OnPropertyChanged(nameof(PermutationFileEnabled));
+                }
+            }
         }
 
         public Dictionary<int, string> PrintPermutedDataOptions => _printPermutedDataOptions;//
@@ -281,7 +300,11 @@ namespace GenotypeApplication.View_models
         public string ConfigurationName
         {
             get => _configurationName;
-            set { SetField(ref _configurationName, value); }
+            set 
+            {
+                if (SetField(ref _configurationName, value))
+                    _parameterNameValidator.Validate(value);
+            }
         }
         public CLUMPPConfigurationModel? SelectedComboBoxConfigurationParameters
         {
@@ -316,6 +339,11 @@ namespace GenotypeApplication.View_models
         public ICommand SelectPermutationFileCommand { get; }
         #endregion
 
+        #region Enabled properties
+        public bool GreedyOptionEnabled => SelectedAlgorithm != 1;
+        public bool RepeatsEnabled => SelectedAlgorithm != 1 && SelectedGreedyOption != 1;
+        public bool PermutationFileEnabled => SelectedAlgorithm != 1 && SelectedGreedyOption == 3;
+        #endregion
         private void SelectPermutationFile()
         {
             PermutationFile = _dialogService.SelectFile(PathConstants.DEFAULT_DOCUMENTS_PATH);
@@ -374,7 +402,7 @@ namespace GenotypeApplication.View_models
             {
                 var (configurationModel, isPop, isIndv, kStart, kEnd) = await _clumppInteractionService.LoadConfiguration(fullSetFolderPath, configuration.ParametersName);
 
-                SetField(ref _selectedComboBoxConfigurationParameters, configurationModel, nameof(SelectedComboBoxConfigurationParameters));
+                SetField(ref _selectedComboBoxConfigurationParameters, configuration, nameof(SelectedComboBoxConfigurationParameters));
 
                 SetConfigurationParameters(configurationModel, isPop, PredefinedPopCount, isIndv, PredefinedIndvCount);
 
@@ -398,7 +426,7 @@ namespace GenotypeApplication.View_models
                         CLUMPPProgress = 0;
                     });
                     CLUMPPStopped = false;
-
+                    _clumppCompleted = false;
                     return;
                 }
 
@@ -410,7 +438,7 @@ namespace GenotypeApplication.View_models
                     CLUMPPProgressText = $"[{_configurationName}] Completed";
                 });
                 CLUMPPStopped = false;
-
+                _clumppCompleted = true;
                 WorkflowState.SetPredefinedCLUMPPParameters(kStart, kEnd);
             }
             catch (Exception ex)

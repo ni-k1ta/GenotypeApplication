@@ -188,25 +188,29 @@ namespace GenotypeApplication.View_models
         public DataFileFormatModel DataFileFormatModel
         {
             get => _dataFileFormatModel;
-            set 
-            { 
+            set
+            {
                 if (SetField(ref _dataFileFormatModel, value))
                 {
-                    LocPriorEnable = value.PopData || value.LocData;
-                    LocIsPopParamEnable = value.PopData && value.LocData;
+                    OnPropertyChanged(nameof(LocPriorEnable));
+                    OnPropertyChanged(nameof(LocIsPopParamEnable));
                 }
             }
         }
         public string DataFileFullPath
         {
             get => _dataFileFullPath;
-            set { SetField(ref _dataFileFullPath, value); }
+            set
+            {
+                if (SetField(ref _dataFileFullPath, value))
+                    OnPropertyChanged(nameof(ConfigurationEnable));
+            }
         }
         public string DataFileName
         {
             get => _dataFileName;
-            set 
-            { 
+            set
+            {
                 if (SetField(ref _dataFileName, value))
                 {
                     _parameterNameValidator.Validate(value);
@@ -251,7 +255,15 @@ namespace GenotypeApplication.View_models
         public bool NoAdmixParam //
         {
             get => _noAdmixParam;
-            set { SetField(ref _noAdmixParam, value); }
+            set
+            {
+                if (SetField(ref _noAdmixParam, value))
+                {
+                    OnPropertyChanged(nameof(AdmixParamEnable));
+                    if (value && LinkageParam)
+                        LinkageParam = false;
+                }
+            }
         }
         public bool LinkageParam
         {
@@ -265,26 +277,30 @@ namespace GenotypeApplication.View_models
                 {
                     _messageService.ShowWarning("PHASEINFO will not be used when the linkage model is turned off.");
                 }
+
+                OnPropertyChanged(nameof(UsePopInfoEnable));
+                OnPropertyChanged(nameof(LocPriorEnable));
+                OnPropertyChanged(nameof(AdmixParamEnable));
+
+                if (value && NoAdmixParam)
+                    NoAdmixParam = false;
             }
         }
         public bool UsePopInfoParam
         {
             get => _usePopInfoParam;
-            set { SetField(ref _usePopInfoParam, value); }
+            set
+            {
+                if (SetField(ref _usePopInfoParam, value))
+                {
+                    OnPropertyChanged(nameof(UsePopInfoEnable));
+                }
+            }
         }
-        public bool LocPriorParam /* (!!!) - обдумать
-                                   * LOCDATA 
-                                   * Input file contains a user-defined sampling location for each individual.
-                                   * For use in the LOCPRIOR model. Can set LOCISPOP=1 to use the POPDATA instead in the LOCPRIOR model.
-                                   * 
-                                   * LOCISPOP
-                                   * This option instructs the program to use the PopData column in the input file as location data when the LOCPRIOR model is turned on.
-                                   * When LOCISPOP=0, the program requires a LocData column to use LOCPRIOR.
-                                   
-                                   - +вроде готово+ */
+        public bool LocPriorParam
         {
             get => _locPriorParam;
-            set 
+            set
             {
                 if (SetField(ref _locPriorParam, value))
                 {
@@ -302,12 +318,6 @@ namespace GenotypeApplication.View_models
                     }
                 }
             }
-        }
-        private bool _locPriorEnable;
-        public bool LocPriorEnable 
-        { 
-            get => _locPriorEnable;
-            set { SetField(ref _locPriorEnable, value); } 
         }
 
         public bool OnefstParam //
@@ -458,12 +468,6 @@ namespace GenotypeApplication.View_models
             get => _locIsPopParam;
             set { SetField(ref _locIsPopParam, value); }
         }
-        private bool _locIsPopParamEnable;
-        public bool LocIsPopParamEnable
-        {
-            get => _locIsPopParamEnable;
-            set { SetField(ref _locIsPopParamEnable, value); }
-        }
         public double LocPriorInitParam //
         {
             get => _locPriorInitParam;
@@ -519,7 +523,7 @@ namespace GenotypeApplication.View_models
             get => _printQhatParam;
             set { SetField(ref _printQhatParam, value); }
         }
-        public bool AncestDistParam // не понял зависимости, разобраться (!!!)
+        public bool AncestDistParam
         {
             get => _ancestDistParam;
             set { SetField(ref _ancestDistParam, value); }
@@ -557,10 +561,10 @@ namespace GenotypeApplication.View_models
         public int AdmBurnInParam
         {
             get => _admBurnInParam;
-            set 
+            set
             {
                 if (value >= BurnInParam) return;
-                SetField(ref _admBurnInParam, value); 
+                SetField(ref _admBurnInParam, value);
             }
         }
         public bool RandomizeParam //
@@ -621,6 +625,17 @@ namespace GenotypeApplication.View_models
         public AsyncRelayCommand StartStructureAsyncCommand { get; }
         public RelayCommand StopStructureCommand { get; }
         #endregion
+
+
+        #region Enable properties
+        public bool UsePopInfoEnable => !LinkageParam && UsePopInfoParam;
+        public bool LocIsPopParamEnable => DataFileFormatModel.PopData && DataFileFormatModel.LocData;
+        public bool LocPriorEnable => (DataFileFormatModel.PopData || DataFileFormatModel.LocData) && !LinkageParam;
+        public bool AdmixParamEnable => !LinkageParam && !NoAdmixParam;
+
+        public bool ConfigurationEnable => !string.IsNullOrWhiteSpace(DataFileFullPath);
+        #endregion
+
 
         private static readonly SetModel _createNewSetPlaceholder = new() { Name = "Create new set" };
         public ObservableCollection<SetModel> SetModelsComboBoxList { get; } = new();
@@ -750,20 +765,27 @@ namespace GenotypeApplication.View_models
         {
             DataFileFormatVM dataFileParametersViewModel = new(_dialogService, _messageService, _pathValidator, _windowService);
 
-            if (!string.IsNullOrWhiteSpace(DataFileFullPath) && !string.IsNullOrWhiteSpace(DataFileName) && DataFileFormatModel != null)
-                await dataFileParametersViewModel.LoadDataFileFormat(DataFileFormatModel, DataFileFullPath);
-
-            bool? loadResult = _windowService.ShowDialogWindow<LoadDataFileWindow, DataFileFormatVM>(dataFileParametersViewModel);
-
-            if (loadResult == true)
+            try
             {
-                DataFileFullPath = dataFileParametersViewModel.DataFileFullPath;
-                DataFileFormatModel = dataFileParametersViewModel.DataFileFormatModel;
+                if (!string.IsNullOrWhiteSpace(DataFileFullPath) && !string.IsNullOrWhiteSpace(DataFileName) && DataFileFormatModel != null)
+                    await dataFileParametersViewModel.LoadDataFileFormat(DataFileFormatModel, DataFileFullPath);
 
-                DataFileName = Path.GetFileName(DataFileFullPath);
+                bool? loadResult = _windowService.ShowDialogWindow<LoadDataFileWindow, DataFileFormatVM>(dataFileParametersViewModel);
 
-                if (DataFileFullPath != _savedDataFileFullPath)
-                    _isNewDataFile = true;
+                if (loadResult == true)
+                {
+                    DataFileFullPath = dataFileParametersViewModel.DataFileFullPath;
+                    DataFileFormatModel = dataFileParametersViewModel.DataFileFormatModel;
+
+                    DataFileName = Path.GetFileName(DataFileFullPath);
+
+                    if (DataFileFullPath != _savedDataFileFullPath)
+                        _isNewDataFile = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _messageService.ShowError($"Failed to load data file. {ex.Message}");
             }
         }
 

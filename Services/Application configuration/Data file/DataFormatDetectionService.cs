@@ -54,10 +54,7 @@ namespace GenotypeApplication.Services.Application_configuration
 
                 return dataDetectionModel.Format;
             }
-            catch (Exception)
-            {
-                throw;
-            }
+            catch (Exception) { throw; }
         }
         public bool IsFormatMatchesWithData(DataTableModel? data, DataFileFormatModel format)
         {

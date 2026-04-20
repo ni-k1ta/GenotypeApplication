@@ -27,6 +27,7 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             {
                 if (SetField(ref _currentSet, value))
                 {
+                    OnPropertyChanged(nameof(ConfigurationEnabled));
 
                     if (value != null && !IsValidSet(value))
                     {
@@ -42,6 +43,7 @@ namespace GenotypeApplication.View_models.External_programs_tabs
                 }
             }
         }
+        public bool ConfigurationEnabled => CurrentSet != null;
         public ICollectionView FilteredSetModelsList { get; }
 
 

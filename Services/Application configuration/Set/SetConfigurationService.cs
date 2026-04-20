@@ -93,11 +93,7 @@ namespace GenotypeApplication.Services.Set
 
                 return (sets, allConfigsExists);
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            catch (Exception) { throw; }
         }
 
         public bool IsSetExist(string fullSetFolderPath)

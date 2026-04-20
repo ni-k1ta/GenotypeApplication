@@ -357,19 +357,6 @@ namespace GenotypeApplication.View_models
             private set => SetField(ref _highlightMap, value);
         }
         #endregion
-        
-        //public bool IsLiveHighlightEnabled
-        //{
-        //    get => _isLiveHighlightEnabled;
-        //    set
-        //    {
-        //        if (SetField(ref _isLiveHighlightEnabled, value))
-        //        {
-        //            // При включении автообновления — если были накоплены изменения, сразу запустить пересчёт, чтобы "догнать" текущее состояние
-        //            if (value) RequestRecalculation();
-        //        }
-        //    }
-        //}
 
         public ICommand SelectDataFileAsyncCommand { get; }
         private async Task SelectDataFileAsync()
@@ -398,13 +385,21 @@ namespace GenotypeApplication.View_models
 
                 _isLiveHighlightEnabled = true;
             }
-            catch (FileNotFoundException) { }
-            catch (InvalidDataException) { }
-            catch (FormatException) { }
-            catch (Exception)
+            catch (FileNotFoundException fnfe)
             {
-                //todo
-                throw;
+                _messageService.ShowError($"File not found: {fnfe.Message}");
+            }
+            catch (InvalidDataException ide)
+            {
+                _messageService.ShowError($"Invalid data format: {ide.Message}");
+            }
+            catch (FormatException fe)
+            {
+                _messageService.ShowError($"Data format error: {fe.Message}");
+            }
+            catch (Exception ex)
+            {
+                _messageService.ShowError($"An error occurred while loading the data file: {ex.Message}");
             }
 
             DataFileFullPath = fullDataFilePath;
@@ -422,7 +417,7 @@ namespace GenotypeApplication.View_models
 
                 var parsedDataTable = _dataTableParser.Parse(fullDataFilePath);
 
-                ParsedDataTable = new DataTableModel(parsedDataTable);
+                UIDispatcherHelper.RunOnUI(() => ParsedDataTable = new DataTableModel(parsedDataTable));
 
                 _isLiveHighlightEnabled = false;
 
@@ -432,10 +427,7 @@ namespace GenotypeApplication.View_models
 
                 _isLiveHighlightEnabled = true;
             }
-            catch (Exception)
-            {
-                throw;
-            }
+            catch (Exception) { throw; }
             DataFileFullPath = fullDataFilePath;
         }
 
@@ -525,9 +517,14 @@ namespace GenotypeApplication.View_models
             {
                 var result = await Task.Run(() => _highlightCalculationService.Calculate(DataFileFormatModel, DataTableSource, ct), ct);
 
-                if (!ct.IsCancellationRequested) HighlightMap = result;
+                if (!ct.IsCancellationRequested)
+                    UIDispatcherHelper.RunOnUI(() => HighlightMap = result);
             }
             catch (OperationCanceledException) { }
+            catch (Exception ex) 
+            {
+                _messageService.ShowError($"An error occurred during highlight calculation: {ex.Message}");
+            }
         }
 
         public ICommand SaveDataFileParametersAsyncCommand { get; }

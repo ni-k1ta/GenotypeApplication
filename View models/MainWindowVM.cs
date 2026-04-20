@@ -13,8 +13,6 @@ namespace GenotypeApplication.View_models
 {
     public class MainWindowVM : ViewModelErrors, IWindowAware
     {
-        //private string _strutureDataFileName;
-
         private readonly WorkflowStateModel _workflowStateModel;
 
         private readonly IWindowService _windowService;
@@ -76,10 +74,9 @@ namespace GenotypeApplication.View_models
 
                 _workflowStateModel.LoadSetModelsList(setsList);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                _messageService.ShowError($"An error occurred while loading parameter sets: {ex.Message}");
             }
         }
 

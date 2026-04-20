@@ -8,7 +8,7 @@
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
         Title="Project configuration"
-        Height="414"
+        Height="415"
         Width="631"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">

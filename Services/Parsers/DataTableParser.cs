@@ -14,7 +14,7 @@ namespace GenotypeApplication.Services.Parsers
 
                 var nonEmptyLines = fileService.ReadFile(filePath);
 
-                if (!nonEmptyLines.Any()) throw new InvalidDataException("Data file can't be empty!"); //todo возможно переделать на уведомление, что файл пустой
+                if (!nonEmptyLines.Any()) throw new InvalidDataException("Data file can't be empty!");
 
                 var parsed = new List<(int offset, string[] tokens)>();
                 int maxCols = 0;
@@ -47,11 +47,7 @@ namespace GenotypeApplication.Services.Parsers
             {
                 throw new FileNotFoundException("Data file was not found.", fnfe.FileName);
             }
-            catch (Exception)
-            {
-                throw;
-            }
-
+            catch (Exception) { throw; }
         }
     }
 }

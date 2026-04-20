@@ -36,6 +36,8 @@ namespace GenotypeApplication.MVVM.Data_grid
                     var map = GetHighlightMap(dataGrid);
                     var data = GetDataSource(dataGrid);
                     UpdateCellStyle(dataGrid, map, data);
+                    UpdateHeaders(dataGrid, map);
+                    UpdateRowHeaders(dataGrid, map);
                 }
                 dataGrid.Loaded += onLoaded;
                 return;
@@ -45,6 +47,8 @@ namespace GenotypeApplication.MVVM.Data_grid
             var data = GetDataSource(dataGrid);
 
             UpdateCellStyle(dataGrid, map, data);
+            UpdateHeaders(dataGrid, map);
+            UpdateRowHeaders(dataGrid, map);
         }
 
         private static void UpdateCellStyle(DataGrid dataGrid, HighlightMapModel? map, DataTable? data)
@@ -90,6 +94,38 @@ namespace GenotypeApplication.MVVM.Data_grid
             style.Setters.Add(new Setter(DataGridCell.BorderThicknessProperty, new Thickness(2)));
 
             dataGrid.CellStyle = style;
+        }
+
+        private static void UpdateHeaders(DataGrid dataGrid, HighlightMapModel? map)
+        {
+            if (map == null) return;
+
+            // Заголовки столбцов
+            foreach (var column in dataGrid.Columns)
+            {
+                int index = column.DisplayIndex;
+                if (map.ColumnHeaders.TryGetValue(index, out var headerText))
+                {
+                    column.Header = headerText;
+                }
+            }
+        }
+        private static void UpdateRowHeaders(DataGrid dataGrid, HighlightMapModel? map)
+        {
+            if (map == null) return;
+
+            var rowHeaderConverter = new RowHeaderConverter(map);
+
+            var rowStyle = new Style(typeof(DataGridRow));
+
+            var headerBinding = new Binding(".")
+            {
+                Converter = rowHeaderConverter
+            };
+
+            rowStyle.Setters.Add(new Setter(DataGridRow.HeaderProperty, headerBinding));
+
+            dataGrid.RowStyle = rowStyle;
         }
     }
 }
