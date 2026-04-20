@@ -17,6 +17,7 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterScreen"
         DataContext="{Binding MainWindowVM}">
 
     <Window.Resources>
@@ -279,7 +280,7 @@
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto">
-                    
+
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -2296,16 +2297,19 @@
                             <GroupBox Grid.Column="1"
                                       x:Name="pregeneratedImageGroupBox"
                                       Header="Pre-generated image"
-                                      HorizontalAlignment="Stretch"
                                       Width="366"
                                       Height="259">
-                                <StackPanel Orientation="Vertical"
-                                            VerticalAlignment="Stretch"
-                                            HorizontalAlignment="Stretch">
+                                <Grid>
+
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
 
                                     <GroupBox x:Name="pregeneratedImageKNumSelectionGroupBox"
                                               Header="Select 'K' number"
-                                              HorizontalAlignment="Stretch">
+                                              HorizontalAlignment="Stretch"
+                                              Grid.Row="0">
                                         <DockPanel LastChildFill="False">
                                             <ComboBox x:Name="pregeneratedImageKNumComboBox"
                                                       DockPanel.Dock="Left"
@@ -2320,18 +2324,15 @@
                                     </GroupBox>
 
                                     <Border Margin="0,5,0,0"
-                                            HorizontalAlignment="Stretch"
-                                            VerticalAlignment="Stretch">
+                                            Grid.Row="1">
 
                                         <Image x:Name="PsPreview"
                                                Source="{Binding PreviewImage}"
                                                Stretch="Uniform"
-                                               RenderOptions.BitmapScalingMode="HighQuality" 
-                                               HorizontalAlignment="Stretch"
-                                               VerticalAlignment="Stretch"/>
+                                               RenderOptions.BitmapScalingMode="HighQuality" />
 
                                     </Border>
-                                </StackPanel>
+                                </Grid>
                             </GroupBox>
                         </Grid>
 

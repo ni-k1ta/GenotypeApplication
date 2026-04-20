@@ -10,7 +10,8 @@
         Title="Clusters color definition"
         Height="290"
         Width="400"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
 
     <Window.Resources>
         <conv:ColorNameToBrushConverter x:Key="ColorNameToBrushConverter" />

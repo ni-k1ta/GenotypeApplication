@@ -12,7 +12,8 @@
         Width="412.5"
         ResizeMode="NoResize"
         UseLayoutRounding="True"
-        SnapsToDevicePixels="True">
+        SnapsToDevicePixels="True"
+        WindowStartupLocation="CenterOwner">
 
     <Grid Margin="5">
         <Grid.ColumnDefinitions>

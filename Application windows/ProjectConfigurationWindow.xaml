@@ -11,7 +11,8 @@
         Height="415"
         Width="631"
         UseLayoutRounding="True"
-        SnapsToDevicePixels="True">
+        SnapsToDevicePixels="True"
+        WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <conv:EmptyStringToPlaceholderStringConverter x:Key="EmptyStringToPlaceholderStringConverter" />

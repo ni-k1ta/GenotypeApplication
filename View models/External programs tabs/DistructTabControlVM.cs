@@ -13,6 +13,7 @@ using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -583,6 +584,11 @@ namespace GenotypeApplication.View_models
             {
                 _isExporting = true;
                 await _distructInteractionService.ExportResultsAsync(fullCurrentSetFolderPath, clumppConfigurationName, configurationName, format, k, configuration.ORIENTATION);
+
+                _messageService.ShowInformation($"Results for K={k} were successfully exported in selected format(s).");
+
+                var exportedFolderPath = Path.Combine(fullCurrentSetFolderPath, DistructConstants.DISTRUCT_FOLDER_NAME, clumppConfigurationName, configurationName, DistructConstants.DISTRUCT_RESULTS_FOLDER_NAME, "Exported");
+                Process.Start("explorer.exe", $"/select,\"{exportedFolderPath}\"");
             }
             catch (Exception)
             {
