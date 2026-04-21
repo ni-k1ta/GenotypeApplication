@@ -12,7 +12,8 @@
         Width="631"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
 
     <Window.Resources>
         <conv:EmptyStringToPlaceholderStringConverter x:Key="EmptyStringToPlaceholderStringConverter" />
@@ -274,6 +275,14 @@
                 </Grid>
             </GroupBox>
         </StackPanel>
+
+        <Button x:Name="resetButton"
+                Content="Reset"
+                Grid.Column="0"
+                Grid.Row="1"
+                HorizontalAlignment="Left"
+                Style="{StaticResource Rounded}"
+                Command="{Binding ResetCommand}" />
 
         <Button x:Name="doneProjectOptionsButton"
                 Content="Done"

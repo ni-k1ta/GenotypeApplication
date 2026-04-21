@@ -91,6 +91,7 @@ namespace GenotypeApplication.View_models
             OpenRecentProjectCommand = new AsyncRelayCommand(OpenRecentProjectAsync);
             DeleteProjectCommand = new RelayCommand(DeleteProject);
             ShowInExplorerCommand = new RelayCommand(ShowProjectInExplorer);
+            ResetCommand = new RelayCommand(execute => Reset(), canExecute => CanReset());
 
             PROJECT_DEFAULT_PATH = PathConstants.PROJECT_DEFAULT_PATH;
 
@@ -241,11 +242,30 @@ namespace GenotypeApplication.View_models
 
         public ICommand OpenProjectCommand { get; }
         public ICommand SaveChangesCommand { get; }
+        public ICommand ResetCommand { get; }
         public ICommand ChangeProjectPathCommand { get; }
         public ICommand RemoveRecentProjectCommand { get; }
         public ICommand OpenRecentProjectCommand { get; }
         public ICommand DeleteProjectCommand { get; }
         public ICommand ShowInExplorerCommand { get; }
+
+        private void Reset()
+        {
+            _projectModel = new();
+            ProjectName = string.Empty;
+            ProjectPath = PROJECT_DEFAULT_PATH;
+
+            ProjectIsParallelEnabled = false;
+            IsAllCores = false;
+            IsSelectionCores = true;
+            SelectedCores = 1;
+
+            _isNewProject = true;
+        }
+        private bool CanReset()
+        {
+            return !_isSaving && (!string.IsNullOrWhiteSpace(_projectName) || (!string.IsNullOrWhiteSpace(_projectPath) && !string.Equals(_projectPath, PROJECT_DEFAULT_PATH)) || _projectIsParallelEnabled || _projectCoresCount != 1);
+        }
 
         private void RemoveRecentProject(object? parameter)
         {
@@ -392,9 +412,13 @@ namespace GenotypeApplication.View_models
                 if (_isNewProject)
                 {
                     shouldContinue = await CreateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
-                    if (!shouldContinue) return;
                 }
-                else await UpdateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
+                else
+                {
+                    shouldContinue = await UpdateProjectAsync(projectName, projectPath, isParallelEnabled, coresCount);
+                }
+
+                if (!shouldContinue) return;
 
                 string fullProjectFolderPath = Path.Combine(projectPath, projectName);
 
@@ -413,7 +437,13 @@ namespace GenotypeApplication.View_models
 
                 if (_currentWindowRef != null && _currentWindowRef.TryGetTarget(out var window))
                 {
-                    _windowService.CloseWindow(window);
+                    window.Hide(); // скрываем вместо закрытия
+
+                    mainWindow.Closed += (s, e) =>
+                    {
+                        Application.Current.MainWindow = window;
+                        window.Show();
+                    };
                 }
             }
             catch (Exception ex)
@@ -459,7 +489,7 @@ namespace GenotypeApplication.View_models
             }
             catch (Exception) { throw; }
         }
-        private async Task UpdateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
+        private async Task<bool> UpdateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
         {
             ProjectParametersModel oldProjectModel = _projectModel;
 
@@ -470,7 +500,7 @@ namespace GenotypeApplication.View_models
                 if (_projectService.IsProjectExist(fullProjectFolderNewPath))
                 {
                     _messageService.ShowWarning("A project with this name already exists.");
-                    return;
+                    return false;
                 }
             }
 
@@ -484,6 +514,7 @@ namespace GenotypeApplication.View_models
                 ProjectLastModified = _projectModel.LastModified;
 
                 _recentProjectsService.UpdateProject(oldProjectModel, _projectModel);
+                return true;
             }
             catch (Exception)
             {

@@ -382,8 +382,6 @@ namespace GenotypeApplication.View_models
                 SetFormatValues(_calculatedDataFileFormatModel);
 
                 await ExecuteCalculationAsync();
-
-                _isLiveHighlightEnabled = true;
             }
             catch (FileNotFoundException fnfe)
             {
@@ -393,16 +391,20 @@ namespace GenotypeApplication.View_models
             {
                 _messageService.ShowError($"Invalid data format: {ide.Message}");
             }
-            catch (FormatException fe)
+            catch (FormatException)
             {
-                _messageService.ShowError($"Data format error: {fe.Message}");
+                _messageService.ShowError($"Failed to automatically detect the input format. Please set the parameters manually.");
+                SetFormatValues(new DataFileFormatModel());
             }
             catch (Exception ex)
             {
                 _messageService.ShowError($"An error occurred while loading the data file: {ex.Message}");
             }
-
-            DataFileFullPath = fullDataFilePath;
+            finally
+            {
+                _isLiveHighlightEnabled = true;
+                DataFileFullPath = fullDataFilePath;
+            }
         }
 
         public async Task LoadDataFileFormat(DataFileFormatModel dataFileFormatModel, string fullDataFilePath)
