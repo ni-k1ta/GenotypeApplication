@@ -208,12 +208,26 @@ namespace GenotypeApplication.View_models
         public int PopsCount
         {
             get => _popsCount;
-            set { SetField(ref _popsCount, value); }
+            set 
+            { 
+                if (SetField(ref _popsCount, value))
+                {
+                    if (value < 2) IsPop = false;
+                    OnPropertyChanged(nameof(IsPopExecAvailable));
+                }
+            }
         }
         public int IndvsCount
         {
             get => _indvsCount;
-            set { SetField(ref _indvsCount, value); }
+            set 
+            { 
+                if (SetField(ref _indvsCount, value))
+                {
+                    if (value < 2) IsIndv = false;
+                    OnPropertyChanged(nameof(IsIndvExecAvailable));
+                }
+            }
         }
         public int R//
         {
@@ -343,7 +357,10 @@ namespace GenotypeApplication.View_models
         public bool GreedyOptionEnabled => SelectedAlgorithm != 1;
         public bool RepeatsEnabled => SelectedAlgorithm != 1 && SelectedGreedyOption != 1;
         public bool PermutationFileEnabled => SelectedAlgorithm != 1 && SelectedGreedyOption == 3;
+        public bool IsPopExecAvailable => PopsCount > 1;
+        public bool IsIndvExecAvailable => IndvsCount > 1;
         #endregion
+
         private void SelectPermutationFile()
         {
             PermutationFile = _dialogService.SelectFile(PathConstants.DEFAULT_DOCUMENTS_PATH);

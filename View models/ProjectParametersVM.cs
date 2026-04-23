@@ -441,6 +441,7 @@ namespace GenotypeApplication.View_models
 
                     mainWindow.Closed += (s, e) =>
                     {
+                        App.ResetGlobalCts();
                         Application.Current.MainWindow = window;
                         window.Show();
                     };

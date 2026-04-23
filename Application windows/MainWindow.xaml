@@ -1362,10 +1362,12 @@
                                         <StackPanel Orientation="Vertical">
                                             <CheckBox x:Name="onlyPopsRadioButton"
                                                       Content="Populations"
-                                                      IsChecked="{Binding IsPop, UpdateSourceTrigger=PropertyChanged}" />
+                                                      IsChecked="{Binding IsPop, UpdateSourceTrigger=PropertyChanged}"
+                                                      IsEnabled="{Binding IsPopExecAvailable, UpdateSourceTrigger=PropertyChanged}" />
                                             <CheckBox x:Name="popsAndIndividsRadioButton"
                                                       Content="Individuals"
-                                                      IsChecked="{Binding IsIndv, UpdateSourceTrigger=PropertyChanged}" />
+                                                      IsChecked="{Binding IsIndv, UpdateSourceTrigger=PropertyChanged}"
+                                                      IsEnabled="{Binding IsIndvExecAvailable, UpdateSourceTrigger=PropertyChanged}"/>
                                         </StackPanel>
                                     </GroupBox>
                                 </StackPanel>
@@ -1794,7 +1796,7 @@
                             <GroupBox x:Name="mainOptionsGroupBox"
                                       Header="Main usage options"
                                       DockPanel.Dock="Left"
-                                      IsEnabled="{Binding ConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
+                                      IsEnabled="{Binding CLUMPPConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
                                 <StackPanel Orientation="Horizontal">
                                     <StackPanel Orientation="Vertical">
                                         <CheckBox x:Name="printIndividsCheckBox"
@@ -1830,7 +1832,7 @@
                                       Header="Extra options"
                                       HorizontalAlignment="Left"
                                       Grid.Column="0"
-                                      IsEnabled="{Binding ConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
+                                      IsEnabled="{Binding CLUMPPConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -2099,7 +2101,7 @@
                                         Orientation="Vertical">
                                 <GroupBox x:Name="dataSettingsGroupBox"
                                           Header="Data settings"
-                                          IsEnabled="{Binding ConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
+                                          IsEnabled="{Binding CLUMPPConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
@@ -2218,7 +2220,7 @@
                                 <GroupBox x:Name="figureAppearanceGroupBox"
                                           Header="Figure appearance"
                                           HorizontalAlignment="Stretch"
-                                          IsEnabled="{Binding ConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
+                                          IsEnabled="{Binding CLUMPPConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />

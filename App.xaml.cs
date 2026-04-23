@@ -75,8 +75,12 @@ namespace GenotypeApplication
             projectParametersViewModel.SetCurrentWindow(windowService.ShowWindow<ProjectConfigurationWindow, ProjectParametersVM>(projectParametersViewModel));
         }
 
-        public static CancellationTokenSource GlobalCts { get; } = new();
+        public static CancellationTokenSource GlobalCts { get; private set; } = new();
 
+        public static void ResetGlobalCts()
+        {
+            GlobalCts = new CancellationTokenSource();
+        }
         protected override void OnExit(ExitEventArgs e)
         {
             GlobalCts.Cancel();

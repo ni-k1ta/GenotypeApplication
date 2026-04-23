@@ -66,7 +66,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             bool hasStructureResults = _directoryService.IsDirectoryExist(fullStructureResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullStructureResultsFolderPath);
 
             if (!hasStructureResults)
-                throw new FileNotFoundException("Не найдены результаты работы Structure");
+                throw new FileNotFoundException("Structure results were not found.");
 
             var fullStructureHarvesterFolderPath = Path.Combine(fullSetFolderPath, STRUCTURE_HARVESTER_FOLDER_NAME);
             if (!_directoryService.IsDirectoryExist(fullStructureHarvesterFolderPath))

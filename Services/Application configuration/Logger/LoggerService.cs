@@ -37,14 +37,15 @@ namespace GenotypeApplication.Services.Application_configuration.Logger
 
         internal void Log(SetProcessingStage stage, string message, LogLevel level)
         {
-            var entry = new LogModel(stage.ToString(), message, level);
+            var source = stage.GetDescription();
+            var entry = new LogModel(source, message, level);
 
             lock (_pendingLock)
             {
                 _pendingEntries.Add(entry);
             }
 
-            Task.Run(() => WriteToFile(stage.ToString(), entry));
+            Task.Run(() => WriteToFile(source, entry));
         }
 
         private void FlushToUI(object? sender, EventArgs e)

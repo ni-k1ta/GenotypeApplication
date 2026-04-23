@@ -44,6 +44,7 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             }
         }
         public bool ConfigurationEnabled => CurrentSet != null;
+        public bool CLUMPPConfigurationEnabled => CurrentSet != null && CurrentCLUMPPConfigurationModel != null;
         public ICollectionView FilteredSetModelsList { get; }
 
 
@@ -59,6 +60,8 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             {
                 if (SetField(ref _currentCLUMPPConfigurationModel, value))
                 {
+                    OnPropertyChanged(nameof(CLUMPPConfigurationEnabled));
+
                     if (value != null && !IsValidCLUMPPConfiguration(value))
                     {
                         _messageService.ShowWarning($"CLUMPP configuration folder with name \"{value.ParametersName}\" was not found.");
