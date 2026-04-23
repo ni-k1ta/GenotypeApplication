@@ -94,6 +94,13 @@
                                    Visibility="{Binding IsDirectory, 
                             Converter={StaticResource BoolToVisConverter}}" />
                         <TextBlock Text="{Binding Name}" />
+
+                        <StackPanel.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Open in explorer"
+                                          Click="OpenInExplorer_Click" />
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
                     </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
@@ -697,7 +704,7 @@
                                     <GroupBox x:Name="usePriorPopInfoGroupBox"
                                               Margin="0,0,0,0"
                                               HorizontalAlignment="Stretch"
-                                              IsEnabled="{Binding DataFileFormatModel.POPDATA, UpdateSourceTrigger=PropertyChanged}">
+                                              IsEnabled="{Binding DataFileFormatModel.PopData, UpdateSourceTrigger=PropertyChanged}">
                                         <GroupBox.Header>
                                             <CheckBox x:Name="usePriorPopInfoCheckBox"
                                                       Content="Use prior population information"
