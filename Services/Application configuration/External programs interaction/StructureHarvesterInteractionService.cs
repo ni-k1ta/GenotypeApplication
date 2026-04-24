@@ -154,7 +154,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             bool isPopFile = filePath.EndsWith(".popfile", StringComparison.OrdinalIgnoreCase);
 
-            int max = 0;
+            var seenIds = new List<int>();
 
             foreach (string line in _fileService.ReadFile(filePath))
             {
@@ -180,13 +180,13 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                         continue;
                 }
 
-                if (val <= max && max > 0)
-                    break; // значения пошли по второму кругу
+                if (seenIds.Contains(val))
+                    break;
 
-                max = val;
+                seenIds.Add(val);
             }
 
-            return max;
+            return seenIds.Count;
         }
 
         public bool IsRunning

@@ -6,6 +6,7 @@ using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.DirectoryServices.ActiveDirectory;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -120,7 +121,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             if (!_directoryService.IsDirectoryExist(fullDistructFolderPath)) throw new DirectoryNotFoundException($"Distruct folder was not found in the set folder.");
 
             string fullFolderWithConfigurationsPath = Path.Combine(fullDistructFolderPath, CLUMPPConfigurationName);
-            if (!_directoryService.IsDirectoryExist(fullFolderWithConfigurationsPath)) throw new DirectoryNotFoundException();
+            if (!_directoryService.IsDirectoryExist(fullFolderWithConfigurationsPath)) throw new ActiveDirectoryObjectExistsException();
 
             try
             {

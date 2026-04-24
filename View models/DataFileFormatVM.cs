@@ -415,7 +415,7 @@ namespace GenotypeApplication.View_models
             try
             {
                 HighlightMap = null;
-                _calculatedDataFileFormatModel = new();
+                _calculatedDataFileFormatModel = dataFileFormatModel;
 
                 var parsedDataTable = _dataTableParser.Parse(fullDataFilePath);
 
@@ -538,24 +538,27 @@ namespace GenotypeApplication.View_models
 
             var dataFileFormatModel = GetFormatValues();
 
-            if (!_dataFormatDetectionService.IsFormatMatchesWithData(ParsedDataTable, dataFileFormatModel))
+            try
             {
-                _messageService.ShowWarning("The specified format parameters do not match the data. Please review your selections.");
-                return;
-            }
-            else if (dataFileFormatModel != _calculatedDataFileFormatModel)
-            {
-                var result = _messageService.ShowQuetion("The specified format parameters differ from the automatically detected format. Do you want to proceed with the specified parameters?");
-
-                if (!result)
+                if (!_dataFormatDetectionService.IsFormatMatchesWithData(ParsedDataTable, dataFileFormatModel))
                 {
-                    _isSaving = false;
+                    _messageService.ShowWarning("The specified format parameters do not match the data. Please review your selections.");
                     return;
                 }
-            }
+                else if (dataFileFormatModel != _calculatedDataFileFormatModel)
+                {
+                    var result = _messageService.ShowQuetion("The specified format parameters differ from the automatically detected format. Do you want to proceed with the specified parameters?");
 
-            DataFileFormatModel = dataFileFormatModel;
-            _isSaving = false;
+                    if (!result) { return; }
+                }
+
+                DataFileFormatModel = dataFileFormatModel;
+            }
+            catch (Exception) { }
+            finally
+            {
+                _isSaving = false;
+            }
 
             if (_currentWindowRef != null && _currentWindowRef.TryGetTarget(out var window))
             {

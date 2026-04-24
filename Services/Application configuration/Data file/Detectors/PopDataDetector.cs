@@ -92,7 +92,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
             int expectedRange = max - min + 1;
 
             double continuityRatio = (double)uniqueInts.Count / expectedRange;
-            if (continuityRatio < 0.9) return false;
+            if (continuityRatio < 0.61) return false;
 
             var singletonCount = groupCounts.Count(kvp => kvp.Value == 1);
             double singletonRatio = (double)singletonCount / uniqueInts.Count;
@@ -111,7 +111,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 return false;
 
             double ratio = (double)minSize / maxSize;
-            if (ratio < 0.05)
+            if (ratio < 0.031)
                 return false;
 
             return true;

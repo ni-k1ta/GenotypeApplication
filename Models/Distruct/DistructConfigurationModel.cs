@@ -77,7 +77,7 @@ namespace GenotypeApplication.Models
             set => _print_indivs = value;
         }
 
-        private bool _print_label_atop = true;
+        private bool _print_label_atop = false;
         [DefineParameterModel("PRINT_LABEL_ATOP")]
         public bool PRINT_LABEL_ATOP
         {
@@ -85,7 +85,7 @@ namespace GenotypeApplication.Models
             set => _print_label_atop = value;
         }
 
-        private bool _print_label_below = true;
+        private bool _print_label_below = false;
         [DefineParameterModel("PRINT_LABEL_BELOW")]
         public bool PRINT_LABEL_BELOW
         {

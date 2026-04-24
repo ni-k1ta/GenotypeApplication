@@ -151,7 +151,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 var resultsPath = Path.Combine(fullConfigurationFolderPath, CLUMPP_RESULTS_FOLDER_NAME);
                 if (_directoryService.IsDirectoryExist(resultsPath) && !_directoryService.IsDirectoryEmpty(resultsPath))
                 {
-                    var regex = new Regex(@"^K(\d+)\.(popq|indvq)$", RegexOptions.Compiled);
+                    var regex = new Regex(@"^K(\d+)\.(popq|indq)$", RegexOptions.Compiled);
 
                     foreach (var filePath in Directory.EnumerateFiles(resultsPath))
                     {
@@ -171,9 +171,9 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                         kMax = 0;
                         kMin = 0;
                     }
-                }
 
-                configurationModel.HasPopResults = Directory.EnumerateFiles(resultsPath, "*.popq").Any();
+                    configurationModel.HasPopResults = Directory.EnumerateFiles(resultsPath, "*.popq").Any();
+                }
                 configurationModel.IsProcessed = found;
                 configurationModel.ParametersName = configurationName;
 
@@ -359,9 +359,16 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 process.OutputDataReceived += (_, e) =>
                 {
-                    if (string.IsNullOrWhiteSpace(e.Data)) return;
+                    if (string.IsNullOrWhiteSpace(e.Data) || e.Data.Contains("Press return to exit", StringComparison.OrdinalIgnoreCase)) return;
 
-                    _logger.Info($"[K={job.K}] {e.Data}");
+                    if (e.Data.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.Error($"[K={job.K}] {e.Data}");
+                    }
+                    else
+                    {
+                        _logger.Info($"[K={job.K}] {e.Data}");
+                    }
 
                     if (e.Data.StartsWith("The highest value of H", StringComparison.OrdinalIgnoreCase)
                         || e.Data.StartsWith("The highest value of G", StringComparison.OrdinalIgnoreCase))

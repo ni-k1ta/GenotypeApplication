@@ -14,6 +14,7 @@ using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -133,7 +134,7 @@ namespace GenotypeApplication.View_models
                 {
                     if (_distructCompleted || DistructStopped) return;
                     DistructProgress = value;
-                    DistructProgressText = $"[{_savedConfigurationName}] In progress... {value:F0}%";
+                    DistructProgressText = $"[{CurrentSet?.Name}|{_savedConfigurationName}] In progress... {value:F0}%";
                 });
             };
         }
@@ -165,8 +166,8 @@ namespace GenotypeApplication.View_models
         public string ConfigurationName
         {
             get => _parametersName;
-            set 
-            { 
+            set
+            {
                 if (SetField(ref _parametersName, value))
                     _parameterNameValidator.Validate(value);
             }
@@ -174,8 +175,8 @@ namespace GenotypeApplication.View_models
         public string INFILE_LABEL_ATOP //
         {
             get => _infile_label_atop;
-            set 
-            { 
+            set
+            {
                 if (SetField(ref _infile_label_atop, value))
                     _pathValidator.Validate(value);
             }
@@ -183,8 +184,8 @@ namespace GenotypeApplication.View_models
         public string INFILE_LABEL_BELOW //
         {
             get => _infile_label_below;
-            set 
-            { 
+            set
+            {
                 if (SetField(ref _infile_label_below, value))
                     _pathValidator.Validate(value);
             }
@@ -727,10 +728,18 @@ namespace GenotypeApplication.View_models
         }
         protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
         {
-            if (configuration == null || CurrentSet == null || !CurrentSet.IsDistructProcessed || !configuration.IsProcessed || !configuration.HasPopResults) return;
+            if (configuration == null || CurrentSet == null || !CurrentSet.IsDistructProcessed || !configuration.IsProcessed || !configuration.HasPopResults)
+            {
+                _savedConfigurationParametersItems.Clear();
+                RebuildConfigurationParametersItems();
+                SelectedConfigurationParameters = ConfigurationParametersItems.LastOrDefault();
+                ConfigurationName = string.Empty;
+                return;
+            }
 
             var setName = CurrentSet.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+            ConfigurationName = string.Empty;
 
             try
             {
@@ -742,6 +751,12 @@ namespace GenotypeApplication.View_models
                     _savedConfigurationParametersItems.Add(config);
 
                 RebuildConfigurationParametersItems();
+            }
+            catch (ActiveDirectoryObjectExistsException)
+            {
+                _savedConfigurationParametersItems.Clear();
+                RebuildConfigurationParametersItems();
+                SelectedConfigurationParameters = ConfigurationParametersItems.LastOrDefault();
             }
             catch (Exception ex)
             {
@@ -774,7 +789,7 @@ namespace GenotypeApplication.View_models
 
                     UIDispatcherHelper.RunOnUI(() =>
                     {
-                        DistructProgressText = $"[{_savedConfigurationName}] Not started";
+                        DistructProgressText = $"[{CurrentSet?.Name}|{_savedConfigurationName}] Not started";
                         DistructProgress = 0;
                     });
                     DistructStopped = false;
@@ -787,7 +802,7 @@ namespace GenotypeApplication.View_models
                 UIDispatcherHelper.RunOnUI(() =>
                 {
                     DistructProgress = 100;
-                    DistructProgressText = $"[{_savedConfigurationName}] Completed";
+                    DistructProgressText = $"[{CurrentSet?.Name}|{_savedConfigurationName}] Completed";
                 });
                 DistructStopped = false;
                 _distructCompleted = true;
@@ -958,7 +973,7 @@ namespace GenotypeApplication.View_models
                 DistructStopped = false;
 
                 DistructProgress = 0;
-                DistructProgressText = $"[{_savedConfigurationName}] In progress... 0%";
+                DistructProgressText = $"[{setName}|{_savedConfigurationName}] In progress... 0%";
 
                 await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, INFILE_CLUST_PERM, _clusterColorItems, GRAYSCALE, _coresCount);
                 _distructCompleted = true;
@@ -968,11 +983,11 @@ namespace GenotypeApplication.View_models
                 RebuildKForExportItems(KFrom, KTo);
 
                 DistructProgress = 100;
-                DistructProgressText = $"[{_savedConfigurationName}] Completed";
+                DistructProgressText = $"[{setName}|{_savedConfigurationName}] Completed";
             }
             catch (OperationCanceledException)
             {
-                DistructProgressText = $"[{_savedConfigurationName}] Stopped at {DistructProgress:F0}%";
+                DistructProgressText = $"[{setName}|{_savedConfigurationName}] Stopped at {DistructProgress:F0}%";
             }
             catch (Exception ex)
             {
@@ -999,7 +1014,7 @@ namespace GenotypeApplication.View_models
         private void StopDistruct()
         {
             DistructStopped = true;
-            DistructProgressText = $"[{_savedConfigurationName}] Stopping...";
+            DistructProgressText = $"[{CurrentSet?.Name}|{_savedConfigurationName}] Stopping...";
             _distructInteractionService.StopExecution();
         }
         private bool CanStopDistruct()

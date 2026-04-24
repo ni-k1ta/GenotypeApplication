@@ -658,6 +658,7 @@ namespace GenotypeApplication.View_models
                     else if (value != null)
                     {
                         CurrentSet = value;
+                        SetName = value.Name;
                     }
                 }
             }
@@ -681,7 +682,7 @@ namespace GenotypeApplication.View_models
             var newStructureExtraParameters = new StructureExtraParametersModel();
 
             SetName = string.Empty;
-            SetMainParameters(newStructureMainParameters);
+            SetMainParameters(newStructureMainParameters, DataFileName);
             SetExtraParameters(newStructureExtraParameters);
 
             KFrom = 1;
@@ -751,14 +752,17 @@ namespace GenotypeApplication.View_models
             catch (DirectoryNotFoundException dnfe)
             {
                 _messageService.ShowError($"Failed to load Structure parameters. {dnfe.Message}");
+                _wasSaved = false;
             }
             catch (FileNotFoundException fnfe)
             {
                 _messageService.ShowError($"Failed to load Structure parameters. {fnfe.Message}");
+                _wasSaved = false;
             }
             catch (Exception ex)
             {
                 _messageService.ShowError($"Failed to load Structure parameters. {ex.Message}");
+                _wasSaved = false;
             }
         }
         private async Task LoadDataFile()
@@ -798,7 +802,7 @@ namespace GenotypeApplication.View_models
 
                 var dataFileFullPath = DataFileFullPath;
 
-                if (string.IsNullOrWhiteSpace(dataFileFullPath) || !_dataFileFormatChangesTracker.HasChanges(DataFileFormatModel)) return;
+                if (string.IsNullOrWhiteSpace(dataFileFullPath)) return;
                 var dataFileFormatModel = DataFileFormatModel;
 
                 string fullNewSetFolderPath = Path.Combine(_fullProjectFolderPath, newSetName);
@@ -853,6 +857,7 @@ namespace GenotypeApplication.View_models
 
                    (_mainParametersChangesTracker.HasChanges(mainParameters) ||
                    _extraParametersChangesTracker.HasChanges(extraParameters) ||
+                   _dataFileFormatChangesTracker.HasChanges(DataFileFormatModel) ||
                    CurrentSet?.Name != SetName ||
                    _isNewDataFile) &&
 
@@ -964,7 +969,7 @@ namespace GenotypeApplication.View_models
             int iterations = Iterations;
 
             var setName = CurrentSet.Name;
-            var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+            var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
             try
             {
@@ -977,10 +982,11 @@ namespace GenotypeApplication.View_models
                 StructureProgress = 0;
                 StructureProgressText = $"[{setName}] In progress... 0%";
 
-                await _structureInteractionService.StartExecution(kFrom, kTo, iterations, fullSetFolderPath, _coresCount);
+                await _structureInteractionService.StartExecution(kFrom, kTo, iterations, fullCurrentSetFolderPath, _coresCount);
 
                 _structureCompleted = true;
                 WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
+                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
                 WorkflowState.SetPredefinedStructureParameters(iterations, kFrom, kTo, dataFileFormatModel.NumInds);
 
                 StructureProgress = 100;
@@ -1091,9 +1097,9 @@ namespace GenotypeApplication.View_models
             };
         }
 
-        private void SetMainParameters(StructureMainParametersModel mainParameters)
+        private void SetMainParameters(StructureMainParametersModel mainParameters, string? dataFileName = null)
         {
-            DataFileName = mainParameters.INFILE;
+            DataFileName = string.IsNullOrWhiteSpace(dataFileName) ? mainParameters.INFILE : dataFileName;
             //OUTFILE = "outfile_" - константа
             BurnInParam = mainParameters.BURNIN;
             NumRepsParam = mainParameters.NumReps;

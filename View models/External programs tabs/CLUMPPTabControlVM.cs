@@ -143,7 +143,7 @@ namespace GenotypeApplication.View_models
                 {
                     if (_clumppCompleted || CLUMPPStopped) return;
                     CLUMPPProgress = value;
-                    CLUMPPProgressText = $"[{_configurationName}] In progress... {value:F0}%";
+                    CLUMPPProgressText = $"[{CurrentSet?.Name}|{_configurationName}] In progress... {value:F0}%";
                 });
             };
         }
@@ -338,6 +338,7 @@ namespace GenotypeApplication.View_models
                     else if (value != null)
                     {
                         CurrentCLUMPPConfigurationModel = value;
+                        ConfigurationName = value.ParametersName;
                     }
                 }
             }
@@ -383,6 +384,7 @@ namespace GenotypeApplication.View_models
             var newConfiguration = new CLUMPPConfigurationModel();
 
             ConfigurationName = string.Empty;
+            newConfiguration.R = PredefinedIterationsLimit;
             SetConfigurationParameters(newConfiguration, false, PredefinedPopCount, false, PredefinedIndvCount);
 
             KFrom = PredefinedStructureKStart;
@@ -391,10 +393,17 @@ namespace GenotypeApplication.View_models
 
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
-            if (set == null || !set.IsCLUMPPProcessed) return;
+            if (set == null || !set.IsCLUMPPProcessed)
+            {
+                WorkflowState.CLUMPPConfigurationModelsList.Clear();
+                ConfigurationName = string.Empty;
+                SelectedComboBoxConfigurationParameters = ConfigurationParametersComboBoxList.LastOrDefault();
+                return;
+            }
 
             var setName = set.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
+            ConfigurationName = string.Empty;
 
             try
             {
@@ -410,7 +419,6 @@ namespace GenotypeApplication.View_models
         protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
         {
             if (configuration == null || CurrentSet == null) return;
-            if (!configuration.IsProcessed) return;
 
             var setName = CurrentSet.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
@@ -439,7 +447,7 @@ namespace GenotypeApplication.View_models
 
                     UIDispatcherHelper.RunOnUI(() =>
                     {
-                        CLUMPPProgressText = $"[{_configurationName}] Not started";
+                        CLUMPPProgressText = $"[{CurrentSet?.Name}|{_configurationName}] Not started";
                         CLUMPPProgress = 0;
                     });
                     CLUMPPStopped = false;
@@ -452,7 +460,7 @@ namespace GenotypeApplication.View_models
                 UIDispatcherHelper.RunOnUI(() =>
                 {
                     CLUMPPProgress = 100;
-                    CLUMPPProgressText = $"[{_configurationName}] Completed";
+                    CLUMPPProgressText = $"[{CurrentSet?.Name}|{_configurationName}] Completed";
                 });
                 CLUMPPStopped = false;
                 _clumppCompleted = true;
@@ -648,7 +656,7 @@ namespace GenotypeApplication.View_models
                     await _clumppInteractionService.RenameConfiguration(fullCurrentSetFolderPath, CurrentCLUMPPConfigurationModel.ParametersName, configurationModel.ParametersName);
                 }
 
-                if (_changesTracker.HasChanges(configurationModel))
+                if (_changesTracker.HasChanges(configurationModel) || _savedDataTypeParameters != (isPop, PopsCount, isIndv, IndvsCount))
                 {
                     if (CurrentCLUMPPConfigurationModel.IsProcessed)
                     {
@@ -715,7 +723,7 @@ namespace GenotypeApplication.View_models
                 CLUMPPStopped = false;
 
                 CLUMPPProgress = 0;
-                CLUMPPProgressText = $"[{_configurationName}] In progress... 0%";
+                CLUMPPProgressText = $"[{setName}|{_configurationName}] In progress... 0%";
 
                 await _clumppInteractionService.StartExecution(configurationName, isPop, isIndv, kFrom, kTo, fullCurrentSetFolderPath, _coresCount);
 
@@ -730,13 +738,13 @@ namespace GenotypeApplication.View_models
                 WorkflowState.MarkCLUMPPConfigurationProcessed(CurrentCLUMPPConfigurationModel, hasPopResults);
 
                 CLUMPPProgress = 100;
-                CLUMPPProgressText = $"[{_configurationName}] Completed";
+                CLUMPPProgressText = $"[{setName}|{_configurationName}] Completed";
 
                 _userSure = false;
             }
             catch (OperationCanceledException)
             {
-                CLUMPPProgressText = $"[{_configurationName}] Stopped at {CLUMPPProgress:F0}%";
+                CLUMPPProgressText = $"[{setName}|{_configurationName}] Stopped at {CLUMPPProgress:F0}%";
             }
             catch (Exception ex)
             {
@@ -764,7 +772,7 @@ namespace GenotypeApplication.View_models
         private void StopCLUMPP()
         {
             CLUMPPStopped = true;
-            CLUMPPProgressText = $"[{_configurationName}] Stopping...";
+            CLUMPPProgressText = $"[{CurrentSet?.Name}|{_configurationName}] Stopping...";
             _clumppInteractionService.StopExecution();
         }
         private bool CanStopCLUMPP()

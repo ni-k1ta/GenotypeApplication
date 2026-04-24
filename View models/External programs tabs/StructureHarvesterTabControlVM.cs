@@ -206,7 +206,8 @@ namespace GenotypeApplication.View_models
                 StructureHarvesterProgressText = $"[{setName}] In progress...";
                 await _structureHarvesterInteractionService.StartExecution(fullCurrentSetFolderPath, evannoParam, clumppOutputParam);
 
-                WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
+                if (clumppOutputParam)
+                    WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
 
                 await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
 

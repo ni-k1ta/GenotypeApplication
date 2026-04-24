@@ -79,7 +79,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
             var sortedUnique = frequency.Keys.OrderBy(k => k).ToList();
             int expectedRange = sortedUnique.Last() - sortedUnique.First() + 1;
             double continuityRatio = (double)uniqueCount / expectedRange;
-            if (continuityRatio < 0.7) return false;
+            if (continuityRatio < 0.45) return false;
 
             int singletonCount = frequency.Count(kvp => kvp.Value == 1);
             double singletonRatio = (double)singletonCount / uniqueCount;

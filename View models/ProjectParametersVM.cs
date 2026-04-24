@@ -2,17 +2,13 @@
 using GenotypeApplication.Interfaces;
 using GenotypeApplication.Interfaces.MVVM;
 using GenotypeApplication.Models.Project;
-using GenotypeApplication.Models.Structure;
 using GenotypeApplication.MVVM.Infrastructure;
-using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Project;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
-
-//todo пару EXCEPTION и привести СТИЛЬ для окна к общему и всё это ПРОТЕСТИРОВАТЬ. Дальше нужно реализовать открытие следующего окна и двигаться по логике остального приложения
 
 namespace GenotypeApplication.View_models
 {
@@ -427,7 +423,6 @@ namespace GenotypeApplication.View_models
                 if (!_isNewProject)
                 {
                     await mainWindowViewModel.LoadProjectSets();
-                    _isNewProject = false;
                 }
 
                 var mainWindow = _windowService.ShowWindow<MainWindow, MainWindowVM>(mainWindowViewModel);
@@ -435,9 +430,11 @@ namespace GenotypeApplication.View_models
 
                 Application.Current.MainWindow = mainWindow;
 
+                _isNewProject = false;
+
                 if (_currentWindowRef != null && _currentWindowRef.TryGetTarget(out var window))
                 {
-                    window.Hide(); // скрываем вместо закрытия
+                    window.Hide();
 
                     mainWindow.Closed += (s, e) =>
                     {
@@ -492,7 +489,7 @@ namespace GenotypeApplication.View_models
         }
         private async Task<bool> UpdateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
         {
-            ProjectParametersModel oldProjectModel = _projectModel;
+            ProjectParametersModel oldProjectModel = new(_projectModel);
 
             if (oldProjectModel.Name != projectName || oldProjectModel.Path != projectPath)
             {

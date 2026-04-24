@@ -50,7 +50,7 @@ namespace GenotypeApplication.Models.Project
         }
         public SetModel CreateNewSet(string name)
         {
-            var newSet = new SetModel { Name = name };
+            var newSet = new SetModel { Name = name, IsCurrent = true };
             SetModelsList.Add(newSet);
             return newSet;
         }

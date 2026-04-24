@@ -114,7 +114,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 var inputFileName = Directory.GetFiles(fullStructureFolderPath).Select(Path.GetFileName).FirstOrDefault(name => string.Equals(name, structureMainParametersModel.INFILE, StringComparison.OrdinalIgnoreCase));
 
-                if (string.IsNullOrEmpty(inputFileName)) 
+                if (string.IsNullOrEmpty(inputFileName))
                     throw new FileNotFoundException($"Input data file was not found in structure folder \"{fullStructureFolderPath}\".");
 
                 var fullInputFilePath = Path.Combine(fullStructureFolderPath, inputFileName);
@@ -292,11 +292,13 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                Debug.WriteLine($"Started [K={k}, i={iteration}] PID={process.Id}");
-
                 await process.WaitForExitAsync(ct);
 
-                Debug.WriteLine($"Finished [K={k}, i={iteration}] ExitCode={process.ExitCode}");
+                if (process.ExitCode != 0)
+                {
+                    _cts?.Cancel();
+                    _logger.Error($"Error on [K={k}, i={iteration}] step. ExitCode={process.ExitCode}. Execution has been stopped.");
+                }
 
                 var (completed, total) = reportProgress();
 
@@ -311,7 +313,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                     _logger.Error($"Failed to kill Structure process: K={k}, Iteration={iteration} {ex.Message}");
+                    _logger.Error($"Failed to kill Structure process: K={k}, Iteration={iteration} {ex.Message}");
                 }
 
                 throw;
