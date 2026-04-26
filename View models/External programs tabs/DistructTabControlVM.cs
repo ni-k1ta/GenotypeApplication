@@ -137,6 +137,19 @@ namespace GenotypeApplication.View_models
                     DistructProgressText = $"[{CurrentSet?.Name}|{_savedConfigurationName}] In progress... {value:F0}%";
                 });
             };
+
+            //workflowState.NewSetCreated += ResetProgress;
+        }
+
+        protected override void ResetProgress()
+        {
+            UIDispatcherHelper.RunOnUI(() =>
+            {
+                DistructProgress = 0;
+                DistructProgressText = "Not started";
+            });
+            DistructStopped = false;
+            DistructCompleted = false;
         }
 
         private void OnLimitedValuesChanged(object? sender, PropertyChangedEventArgs e)
@@ -730,7 +743,20 @@ namespace GenotypeApplication.View_models
         #region Load parameters methods
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
-            return;
+            if (set == null || !set.IsDistructProcessed)
+            {
+                ResetProgress();
+            }
+            else
+            {
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    DistructProgress = 0;
+                    DistructProgressText = "Choose configuration...";
+                });
+                DistructStopped = false;
+                DistructCompleted = false;
+            }
         }
         protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
         {
@@ -757,6 +783,14 @@ namespace GenotypeApplication.View_models
                     _savedConfigurationParametersItems.Add(config);
 
                 RebuildConfigurationParametersItems();
+
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    DistructProgress = 0;
+                    DistructProgressText = "Choose configuration...";
+                });
+                DistructStopped = false;
+                DistructCompleted = false;
             }
             catch (ActiveDirectoryObjectExistsException)
             {

@@ -183,7 +183,20 @@ namespace GenotypeApplication.View_models
                 });
             };
 
+            //workflowStateModel.NewSetCreated += ResetProgress;
+
             _windowService = windowService;
+        }
+
+        protected override void ResetProgress()
+        {
+            UIDispatcherHelper.RunOnUI(() =>
+            {
+                StructureProgress = 0;
+                StructureProgressText = $"Not started";
+            });
+            StructureStopped = false;
+            _structureCompleted = false;
         }
 
         #region Data file properties
@@ -697,8 +710,11 @@ namespace GenotypeApplication.View_models
 
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
-            if (set == null) return;
-            if (!set.IsStructureProcessed) return;
+            if (set == null || !set.IsStructureProcessed)
+            {
+                ResetProgress();
+                return;
+            }
 
             var setName = set.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
@@ -886,8 +902,12 @@ namespace GenotypeApplication.View_models
 
                 await _structureInteractionService.PrepareParameterFiles(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
 
-                WorkflowState.CurrentSet = newSet;
+                CurrentSet = null;
+
                 SetField(ref _selectedComboBoxSet, newSet, nameof(SelectedComboBoxSet));
+                WorkflowState.CurrentSet = newSet;
+
+                //WorkflowState.NotifyNewSetCreated();
 
                 _messageService.ShowInformation($"Set \"{newSetName}\" was successfully created.");
             }

@@ -163,5 +163,13 @@ namespace GenotypeApplication.Models.Project
         {
             PredifinedPopCountChanged?.Invoke(popCount);
         }
+
+
+
+        //public event Action? NewSetCreated;
+        //public void NotifyNewSetCreated()
+        //{
+        //    NewSetCreated?.Invoke();
+        //}
     }
 }

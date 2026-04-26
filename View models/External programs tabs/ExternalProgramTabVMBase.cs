@@ -133,7 +133,12 @@ namespace GenotypeApplication.View_models.External_programs_tabs
 
         private void OnCurrentSetChanged(SetModel? newSet)
         {
-            if (newSet != null && !newSet.IsAvailableForStage(ProcessingStage)) return;
+            if (newSet != null && !newSet.IsAvailableForStage(ProcessingStage))
+            {
+                SetField(ref _currentSet, null, nameof(CurrentSet));
+                ResetProgress();
+                return;
+            }
 
             _isSyncing = true;
             CurrentSet = newSet;
@@ -142,6 +147,7 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             var setName = newSet?.Name;
             _logger.ChangeSet(setName);
         }
+        protected abstract void ResetProgress();
 
         protected virtual bool IsValidSet(SetModel set)
         {

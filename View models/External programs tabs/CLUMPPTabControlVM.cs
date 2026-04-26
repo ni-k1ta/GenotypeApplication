@@ -146,6 +146,19 @@ namespace GenotypeApplication.View_models
                     CLUMPPProgressText = $"[{CurrentSet?.Name}|{_configurationName}] In progress... {value:F0}%";
                 });
             };
+
+            //workflowState.NewSetCreated += ResetProgress;
+        }
+
+        protected override void ResetProgress()
+        {
+            UIDispatcherHelper.RunOnUI(() =>
+            {
+                CLUMPPProgress = 0;
+                CLUMPPProgressText = $"Not started";
+            });
+            CLUMPPStopped = false;
+            CLUMPPCompleted = false;
         }
 
         private void OnLimitedValuesChanged(object? sender, PropertyChangedEventArgs e)
@@ -404,6 +417,8 @@ namespace GenotypeApplication.View_models
                 WorkflowState.CLUMPPConfigurationModelsList.Clear();
                 ConfigurationName = string.Empty;
                 SelectedComboBoxConfigurationParameters = ConfigurationParametersComboBoxList.LastOrDefault();
+
+                ResetProgress();
                 return;
             }
 
@@ -416,6 +431,14 @@ namespace GenotypeApplication.View_models
                 var configurations = await _clumppInteractionService.LoadConfigurationsListAsync(fullSetFolderPath);
 
                 WorkflowState.LoadCLUMPPConfigurationModelsList(configurations);
+
+                UIDispatcherHelper.RunOnUI(() =>
+                {
+                    CLUMPPProgress = 0;
+                    CLUMPPProgressText = $"Choose configuration...";
+                });
+                CLUMPPStopped = false;
+                CLUMPPCompleted = false;
             }
             catch (Exception ex)
             {

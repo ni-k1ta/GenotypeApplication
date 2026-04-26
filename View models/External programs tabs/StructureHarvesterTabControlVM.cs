@@ -36,7 +36,7 @@ namespace GenotypeApplication.View_models
         #endregion
 
         private readonly StructureHarvesterInteractionService _structureHarvesterInteractionService;
-        
+
         #region Progress parameters
         private double _structureHarvesterProgress;
         public double StructureHarvesterProgress
@@ -51,7 +51,7 @@ namespace GenotypeApplication.View_models
             get => _structureHarvesterProgressText;
             set { SetField(ref _structureHarvesterProgressText, value); }
         }
-        
+
         private bool _structureHarvesterIsIndeterminate;
         public bool StructureHarvesterIsIndeterminate
         {
@@ -72,8 +72,20 @@ namespace GenotypeApplication.View_models
             workflowStateModel.SetModelsList.CollectionChanged += (_, _) => RebuildGraphComboBoxItems();
             RebuildGraphComboBoxItems();
 
+            //workflowStateModel.NewSetCreated += ResetProgress;
+
             _evannoParser = new();
             _chartService = new();
+        }
+
+        protected override void ResetProgress()
+        {
+            UIDispatcherHelper.RunOnUI(() =>
+            {
+                StructureHarvesterProgress = 0;
+                StructureHarvesterProgressText = "Not started";
+                StructureHarvesterIsIndeterminate = false;
+            });
         }
 
         #region Arguments parameters properties
@@ -155,8 +167,11 @@ namespace GenotypeApplication.View_models
 
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
-            if (set == null) return;
-            if (!set.IsStructureHarvesterProcessed) return;
+            if (set == null || !set.IsStructureHarvesterProcessed)
+            {
+                ResetProgress();
+                return;
+            }
 
             var setName = set.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);

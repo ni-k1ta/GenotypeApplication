@@ -921,7 +921,7 @@
                                             <xctk:IntegerUpDown x:Name="preburninLengthIntUpDown"
                                                                 DockPanel.Dock="Right"
                                                                 Minimum="0"
-                                                                Maximum="100"
+                                                                Maximum="{Binding BurnInParam, UpdateSourceTrigger=PropertyChanged}"
                                                                 Increment="1"
                                                                 Value="{Binding AdmBurnInParam, UpdateSourceTrigger=PropertyChanged}" />
                                         </DockPanel>
