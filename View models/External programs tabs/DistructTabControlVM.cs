@@ -655,6 +655,10 @@ namespace GenotypeApplication.View_models
             get => _selectedConfigurationParameters;
             set
             {
+                if (IsRunning)
+                {
+                    return;
+                }
                 if (SetField(ref _selectedConfigurationParameters, value))
                 {
                     if (value == CreateNewSetPlaceholder)
@@ -664,6 +668,8 @@ namespace GenotypeApplication.View_models
                         _isCreatingNewConfiguration = true;
                         _wasSaved = false;
                         ConfigurationName = string.Empty;
+
+                        _selectedConfigurationParameters = null;
                     }
                     else if (value != null)
                     {
@@ -964,7 +970,8 @@ namespace GenotypeApplication.View_models
             var configurationName = _savedConfigurationName;
             var clumppConfigurationName = CurrentCLUMPPConfigurationModel.ParametersName;
 
-            var setName = CurrentSet.Name;
+            var currentSet = CurrentSet;
+            var setName = currentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
             try
@@ -974,12 +981,13 @@ namespace GenotypeApplication.View_models
 
                 DistructProgress = 0;
                 DistructProgressText = $"[{setName}|{_savedConfigurationName}] In progress... 0%";
+                IsRunning = true;
 
                 await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, INFILE_CLUST_PERM, _clusterColorItems, GRAYSCALE, _coresCount);
                 _distructCompleted = true;
 
-                WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
-                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
+                WorkflowState.MarkProcessedAndRefreshStage(currentSet, ProcessingStage);
+                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, currentSet);
                 RebuildKForExportItems(KFrom, KTo);
 
                 DistructProgress = 100;
@@ -998,6 +1006,7 @@ namespace GenotypeApplication.View_models
             finally
             {
                 StopDistructCommand.NotifyCanExecuteChanged();
+                IsRunning = false;
             }
         }
         private bool CanStartDistruct()

@@ -9,7 +9,7 @@
         mc:Ignorable="d"
         Title="Project configuration"
         Height="415"
-        Width="631"
+        Width="622"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         WindowStartupLocation="CenterScreen"
@@ -25,13 +25,11 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Vertical"
@@ -58,9 +56,10 @@
                           VerticalAlignment="Bottom">
                     <Grid Width="173">
                         <TextBox x:Name="projectNameTextBox"
+                                 Width="173"
                                  Text="{Binding ProjectName,
                                         ValidatesOnNotifyDataErrors=True,
-                                        UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Stretch"/>
+                                        UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left"/>
 
                         <TextBlock Text="Project name"
                                    Foreground="LightGray"
@@ -286,7 +285,7 @@
 
         <Button x:Name="doneProjectOptionsButton"
                 Content="Done"
-                Grid.Column="0"
+                Grid.Column="1"
                 Grid.Row="1"
                 HorizontalAlignment="Right"
                 Style="{StaticResource Rounded}"
@@ -294,7 +293,7 @@
 
         <GroupBox x:Name="projectInformationGroupBox"
                   Header="Project information"
-                  Margin="5,0,5,0"
+                  Margin="5,0,0,0"
                   Width="300"
                   VerticalAlignment="Stretch"
                   Grid.Row="0"

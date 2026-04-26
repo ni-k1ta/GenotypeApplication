@@ -18,6 +18,9 @@ namespace GenotypeApplication.Models.Project
             _projectExplorer = projectExplorer;
         }
 
+        // Функция проверки — устанавливается снаружи
+        public Func<bool>? CanChangeActiveSet { get; set; }
+
         public ObservableCollection<SetModel> SetModelsList => _setModelsList;
         public SetModel? CurrentSet
         {
@@ -25,6 +28,12 @@ namespace GenotypeApplication.Models.Project
             set
             {
                 if (_currentSet == value) return;
+
+                if (CanChangeActiveSet != null && !CanChangeActiveSet())
+                {
+                    ActiveSetChangeBlocked?.Invoke();
+                    return;
+                }
 
                 if (_currentSet != null) _currentSet.IsCurrent = false;
 
@@ -37,6 +46,9 @@ namespace GenotypeApplication.Models.Project
                 _projectExplorer.SetName = value?.Name;
             }
         }
+
+        // Событие для уведомления UI о блокировке
+        public event Action? ActiveSetChangeBlocked;
 
         public event Action<SetModel?>? CurrentSetChanged;
         public event Action? StateRefreshed;

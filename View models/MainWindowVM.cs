@@ -55,6 +55,15 @@ namespace GenotypeApplication.View_models
             StructureHarvesterTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath, _setService, dialogService, directoryService, fileService, messageService, pathValidator, parameterNameValidator, Logger, _kRangeValidator);
             CLUMPPTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath, _setService, dialogService, directoryService, fileService, messageService, pathValidator, parameterNameValidator, Logger, _kRangeValidator);
             DistructTabControlVM = new(_workflowStateModel, coresCount, fullProjectFolderPath, _setService, dialogService, directoryService, fileService, messageService, pathValidator, parameterNameValidator, Logger, _kRangeValidator, windowService);
+
+            _workflowStateModel.CanChangeActiveSet = () =>
+                !StructureTabControlVM.IsRunning &&
+                !StructureHarvesterTabControlVM.IsRunning &&
+                !CLUMPPTabControlVM.IsRunning &&
+                !DistructTabControlVM.IsRunning;
+
+            _workflowStateModel.ActiveSetChangeBlocked += () =>
+                _messageService.ShowWarning("Cannot switch Set while processing is running.");
         }
 
         public ProjectExplorerViewModel ProjectExplorer { get => _projectExplorer; }

@@ -47,7 +47,13 @@ namespace GenotypeApplication.View_models.External_programs_tabs
         public bool CLUMPPConfigurationEnabled => CurrentSet != null && CurrentCLUMPPConfigurationModel != null;
         public ICollectionView FilteredSetModelsList { get; }
 
-
+        // Каждая вкладка знает, запущено ли у неё приложение
+        private bool _isRunning = false;
+        public bool IsRunning
+        {
+            get => _isRunning;
+            set => SetField(ref _isRunning, value);
+        }
 
         protected CLUMPPConfigurationModel? _currentCLUMPPConfigurationModel;
         private bool _isSyncingCLUMPPConfiguration; // защита от циклов

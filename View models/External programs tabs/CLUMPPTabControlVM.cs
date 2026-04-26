@@ -325,6 +325,10 @@ namespace GenotypeApplication.View_models
             get => _selectedComboBoxConfigurationParameters;
             set
             {
+                if (IsRunning)
+                {
+                    return;
+                }
                 if (SetField(ref _selectedComboBoxConfigurationParameters, value))
                 {
                     if (value == _createNewSetPlaceholder)
@@ -334,8 +338,10 @@ namespace GenotypeApplication.View_models
                         _isCreatingNewConfiguration = true;
                         _wasSaved = false;
                         ConfigurationName = string.Empty;
+
+                        _currentCLUMPPConfigurationModel = null;
                     }
-                    else if (value != null)
+                    else if (value != null) 
                     {
                         CurrentCLUMPPConfigurationModel = value;
                         ConfigurationName = value.ParametersName;
@@ -714,7 +720,8 @@ namespace GenotypeApplication.View_models
                 if (result == false) return;
             }
 
-            var setName = CurrentSet.Name;
+            var currentSet = CurrentSet;
+            var setName = currentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
             try
@@ -724,12 +731,13 @@ namespace GenotypeApplication.View_models
 
                 CLUMPPProgress = 0;
                 CLUMPPProgressText = $"[{setName}|{_configurationName}] In progress... 0%";
+                IsRunning = true;
 
                 await _clumppInteractionService.StartExecution(configurationName, isPop, isIndv, kFrom, kTo, fullCurrentSetFolderPath, _coresCount);
 
                 _clumppCompleted = true;
-                WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
-                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
+                WorkflowState.MarkProcessedAndRefreshStage(currentSet, ProcessingStage);
+                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, currentSet);
 
                 WorkflowState.SetPredefinedCLUMPPParameters(kFrom, kTo);
 
@@ -755,6 +763,7 @@ namespace GenotypeApplication.View_models
             finally
             {
                 StopCLUMPPCommand.NotifyCanExecuteChanged();
+                IsRunning = false;
             }
         }
         private bool CanStartCLUMPP()

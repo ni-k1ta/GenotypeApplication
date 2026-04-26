@@ -10,8 +10,7 @@ namespace GenotypeApplication.Services.MVVM
         private static readonly OxyColor MarkerColor = OxyColors.SteelBlue;
         private static readonly OxyColor ErrorBarColor = OxyColors.Black;
 
-        public (PlotModel MeanLnPK, PlotModel LnPrimeK, PlotModel LnDoublePrimeK, PlotModel DeltaK)
-            BuildCharts(List<EvannoParametersModel> data)
+        public (PlotModel MeanLnPK, PlotModel LnPrimeK, PlotModel LnDoublePrimeK, PlotModel DeltaK) BuildCharts(List<EvannoParametersModel> data)
         {
             return (
                 BuildMeanLnPKPlot(data),
@@ -138,7 +137,14 @@ namespace GenotypeApplication.Services.MVVM
                 MinimumMajorStep = 1,
                 StringFormat = "0",
                 MinimumPadding = 0.05,
-                MaximumPadding = 0.05
+                MaximumPadding = 0.05,
+
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColor.FromArgb(60, 0, 0, 0),
+                MajorGridlineThickness = 0.75,
+                MinorGridlineStyle = LineStyle.Dot,
+                MinorGridlineColor = OxyColor.FromArgb(30, 0, 0, 0),
+                MinorGridlineThickness = 0.5
             });
 
             model.Axes.Add(new LinearAxis
@@ -146,7 +152,16 @@ namespace GenotypeApplication.Services.MVVM
                 Position = AxisPosition.Left,
                 Title = yTitle,
                 MinimumPadding = 0.05,
-                MaximumPadding = 0.05
+                MaximumPadding = 0.05,
+
+                IntervalLength = 30,
+
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColor.FromArgb(60, 0, 0, 0),
+                MajorGridlineThickness = 0.75,
+                MinorGridlineStyle = LineStyle.Dot,
+                MinorGridlineColor = OxyColor.FromArgb(30, 0, 0, 0),
+                MinorGridlineThickness = 0.5
             });
 
             return model;

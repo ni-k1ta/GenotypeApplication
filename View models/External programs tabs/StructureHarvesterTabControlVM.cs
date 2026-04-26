@@ -192,7 +192,8 @@ namespace GenotypeApplication.View_models
         {
             if (CurrentSet == null) return;
 
-            var setName = CurrentSet.Name;
+            var currentSet = CurrentSet;
+            var setName = currentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
             try
@@ -204,12 +205,13 @@ namespace GenotypeApplication.View_models
 
                 StructureHarvesterIsIndeterminate = true;
                 StructureHarvesterProgressText = $"[{setName}] In progress...";
+                IsRunning = true;
                 await _structureHarvesterInteractionService.StartExecution(fullCurrentSetFolderPath, evannoParam, clumppOutputParam);
 
                 if (clumppOutputParam)
-                    WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
+                    WorkflowState.MarkProcessedAndRefreshStage(currentSet, ProcessingStage);
 
-                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
+                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, currentSet);
 
                 var popCount = _structureHarvesterInteractionService.GetPopulationsCountFromResults(fullCurrentSetFolderPath);
                 if (popCount > 0) WorkflowState.SetPredefinedPopCount(popCount);
@@ -221,6 +223,10 @@ namespace GenotypeApplication.View_models
             {
                 _messageService.ShowError($"An error occurred while running Structure Harvester for set {setName}. {ex.Message}. See logs for details.");
                 StructureHarvesterProgressText = $"[{setName}] Stopped by error.";
+            }
+            finally
+            {
+                IsRunning = false;
             }
         }
         private bool CanStartStructureHarvester()

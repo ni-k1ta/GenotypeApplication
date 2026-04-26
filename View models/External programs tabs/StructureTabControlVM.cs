@@ -12,6 +12,8 @@ using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Runtime.Serialization;
+using System.Windows;
 using System.Windows.Input;
 
 namespace GenotypeApplication.View_models
@@ -645,6 +647,7 @@ namespace GenotypeApplication.View_models
             get => _selectedComboBoxSet;
             set
             {
+                if (IsRunning) { return; }
                 if (SetField(ref _selectedComboBoxSet, value))
                 {
                     if (value == _createNewSetPlaceholder)
@@ -654,6 +657,8 @@ namespace GenotypeApplication.View_models
                         _isCreatingNewSet = true;
                         SetName = string.Empty;
                         _wasSaved = false;
+
+                        _currentSet = null;
                     }
                     else if (value != null)
                     {
@@ -968,7 +973,8 @@ namespace GenotypeApplication.View_models
             int kTo = KTo;
             int iterations = Iterations;
 
-            var setName = CurrentSet.Name;
+            var currentSet = CurrentSet;
+            var setName = currentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
             try
@@ -982,11 +988,13 @@ namespace GenotypeApplication.View_models
                 StructureProgress = 0;
                 StructureProgressText = $"[{setName}] In progress... 0%";
 
+                IsRunning = true;
+
                 await _structureInteractionService.StartExecution(kFrom, kTo, iterations, fullCurrentSetFolderPath, _coresCount);
 
                 _structureCompleted = true;
-                WorkflowState.MarkProcessedAndRefreshStage(CurrentSet, ProcessingStage);
-                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, CurrentSet);
+                WorkflowState.MarkProcessedAndRefreshStage(currentSet, ProcessingStage);
+                await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, currentSet);
                 WorkflowState.SetPredefinedStructureParameters(iterations, kFrom, kTo, dataFileFormatModel.NumInds);
 
                 StructureProgress = 100;
@@ -1005,6 +1013,7 @@ namespace GenotypeApplication.View_models
             finally
             {
                 StopStructureCommand.NotifyCanExecuteChanged();
+                IsRunning = false;
             }
         }
         private bool CanStartStructure()

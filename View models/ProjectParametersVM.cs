@@ -249,12 +249,15 @@ namespace GenotypeApplication.View_models
         {
             _projectModel = new();
             ProjectName = string.Empty;
-            ProjectPath = PROJECT_DEFAULT_PATH;
+            ProjectPath = string.Empty;
 
             ProjectIsParallelEnabled = false;
             IsAllCores = false;
             IsSelectionCores = true;
             SelectedCores = 1;
+
+            ProjectCreatedAt = default;
+            ProjectLastModified = default;
 
             _isNewProject = true;
         }
