@@ -798,7 +798,9 @@ namespace GenotypeApplication.View_models
                    !HasErrorsFor(nameof(KFrom)) &&
                    !HasErrorsFor(nameof(KTo)) &&
                    ((IsPop && IsPop == _savedDataTypeParameters.savedIsPop) ||
-                    (IsIndv && IsIndv == _savedDataTypeParameters.savedisIndv));
+                    (IsIndv && IsIndv == _savedDataTypeParameters.savedisIndv)) &&
+                    KFrom > 0 &&
+                    KTo > 0;
         }
 
         private void StopCLUMPP()

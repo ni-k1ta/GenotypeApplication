@@ -12,8 +12,6 @@ using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Runtime.Serialization;
-using System.Windows;
 using System.Windows.Input;
 
 namespace GenotypeApplication.View_models
@@ -710,11 +708,9 @@ namespace GenotypeApplication.View_models
 
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
-            if (set == null || !set.IsStructureProcessed)
-            {
-                ResetProgress();
-                return;
-            }
+            if (set == null) return;
+
+            if (!set.IsStructureProcessed) ResetProgress();
 
             var setName = set.Name;
             var fullSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
@@ -1042,7 +1038,10 @@ namespace GenotypeApplication.View_models
                    CurrentSet != null &&
                    !_structureInteractionService.IsRunning &&
                    !HasErrorsFor(nameof(KFrom)) &&
-                   !HasErrorsFor(nameof(KTo));
+                   !HasErrorsFor(nameof(KTo)) &&
+                   KFrom > 0 &&
+                   KTo > 0 &&
+                   Iterations > 0;
         }
 
         private void StopStructure()

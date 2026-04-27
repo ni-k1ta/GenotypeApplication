@@ -1101,17 +1101,20 @@
                                    Content="'K' from"
                                    Height="23" />
                             <xctk:IntegerUpDown x:Name="structureStartKIntUpDown"
-                                                Value="{Binding KFrom, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}" />
+                                                Value="{Binding KFrom, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}"
+                                                Minimum="1"/>
                             <Label x:Name="structureToLabel"
                                    Content="to"
                                    Height="23" />
                             <xctk:IntegerUpDown x:Name="structureEndKIntUpDown"
-                                                Value="{Binding KTo, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}" />
+                                                Value="{Binding KTo, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}"
+                                                Minimum="1" />
                             <Label x:Name="structureWithLabel"
                                    Content="with"
                                    Height="23" />
                             <xctk:IntegerUpDown x:Name="structureIterationsIntUpDown"
-                                                Value="{Binding Iterations, UpdateSourceTrigger=PropertyChanged}" />
+                                                Value="{Binding Iterations, UpdateSourceTrigger=PropertyChanged}"
+                                                Minimum="1"/>
                             <Label x:Name="structureIterationsLabel"
                                    Content="iterations"
                                    Height="23" />

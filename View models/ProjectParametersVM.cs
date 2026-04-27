@@ -280,17 +280,23 @@ namespace GenotypeApplication.View_models
         }
         private async Task OpenRecentProjectAsync(object? parameter)
         {
-            if (parameter is RecentProjectModel recentProject)
+            if (parameter is RecentProjectModel recentProject && parameter != null)
             {
                 string fullProjectFolderPath = Path.Combine(recentProject.Path, recentProject.Name);
 
-                if (!_projectService.IsProjectExist(fullProjectFolderPath))
+                try
                 {
-                    _messageService.ShowWarning("The selected project was not found. It may have been deleted or modified.");
-                    return;
-                }
+                    if (string.IsNullOrWhiteSpace(fullProjectFolderPath)) return;
 
-                await LoadProjectAsync(fullProjectFolderPath);
+                    if (!_projectService.IsProjectExist(fullProjectFolderPath))
+                    {
+                        _messageService.ShowWarning("The selected project was not found. It may have been deleted or modified.");
+                        return;
+                    }
+
+                    await LoadProjectAsync(fullProjectFolderPath);
+                }
+                catch (Exception) { }
             }
         }
         private void DeleteProject(object? parameter)

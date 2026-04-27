@@ -243,7 +243,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             {
                 ct.ThrowIfCancellationRequested();
 
-                var arguments = $"-K {k} -o {outFilePath}K{k}-i{iteration}";
+                var arguments = $"-K {k} -o \"{outFilePath}K{k}-i{iteration}\"";
 
                 var startInfo = new ProcessStartInfo
                 {

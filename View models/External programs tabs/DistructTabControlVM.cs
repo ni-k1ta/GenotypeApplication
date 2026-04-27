@@ -1051,7 +1051,9 @@ namespace GenotypeApplication.View_models
                    !_distructInteractionService.IsRunning &&
                    SelectedConfigurationParameters != null &&
                    !HasErrorsFor(nameof(KFrom)) &&
-                   !HasErrorsFor(nameof(KTo));
+                   !HasErrorsFor(nameof(KTo)) &&
+                   KFrom > 0 &&
+                   KTo > 0;
         }
 
         private void StopDistruct()
