@@ -3,6 +3,7 @@ using GenotypeApplication.Interfaces;
 using GenotypeApplication.Models.CLUMPP;
 using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -28,6 +29,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         private CancellationTokenSource? _cts;
         private readonly object _lock = new();
         private bool _isRunning;
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _hvFileLocks = new();
 
         public event Action<double>? ProgressChanged;
         private readonly Dictionary<(int k, string dataType), double> _unitProgress = new();
@@ -265,20 +267,20 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                        kFrom, kTo, isPop, isIndv,
                        configurationName);
 
-            var hvFilesToReset = new HashSet<string>();
+            //var hvFilesToReset = new HashSet<string>();
 
-            foreach (var job in jobs)
-            {
-                var hvFileName = $"K{job.K}_hv.txt";
-                var hvFilePath = Path.Combine(fullResultsFolderPath, hvFileName);
-                hvFilesToReset.Add(hvFilePath);
-            }
+            //foreach (var job in jobs)
+            //{
+            //    var hvFileName = $"K{job.K}_hv.txt";
+            //    var hvFilePath = Path.Combine(fullResultsFolderPath, hvFileName);
+            //    hvFilesToReset.Add(hvFilePath);
+            //}
 
-            foreach (var path in hvFilesToReset)
-            {
-                if (File.Exists(path))
-                    File.Delete(path);
-            }
+            //foreach (var path in hvFilesToReset)
+            //{
+            //    if (File.Exists(path))
+            //        File.Delete(path);
+            //}
 
             _totalUnits = jobs.Count;
             int completedUnits = 0;
@@ -309,6 +311,21 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 }));
 
                 await Task.WhenAll(tasks);
+
+                var validK = Enumerable.Range(kFrom, kTo - kFrom + 1).ToHashSet();
+                var pattern = new Regex(@"^K(\d+)[._]", RegexOptions.Compiled);
+
+                var filesToDelete = Directory.GetFiles(fullResultsFolderPath)
+                    .Where(f =>
+                    {
+                        var match = pattern.Match(Path.GetFileName(f));
+                        return match.Success && !validK.Contains(int.Parse(match.Groups[1].Value));
+                    });
+
+                foreach (var file in filesToDelete)
+                {
+                    if (File.Exists(file)) File.Delete(file);
+                }
             }
             catch (Exception) { throw; }
             finally
@@ -442,14 +459,19 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 {
                     try
                     {
-
                         var hvFileName = $"K{job.K}_hv.txt";
                         var hvFilePath = Path.Combine(workingDirectory, CLUMPP_RESULTS_FOLDER_NAME, hvFileName);
 
                         var label = job.DataType == "-p" ? "Pop" : "Ind";
                         var lineToWrite = $"{label}: {highestHLine}{Environment.NewLine}";
 
-                        await File.AppendAllTextAsync(hvFilePath, lineToWrite, Encoding.UTF8, ct);
+                        var fileLock = _hvFileLocks.GetOrAdd(hvFilePath, _ => new SemaphoreSlim(1, 1));
+                        await fileLock.WaitAsync();
+                        try
+                        {
+                            await File.AppendAllTextAsync(hvFilePath, lineToWrite, Encoding.UTF8, ct);
+                        }
+                        finally { fileLock.Release(); }
                     }
                     catch (Exception ex)
                     {

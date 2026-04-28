@@ -566,7 +566,7 @@ namespace GenotypeApplication.View_models
 
             try
             {
-                if (configuration.GREEDY_OPTION == 1 && !IsCLUMPPFullSearchOptimal.Calculate(KTo, configuration.R))
+                if (configuration.M == 1 && !IsCLUMPPFullSearchOptimal.Calculate(KTo, configuration.R))
                 {
                     var result = _messageService.ShowQuetion("With the current values of K and number of iterations (R), FullSearch computations may take a considerable amount of time. Consider reducing the maximum K value or switching the method to Greedy / LargeKGreedy (for K ≥ 15). Are you sure you want to continue with the current settings?");
 
@@ -736,7 +736,7 @@ namespace GenotypeApplication.View_models
             var isPop = IsPop;
             var isIndv = IsIndv;
 
-            if (!_userSure && CurrentCLUMPPConfigurationModel.GREEDY_OPTION == 1 && !IsCLUMPPFullSearchOptimal.Calculate(kTo, CurrentCLUMPPConfigurationModel.R))
+            if (!_userSure && CurrentCLUMPPConfigurationModel.M == 1 && !IsCLUMPPFullSearchOptimal.Calculate(kTo, CurrentCLUMPPConfigurationModel.R))
             {
                 var result = _messageService.ShowQuetion("With the current values of K and number of iterations (R), FullSearch computations may take a considerable amount of time. Consider reducing the maximum K value or switching the method to Greedy / LargeKGreedy (for K ≥ 15). Are you sure you want to continue with the current settings?");
 
@@ -754,15 +754,15 @@ namespace GenotypeApplication.View_models
 
                 CLUMPPProgress = 0;
                 CLUMPPProgressText = $"[{setName}|{_configurationName}] In progress... 0%";
+
                 IsRunning = true;
+                WorkflowState.SetPredefinedCLUMPPParameters(kFrom, kTo);
 
                 await _clumppInteractionService.StartExecution(configurationName, isPop, isIndv, kFrom, kTo, fullCurrentSetFolderPath, _coresCount);
 
                 _clumppCompleted = true;
                 WorkflowState.MarkProcessedAndRefreshStage(currentSet, ProcessingStage);
                 await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, currentSet);
-
-                WorkflowState.SetPredefinedCLUMPPParameters(kFrom, kTo);
 
                 bool hasPopResults = _clumppInteractionService.HasPopResults(fullCurrentSetFolderPath, configurationName);
 

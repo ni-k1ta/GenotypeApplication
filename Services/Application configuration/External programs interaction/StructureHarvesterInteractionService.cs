@@ -73,6 +73,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 throw new DirectoryNotFoundException($"The directory {fullStructureHarvesterFolderPath} does not exist.");
 
             var fullResultsFolderPath = Path.Combine(fullStructureHarvesterFolderPath, STRUCTURE_HARVESTER_RESULTS_FOLDER_NAME);
+            _directoryService.DeleteDirectory(fullResultsFolderPath);
             Directory.CreateDirectory(fullResultsFolderPath);
 
             var fullStructureHarvesterExecutableFilePath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, STRUCTURE_HARVESTER_EXECUTABLE_FILE_NAME);

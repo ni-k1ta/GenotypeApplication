@@ -343,7 +343,14 @@ namespace GenotypeApplication.View_models
 
                 string fullProjectLoadedFolerPath = Path.Combine(_projectModel.Path, _projectModel.Name);
 
-                if (!string.Equals(fullProjectFolderPath, fullProjectLoadedFolerPath)) ProjectPath = fullProjectFolderPath;
+                var projectPath = Directory.GetParent(fullProjectFolderPath)?.FullName;
+                if (string.IsNullOrWhiteSpace(projectPath))
+                {
+                    _messageService.ShowError("Invalid project folder path.");
+                    return;
+                }
+
+                if (!string.Equals(fullProjectFolderPath, fullProjectLoadedFolerPath)) ProjectPath = projectPath;
                 else ProjectPath = _projectModel.Path;
 
                 ProjectName = _projectModel.Name;
@@ -500,7 +507,8 @@ namespace GenotypeApplication.View_models
         {
             ProjectParametersModel oldProjectModel = new(_projectModel);
 
-            if (oldProjectModel.Name != projectName || oldProjectModel.Path != projectPath)
+            if (oldProjectModel.Name != projectName ||
+               (_projectService.IsProjectExist(Path.Combine(oldProjectModel.Path, oldProjectModel.Name)) && oldProjectModel.Path != projectPath))
             {
                 string fullProjectFolderNewPath = Path.Combine(projectPath, projectName);
 

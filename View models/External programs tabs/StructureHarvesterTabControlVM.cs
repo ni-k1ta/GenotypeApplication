@@ -220,7 +220,9 @@ namespace GenotypeApplication.View_models
 
                 StructureHarvesterIsIndeterminate = true;
                 StructureHarvesterProgressText = $"[{setName}] In progress...";
+                WorkflowState.MarkUnprocessedAndRefreshStage(currentSet, ProcessingStage);
                 IsRunning = true;
+
                 await _structureHarvesterInteractionService.StartExecution(fullCurrentSetFolderPath, evannoParam, clumppOutputParam);
 
                 if (clumppOutputParam)

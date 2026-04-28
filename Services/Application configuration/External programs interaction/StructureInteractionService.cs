@@ -201,20 +201,31 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             try
             {
                 var tasks = units.Select(unit => RunSingleProcessAsync(
-               unit.k,
-               unit.iteration,
-               fullStructureExecutableFilePath,
-               fullStructureFolderPath,
-               fullStructureOutFilePath,
-               semaphore,
-               token,
-               () =>
-               {
-                   int completed = Interlocked.Increment(ref completedUnits);
-                   return (completed, _totalUnits);
-               }));
+                unit.k,
+                unit.iteration,
+                fullStructureExecutableFilePath,
+                fullStructureFolderPath,
+                fullStructureOutFilePath,
+                semaphore,
+                token,
+                () =>
+                {
+                    int completed = Interlocked.Increment(ref completedUnits);
+                    return (completed, _totalUnits);
+                }));
 
                 await Task.WhenAll(tasks);
+
+                var validNames = units.Select(u => $"outfile_K{u.k}-i{u.iteration}").ToHashSet();
+
+                var filesToDelete = Directory.GetFiles(fullResultsFolderPath)
+                    .Where(f => Path.GetFileNameWithoutExtension(f).StartsWith("outfile_K"))
+                    .Where(f => !validNames.Contains(Path.GetFileNameWithoutExtension(f)));
+
+                foreach (var file in filesToDelete)
+                {
+                    if (File.Exists(file)) File.Delete(file);
+                }
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception) { throw; }

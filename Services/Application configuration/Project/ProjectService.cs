@@ -76,7 +76,8 @@ namespace GenotypeApplication.Services.Project
                     string fullNewProjectPath = Path.Combine(newProjectModel.Path, oldProjectModel.Name);
                     string fullOldProjectPath = Path.Combine(oldProjectModel.Path, oldProjectModel.Name);
 
-                    _directoryService.CopyDirectory(fullOldProjectPath, fullNewProjectPath);
+                    if (!IsProjectExist(fullNewProjectPath) && IsProjectExist(fullOldProjectPath))
+                        _directoryService.CopyDirectory(fullOldProjectPath, fullNewProjectPath);
                 }
 
                 if (newProjectModel.Name != oldProjectModel.Name)
@@ -100,10 +101,7 @@ namespace GenotypeApplication.Services.Project
                     }
                 }
             }
-            catch (Exception)
-            {
-                throw;
-            }
+            catch (Exception) { throw; }
         }
 
         public void Remove(string fullProjectFolderPath)

@@ -8,6 +8,7 @@ using GenotypeApplication.Services.Application_configuration.Logger;
 using GenotypeApplication.Services.Set;
 using System.ComponentModel;
 using System.IO;
+using System.Printing;
 using System.Windows.Data;
 
 namespace GenotypeApplication.View_models.External_programs_tabs
@@ -19,6 +20,7 @@ namespace GenotypeApplication.View_models.External_programs_tabs
 
         protected SetModel? _currentSet;
         private bool _isSyncing; // защита от циклов
+        private bool _isRefreshing;
 
         public SetModel? CurrentSet 
         {   
@@ -39,7 +41,7 @@ namespace GenotypeApplication.View_models.External_programs_tabs
 
                     _ = LoadSelectedSetParametersAsync(value);
                     //если это пользовательский выбор (не синхронизация) — сообщаем сервису
-                    if (!_isSyncing) WorkflowState.CurrentSet = value;
+                    if (!_isSyncing && !_isRefreshing) WorkflowState.CurrentSet = value;
                 }
             }
         }
@@ -100,8 +102,12 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             //подписка на смену текущего Set
             workflowState.CurrentSetChanged += OnCurrentSetChanged;
             //подписка на обновление фильтров
-            workflowState.StateRefreshed += () => UIDispatcherHelper.RunOnUI(() => FilteredSetModelsList.Refresh());
-
+            workflowState.StateRefreshed += () =>
+            {
+                _isRefreshing = true;
+                UIDispatcherHelper.RunOnUI(() => FilteredSetModelsList.Refresh());
+                _isRefreshing = false;
+            };
 
             FilteredCLUMPPConfigurationModelsList = new ListCollectionView(workflowState.CLUMPPConfigurationModelsList)
             {

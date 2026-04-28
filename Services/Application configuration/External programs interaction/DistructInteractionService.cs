@@ -228,7 +228,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var fullCLUMPPResultsFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME);
             bool hasCLUMPPResults = _directoryService.IsDirectoryExist(fullCLUMPPResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullCLUMPPResultsFolderPath);
             if (!hasCLUMPPResults)
-                throw new FileNotFoundException("Не найдены результаты работы CLUMPP");
+                throw new FileNotFoundException("CLUMPP results were not found.");
 
             var fullConfigurationCLUMPPFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName);
             if (!_directoryService.IsDirectoryExist(fullConfigurationCLUMPPFolderPath))
@@ -284,10 +284,24 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 }));
 
                 await Task.WhenAll(tasks);
+
+                var validK = Enumerable.Range(kFrom, kTo - kFrom + 1).ToHashSet();
+                var pattern = new Regex(@"^K(\d+)\.", RegexOptions.Compiled);
+
+                var filesToDelete = Directory.GetFiles(fullResultsFolderPath)
+                    .Where(f =>
+                    {
+                        var match = pattern.Match(Path.GetFileName(f));
+                        return match.Success && !validK.Contains(int.Parse(match.Groups[1].Value));
+                    });
+
+                foreach (var file in filesToDelete)
+                {
+                    if (File.Exists(file)) File.Delete(file);
+                }
             }
             catch (Exception)
             {
-
                 throw;
             }
             finally
@@ -350,7 +364,9 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                     if (e.Data.StartsWith("Warning", StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.Warning($"[K={job.K}] {e.Data}");
+                        if (e.Data.Contains("could not open file  of permutations and colors. Not to", StringComparison.OrdinalIgnoreCase))
+                            _logger.Info($"[K={job.K}] {e.Data}");
+                        else _logger.Warning($"[K={job.K}] {e.Data}");
                     }
                     else
                     {
@@ -704,7 +720,12 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var match = Regex.Match(output, @"%%HiResBoundingBox:\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)");
 
             if (!match.Success)
-                throw new Exception($"Could not determine BoundingBox: {output}");
+            {
+                match = Regex.Match(output, @"%%BoundingBox:\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)");
+            }
+
+            if (!match.Success)
+                throw new Exception($"Failed to read the PostScript file: {Path.GetFileName(inputFilePath)}. The file may be empty or corrupted.");
 
             double x2 = double.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
             double y2 = double.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture);

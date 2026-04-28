@@ -65,6 +65,26 @@ namespace GenotypeApplication.Models.Project
                     break;
             }
         }
+
+        public void MarkAsUnprocessedForStage(SetProcessingStage stage)
+        {
+            switch (stage)
+            {
+                case SetProcessingStage.Structure:
+                    IsStructureProcessed = false;
+                    break;
+                case SetProcessingStage.StructureHarvester:
+                    IsStructureHarvesterProcessed = false;
+                    break;
+                case SetProcessingStage.CLUMPP:
+                    IsCLUMPPProcessed = false;
+                    break;
+                case SetProcessingStage.Distruct:
+                    IsDistructProcessed = false;
+                    break;
+            }
+        }
+
         public bool IsAvailableForStage(SetProcessingStage stage)
         {
             return stage switch

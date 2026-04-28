@@ -142,6 +142,8 @@ namespace GenotypeApplication.View_models
         }
 
         private bool _structureCompleted;
+
+        private bool _isSaving;
         #endregion
 
         public StructureTabControlVM(WorkflowStateModel workflowStateModel, string fullProjectFolderPath, int coresCount, SetConfigurationService setConfigurationService, IDialogService dialogService, IDirectoryService directoryService, IFileService fileService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, IWindowService windowService, LoggerService loggerService, IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> kRangeValidator) : base(workflowStateModel, SetProcessingStage.Structure, coresCount, fullProjectFolderPath, setConfigurationService, directoryService, fileService, messageService, dialogService, loggerService, pathValidator, parameterNameValidator, kRangeValidator)
@@ -708,7 +710,7 @@ namespace GenotypeApplication.View_models
 
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
-            if (set == null) return;
+            if (set == null || _isSaving) return;
 
             if (!set.IsStructureProcessed) ResetProgress();
 
@@ -836,6 +838,8 @@ namespace GenotypeApplication.View_models
                 var newMainParameters = GetMainParameters();
                 var newExtraParameters = GetExtraParameters();
 
+                _isSaving = true;
+
                 if (_isCreatingNewSet)
                 {
                     await CreateNewSetAsync(newSetName, fullNewSetFolderPath, dataFileFullPath, dataFileFormatModel, newMainParameters, newExtraParameters);
@@ -861,6 +865,7 @@ namespace GenotypeApplication.View_models
             }
             finally
             {
+                _isSaving = false;
                 StartStructureAsyncCommand.NotifyCanExecuteChanged();
             }
         }
@@ -1005,13 +1010,13 @@ namespace GenotypeApplication.View_models
                 StructureProgressText = $"[{setName}] In progress... 0%";
 
                 IsRunning = true;
+                WorkflowState.SetPredefinedStructureParameters(iterations, kFrom, kTo, dataFileFormatModel.NumInds);
 
                 await _structureInteractionService.StartExecution(kFrom, kTo, iterations, fullCurrentSetFolderPath, _coresCount);
 
                 _structureCompleted = true;
                 WorkflowState.MarkProcessedAndRefreshStage(currentSet, ProcessingStage);
                 await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, currentSet);
-                WorkflowState.SetPredefinedStructureParameters(iterations, kFrom, kTo, dataFileFormatModel.NumInds);
 
                 StructureProgress = 100;
                 StructureProgressText = $"[{setName}] Completed";

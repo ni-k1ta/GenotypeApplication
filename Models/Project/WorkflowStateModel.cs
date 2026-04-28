@@ -60,6 +60,15 @@ namespace GenotypeApplication.Models.Project
             StateRefreshed?.Invoke();
             CurrentSetChanged?.Invoke(set);
         }
+
+        public void MarkUnprocessedAndRefreshStage(SetModel set, SetProcessingStage stage)
+        {
+            set.MarkAsUnprocessedForStage(stage);
+
+            StateRefreshed?.Invoke();
+            CurrentSetChanged?.Invoke(set);
+        }
+
         public SetModel CreateNewSet(string name)
         {
             var newSet = new SetModel { Name = name, IsCurrent = true };
