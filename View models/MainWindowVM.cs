@@ -62,8 +62,12 @@ namespace GenotypeApplication.View_models
                 !CLUMPPTabControlVM.IsRunning &&
                 !DistructTabControlVM.IsRunning;
 
+            _workflowStateModel.CanChangeActiveConfiguration = () =>
+                !CLUMPPTabControlVM.IsRunning &&
+                !DistructTabControlVM.IsRunning;
+
             _workflowStateModel.ActiveSetChangeBlocked += () =>
-                _messageService.ShowWarning("Cannot switch Set while processing is running.");
+                _messageService.ShowWarning("Cannot switch configurations while processing is running.");
         }
 
         public ProjectExplorerViewModel ProjectExplorer { get => _projectExplorer; }

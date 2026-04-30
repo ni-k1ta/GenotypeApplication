@@ -122,7 +122,6 @@ namespace GenotypeApplication.View_models
 
             _windowService = windowService;
 
-
             _distructInteractionService = new DistructInteractionService(directoryService, fileService, _logger);
 
             _distructInteractionService.ProgressChanged += value =>
@@ -138,6 +137,7 @@ namespace GenotypeApplication.View_models
                 });
             };
 
+            ToggleExpandCommand = new RelayCommand(_ => IsExpanded = !IsExpanded);
             //workflowState.NewSetCreated += ResetProgress;
         }
 
@@ -167,6 +167,22 @@ namespace GenotypeApplication.View_models
 
             if (e.PropertyName == nameof(PredefinedPopCount))
                 NUMPOPS = PredefinedPopCount;
+
+            if (e.PropertyName == nameof(CurrentCLUMPPConfigurationModel))
+            {
+                OnPropertyChanged(nameof(IsIndividualsLabelsEnabled));
+
+                if (CurrentCLUMPPConfigurationModel == null)
+                {
+                    _savedConfigurationParametersItems.Clear();
+                    RebuildConfigurationParametersItems();
+                    SelectedConfigurationParameters = ConfigurationParametersItems.LastOrDefault();
+                    ConfigurationName = string.Empty;
+                    return;
+                }
+
+                if (!CurrentCLUMPPConfigurationModel.HasIndvResults) { PRINT_INDIVS = false; }
+            }
         }
         private void ValidateKRange()
         {
@@ -210,6 +226,7 @@ namespace GenotypeApplication.View_models
         }
 
         private ObservableCollection<ClusterColorItem> _clusterColorItems = new();
+        private ObservableCollection<ClusterColorItem> _colorBrewerItems = new();
 
         public int KFrom
         {
@@ -232,8 +249,9 @@ namespace GenotypeApplication.View_models
                 if (SetField(ref _kTo, value))
                 {
                     ValidateKRange();
-                    if (!HasErrorsFor(nameof(KFrom)) && !HasErrorsFor(nameof(KTo)))
-                        RebuildKForPreviewItems();
+                    if (value < 3 || value > 12)
+                        PRINT_COLOR_BREWER = false;
+                    OnPropertyChanged(nameof(IsColorBrewerEnabled));
                 }
             }
         }
@@ -357,7 +375,13 @@ namespace GenotypeApplication.View_models
         public bool GRAYSCALE //
         {
             get => _grayscale;
-            set { SetField(ref _grayscale, value); }
+            set
+            {
+                if (SetField(ref _grayscale, value))
+                {
+                    if (value) PRINT_COLOR_BREWER = false;
+                }
+            }
         }
         public bool ECHO_DATA//
         {
@@ -377,8 +401,17 @@ namespace GenotypeApplication.View_models
         public bool PRINT_COLOR_BREWER//
         {
             get => _print_color_brewer;
-            set { SetField(ref _print_color_brewer, value); }
+            set
+            {
+                if (SetField(ref _print_color_brewer, value))
+                {
+                    if (value) GRAYSCALE = false;
+                }
+            }
         }
+
+        public bool IsColorBrewerEnabled => KTo >= 3 && KTo <= 12;
+        public bool IsIndividualsLabelsEnabled => CurrentCLUMPPConfigurationModel?.HasIndvResults ?? false;
         #endregion
 
         #region Commands properties
@@ -526,15 +559,19 @@ namespace GenotypeApplication.View_models
         #endregion
 
         #region Preview region
-        private BitmapImage? _previewImage;
-        public BitmapImage? PreviewImage
+
+        private ObservableCollection<PreviewItem> _previewImages = new();
+        public ObservableCollection<PreviewItem> PreviewImages
         {
-            get => _previewImage;
-            set
-            {
-                _previewImage = value;
-                OnPropertyChanged(nameof(PreviewImage));
-            }
+            get => _previewImages;
+            set { SetField(ref _previewImages, value); }
+        }
+
+        private bool _isExpanded;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set { SetField(ref _isExpanded, value); }
         }
 
         private async Task GeneratePreview()
@@ -543,38 +580,110 @@ namespace GenotypeApplication.View_models
 
             var configurationName = _savedConfigurationName;
             var clumppConfigurationName = CurrentCLUMPPConfigurationModel.ParametersName;
-
             var currentSetName = CurrentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
+
+            int kFrom = KFrom;
+            int kTo = KTo;
+
+            if (kFrom > kTo)
+            {
+                _messageService.ShowError($"KFrom ({kFrom}) must be <= KTo ({kTo}).");
+                return;
+            }
 
             try
             {
                 _isPreviewing = true;
-                PreviewImage = null;
-                BitmapImage btmImage = new();
+                PreviewImages.Clear();
+                PreviewImages = [];
 
-                btmImage = await _distructInteractionService.GeneratePreviewForKAsync(fullCurrentSetFolderPath, clumppConfigurationName, configurationName, SelectedKForPreview, INFILE_CLUST_PERM, _clusterColorItems, GRAYSCALE);
+                var progress = new Progress<PreviewItem>(item =>
+                {
+                    PreviewImages.Add(item);
+                });
 
-                PreviewImage = btmImage;
+                var clusterColorItems = _changesTracker.GetSnapshot()?.PRINT_COLOR_BREWER == true ? _colorBrewerItems : _clusterColorItems;
+
+                await _distructInteractionService.GeneratePreviewsForRangeAsync(
+                    fullCurrentSetFolderPath,
+                    clumppConfigurationName,
+                    configurationName,
+                    kFrom,
+                    kTo,
+                    INFILE_CLUST_PERM,
+                    clusterColorItems,
+                    GRAYSCALE,
+                    progress,
+                    App.GlobalCts.Token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                _messageService.ShowError($"An error occurred while generating the preview image: {ex.Message}");
+                if (!PRINT_COLOR_BREWER)
+                    _messageService.ShowError($"An error occurred while generating the preview images: {ex.Message} It is possible that the cluster color configuration file uses ColorBrewer values, but ColorBrewer is not enabled in the settings.");
+                else
+                    _messageService.ShowError($"An error occurred while generating the preview images: {ex.Message}");
             }
             finally
             {
                 _isPreviewing = false;
             }
         }
+
+        //private BitmapImage? _previewImage;
+        //public BitmapImage? PreviewImage
+        //{
+        //    get => _previewImage;
+        //    set
+        //    {
+        //        _previewImage = value;
+        //        OnPropertyChanged(nameof(PreviewImage));
+        //    }
+        //}
+
+        //private async Task GeneratePreview()
+        //{
+        //    if (CurrentSet == null || CurrentCLUMPPConfigurationModel == null) return;
+
+        //    var configurationName = _savedConfigurationName;
+        //    var clumppConfigurationName = CurrentCLUMPPConfigurationModel.ParametersName;
+
+        //    var currentSetName = CurrentSet.Name;
+        //    var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, currentSetName);
+
+        //    try
+        //    {
+        //        _isPreviewing = true;
+        //        PreviewImage = null;
+        //        BitmapImage btmImage = new();
+
+        //        btmImage = await _distructInteractionService.GeneratePreviewForKAsync(fullCurrentSetFolderPath, clumppConfigurationName, configurationName, SelectedKForPreview, INFILE_CLUST_PERM, _clusterColorItems, GRAYSCALE);
+
+        //        PreviewImage = btmImage;
+        //    }
+        //    catch (OperationCanceledException) { }
+        //    catch (Exception ex)
+        //    {
+        //        _messageService.ShowError($"An error occurred while generating the preview image: {ex.Message}");
+        //    }
+        //    finally
+        //    {
+        //        _isPreviewing = false;
+        //    }
+        //}
         private bool CanGeneratePreview()
         {
             return CurrentSet != null &&
                    CurrentCLUMPPConfigurationModel != null &&
                    SelectedConfigurationParameters != null &&
+                   !HasErrors &&
                    _wasSaved &&
-                   !_isPreviewing;
+                   !_isPreviewing &&
+                   PRINT_COLOR_BREWER == _changesTracker.GetSnapshot()?.PRINT_COLOR_BREWER;
         }
+
+        public ICommand ToggleExpandCommand { get; }
         #endregion
 
         #region Export region
@@ -649,13 +758,27 @@ namespace GenotypeApplication.View_models
 
         private void ConfigureColorPalette()
         {
-            DistructColorsConfigurationVM distructColorsConfigurationVM = new(KTo, GRAYSCALE, _windowService);
-
-            bool? configurationResult = _windowService.ShowDialogWindow<DistructColorsConfigurationWindow, DistructColorsConfigurationVM>(distructColorsConfigurationVM);
-
-            if (configurationResult == true)
+            if (PRINT_COLOR_BREWER)
             {
-                _clusterColorItems = distructColorsConfigurationVM.Items;
+                ColorBrewerConfigurationVM colorBrewerConfigurationVM = new(KTo, _windowService);
+
+                bool? configurationResult = _windowService.ShowDialogWindow<ColorBrewerConfigurationWindow, ColorBrewerConfigurationVM>(colorBrewerConfigurationVM);
+
+                if (configurationResult == true)
+                {
+                    _colorBrewerItems = colorBrewerConfigurationVM.Items;
+                }
+            }
+            else
+            {
+                DistructColorsConfigurationVM distructColorsConfigurationVM = new(KTo, GRAYSCALE, _windowService);
+
+                bool? configurationResult = _windowService.ShowDialogWindow<DistructColorsConfigurationWindow, DistructColorsConfigurationVM>(distructColorsConfigurationVM);
+
+                if (configurationResult == true)
+                {
+                    _clusterColorItems = distructColorsConfigurationVM.Items;
+                }
             }
         }
 
@@ -743,7 +866,9 @@ namespace GenotypeApplication.View_models
         #region Load parameters methods
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
-            if (set == null || !set.IsDistructProcessed)
+            if (set == null ||
+                !_directoryService.IsDirectoryExist(Path.Combine(_fullProjectFolderPath, set.Name, DistructConstants.DISTRUCT_FOLDER_NAME)) ||
+                _directoryService.IsDirectoryEmpty(Path.Combine(_fullProjectFolderPath, set.Name, DistructConstants.DISTRUCT_FOLDER_NAME)))
             {
                 ResetProgress();
             }
@@ -760,7 +885,12 @@ namespace GenotypeApplication.View_models
         }
         protected override async Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration)
         {
-            if (configuration == null || CurrentSet == null || !CurrentSet.IsDistructProcessed || !configuration.IsProcessed || !configuration.HasPopResults)
+            if (configuration == null ||
+                CurrentSet == null ||
+                !_directoryService.IsDirectoryExist(Path.Combine(_fullProjectFolderPath, CurrentSet.Name, DistructConstants.DISTRUCT_FOLDER_NAME, configuration.ParametersName)) ||
+                _directoryService.IsDirectoryEmpty(Path.Combine(_fullProjectFolderPath, CurrentSet.Name, DistructConstants.DISTRUCT_FOLDER_NAME, configuration.ParametersName)) ||
+                !configuration.IsProcessed ||
+                !configuration.HasPopResults)
             {
                 _savedConfigurationParametersItems.Clear();
                 RebuildConfigurationParametersItems();
@@ -981,6 +1111,7 @@ namespace GenotypeApplication.View_models
                     await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, configuration, INFILE_CLUST_PERM);
                 }
 
+                _messageService.ShowInformation($"Configuration \"{configuration.ParametersName}\" was successfully updated.");
                 return true;
             }
             catch (Exception) { throw; }
@@ -1008,6 +1139,8 @@ namespace GenotypeApplication.View_models
             var setName = currentSet.Name;
             var fullCurrentSetFolderPath = Path.Combine(_fullProjectFolderPath, setName);
 
+            var clusterColorItems = _changesTracker.GetSnapshot()?.PRINT_COLOR_BREWER == true ? _colorBrewerItems : _clusterColorItems;
+
             try
             {
                 _distructCompleted = false;
@@ -1017,7 +1150,7 @@ namespace GenotypeApplication.View_models
                 DistructProgressText = $"[{setName}|{_savedConfigurationName}] In progress... 0%";
                 IsRunning = true;
 
-                await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, INFILE_CLUST_PERM, _clusterColorItems, GRAYSCALE, _coresCount);
+                await _distructInteractionService.StartExecution(configurationName, kFrom, kTo, fullCurrentSetFolderPath, clumppConfigurationName, INFILE_CLUST_PERM, clusterColorItems, GRAYSCALE, _coresCount);
                 _distructCompleted = true;
 
                 WorkflowState.MarkProcessedAndRefreshStage(currentSet, ProcessingStage);
@@ -1041,6 +1174,10 @@ namespace GenotypeApplication.View_models
             {
                 StopDistructCommand.NotifyCanExecuteChanged();
                 IsRunning = false;
+                if (DistructStopped)
+                {
+                    _distructInteractionService.DeleteResults(fullCurrentSetFolderPath, clumppConfigurationName, configurationName);
+                }
             }
         }
         private bool CanStartDistruct()
@@ -1053,7 +1190,8 @@ namespace GenotypeApplication.View_models
                    !HasErrorsFor(nameof(KFrom)) &&
                    !HasErrorsFor(nameof(KTo)) &&
                    KFrom > 0 &&
-                   KTo > 0;
+                   KTo > 0 &&
+                   (WorkflowState.CanChangeActiveSet != null && WorkflowState.CanChangeActiveSet());
         }
 
         private void StopDistruct()

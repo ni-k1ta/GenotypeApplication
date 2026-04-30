@@ -46,6 +46,13 @@ namespace GenotypeApplication.Models.CLUMPP
             get => _hasPopResults;
             set => SetField(ref _hasPopResults, value);
         }
+
+        private bool _hasIndvResults;
+        public bool HasIndvResults
+        {
+            get => _hasIndvResults;
+            set => SetField(ref _hasIndvResults, value);
+        }
         public bool IsAvailableForStage(SetProcessingStage stage)
         {
             return stage switch

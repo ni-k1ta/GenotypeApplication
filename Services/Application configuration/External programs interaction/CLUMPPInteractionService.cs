@@ -175,6 +175,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     }
 
                     configurationModel.HasPopResults = Directory.EnumerateFiles(resultsPath, "*.popq").Any();
+                    configurationModel.HasIndvResults = Directory.EnumerateFiles(resultsPath, "*.indq").Any();
                 }
                 configurationModel.IsProcessed = found;
                 configurationModel.ParametersName = configurationName;
@@ -184,7 +185,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             catch (Exception) { throw; }
         }
 
-        public bool HasPopResults(string fullSetFolderPath, string configurationName)
+        public (bool hasPopResults, bool hasIndvResults) GetResultsType(string fullSetFolderPath, string configurationName)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(fullSetFolderPath);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(configurationName);
@@ -200,7 +201,10 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var resultsPath = Path.Combine(fullConfigurationFolderPath, CLUMPP_RESULTS_FOLDER_NAME);
             if (!_directoryService.IsDirectoryExist(resultsPath)) throw new DirectoryNotFoundException($"Set folder \"{resultsPath}\" was not found.");
 
-            return Directory.EnumerateFiles(resultsPath, "*.popq").Any();
+            bool hasPopResults = Directory.EnumerateFiles(resultsPath, "*.popq").Any();
+            bool hasIndvResults = Directory.EnumerateFiles(resultsPath, "*.indq").Any();
+
+            return (hasPopResults, hasIndvResults);
         }
         private record CLUMPPJob(int K, string ParametersFileName, string DataType, string InputFilePath, string OutFilePath, string OutMiscfilePath);
 
@@ -564,6 +568,18 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             }
         }
 
+        public void DeleteResults(string fullCurrentSetFolderPath, string configurationName)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(configurationName);
+            string fullCLUMPPFolderPath = Path.Combine(fullCurrentSetFolderPath, CLUMPP_FOLDER_NAME);
+            string fullConfigurationFolderPath = Path.Combine(fullCLUMPPFolderPath, configurationName);
+            string fullResultsFolderPath = Path.Combine(fullConfigurationFolderPath, CLUMPP_RESULTS_FOLDER_NAME);
+            if (_directoryService.IsDirectoryExist(fullResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullResultsFolderPath))
+            {
+                _directoryService.DeleteDirectory(fullResultsFolderPath);
+            }
+        }
         private void ReportTotalProgress()
         {
             if (_unitProgress.Count == 0 || _totalUnits == 0) return;

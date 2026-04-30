@@ -66,6 +66,7 @@ namespace GenotypeApplication.View_models.External_programs_tabs
             get => _currentCLUMPPConfigurationModel;
             set
             {
+                if (CurrentSet == null) return;
                 if (SetField(ref _currentCLUMPPConfigurationModel, value))
                 {
                     OnPropertyChanged(nameof(CLUMPPConfigurationEnabled));
@@ -171,19 +172,26 @@ namespace GenotypeApplication.View_models.External_programs_tabs
 
         private void OnCurrentCLUMPPConfigurationModelChanged(CLUMPPConfigurationModel? newConfiguration)
         {
-            if (newConfiguration != null && !newConfiguration.IsAvailableForStage(ProcessingStage)) return;
+            if (newConfiguration != null && !newConfiguration.IsAvailableForStage(ProcessingStage))
+            {
+                if (ProcessingStage == SetProcessingStage.Distruct)
+                {
+                    SetField(ref _currentCLUMPPConfigurationModel, null, nameof(CurrentCLUMPPConfigurationModel));
+                    ResetProgress();
+                }
+                return;
+            }
 
             _isSyncingCLUMPPConfiguration = true;
             CurrentCLUMPPConfigurationModel = newConfiguration;
             _isSyncingCLUMPPConfiguration = false;
         }
+
         protected abstract Task LoadSelectedCLUMPPConfigurationAsync(CLUMPPConfigurationModel? configuration);
         protected virtual bool IsValidCLUMPPConfiguration(CLUMPPConfigurationModel configuration)
         {
-            if (CurrentSet == null) return false;
-
             var configName = configuration.ParametersName;
-            var fullConfigFolderPath = Path.Combine(_fullProjectFolderPath, CurrentSet.Name, CLUMPPConstants.CLUMPP_FOLDER_NAME, configName);
+            var fullConfigFolderPath = Path.Combine(_fullProjectFolderPath, CurrentSet?.Name ?? string.Empty, CLUMPPConstants.CLUMPP_FOLDER_NAME, configName);
             return _directoryService.IsDirectoryExist(fullConfigFolderPath) && !_directoryService.IsDirectoryEmpty(fullConfigFolderPath);
         }
 

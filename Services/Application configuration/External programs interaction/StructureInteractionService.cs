@@ -216,11 +216,18 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 await Task.WhenAll(tasks);
 
-                var validNames = units.Select(u => $"outfile_K{u.k}-i{u.iteration}").ToHashSet();
+                var validK = Enumerable.Range(kFrom, kTo - kFrom + 1).ToHashSet();
+                var validIterations = Enumerable.Range(1, iterations).ToHashSet();
+                var pattern = new Regex(@"^outfile_K(\d+)-i(\d+)", RegexOptions.Compiled);
 
                 var filesToDelete = Directory.GetFiles(fullResultsFolderPath)
-                    .Where(f => Path.GetFileNameWithoutExtension(f).StartsWith("outfile_K"))
-                    .Where(f => !validNames.Contains(Path.GetFileNameWithoutExtension(f)));
+                    .Where(f =>
+                    {
+                        var match = pattern.Match(Path.GetFileName(f));
+                        return match.Success &&
+                               (!validK.Contains(int.Parse(match.Groups[1].Value)) ||
+                                !validIterations.Contains(int.Parse(match.Groups[2].Value)));
+                    });
 
                 foreach (var file in filesToDelete)
                 {
@@ -333,6 +340,17 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             {
                 process?.Dispose();
                 semaphore.Release();
+            }
+        }
+
+        public void DeleteResults(string fullCurrentSetFolderPath)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(fullCurrentSetFolderPath);
+            var fullStructureFolderPath = Path.Combine(fullCurrentSetFolderPath, STRUCTURE_FOLDER_NAME);
+            var fullResultsFolderPath = Path.Combine(fullStructureFolderPath, STRUCTURE_RESULTS_FOLDER_NAME);
+            if (_directoryService.IsDirectoryExist(fullResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullResultsFolderPath))
+            {
+                _directoryService.DeleteDirectory(fullResultsFolderPath);
             }
         }
 

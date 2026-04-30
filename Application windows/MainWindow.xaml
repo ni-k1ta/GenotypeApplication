@@ -301,7 +301,6 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
@@ -1102,7 +1101,7 @@
                                    Height="23" />
                             <xctk:IntegerUpDown x:Name="structureStartKIntUpDown"
                                                 Value="{Binding KFrom, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}"
-                                                Minimum="1"/>
+                                                Minimum="1" />
                             <Label x:Name="structureToLabel"
                                    Content="to"
                                    Height="23" />
@@ -1114,7 +1113,7 @@
                                    Height="23" />
                             <xctk:IntegerUpDown x:Name="structureIterationsIntUpDown"
                                                 Value="{Binding Iterations, UpdateSourceTrigger=PropertyChanged}"
-                                                Minimum="1"/>
+                                                Minimum="1" />
                             <Label x:Name="structureIterationsLabel"
                                    Content="iterations"
                                    Height="23" />
@@ -1159,7 +1158,6 @@
                     <Grid>
 
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
@@ -1744,8 +1742,8 @@
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="209*" />
-                            <ColumnDefinition Width="700*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
                         <Grid.RowDefinitions>
@@ -1831,7 +1829,8 @@
                                     <StackPanel Orientation="Vertical">
                                         <CheckBox x:Name="printIndividsCheckBox"
                                                   Content="Print individuals"
-                                                  IsChecked="{Binding PRINT_INDIVS, UpdateSourceTrigger=PropertyChanged}" />
+                                                  IsChecked="{Binding PRINT_INDIVS, UpdateSourceTrigger=PropertyChanged}"
+                                                  IsEnabled="{Binding IsIndividualsLabelsEnabled, UpdateSourceTrigger=PropertyChanged}"/>
                                         <CheckBox x:Name="printPopSeparatorsCheckBox"
                                                   Content="Print pop separators"
                                                   IsChecked="{Binding PRINT_SEP, UpdateSourceTrigger=PropertyChanged}" />
@@ -1862,7 +1861,9 @@
                                       Header="Extra options"
                                       HorizontalAlignment="Left"
                                       Grid.Column="0"
-                                      IsEnabled="{Binding CLUMPPConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
+                                      IsEnabled="{Binding CLUMPPConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}"
+                                      Padding="1"
+                                      Width="735">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -2039,12 +2040,13 @@
                                               Margin="5,0,0,0"
                                               IsChecked="{Binding ECHO_DATA, UpdateSourceTrigger=PropertyChanged}" />
                                     <CheckBox x:Name="printColorBrewerSettingsCheckBox"
-                                              Content="Use ColorBrewer (file-based color palette only)"
+                                              Content="Use the ColorBrewer color palette"
                                               HorizontalAlignment="Left"
                                               Grid.Column="2"
                                               Grid.Row="3"
                                               Margin="5,0,0,0"
-                                              IsChecked="{Binding PRINT_COLOR_BREWER, UpdateSourceTrigger=PropertyChanged}" />
+                                              IsChecked="{Binding PRINT_COLOR_BREWER, UpdateSourceTrigger=PropertyChanged}"
+                                              IsEnabled="{Binding IsColorBrewerEnabled, UpdateSourceTrigger=PropertyChanged}"/>
                                     <CheckBox x:Name="useGrayscaleCheckBox"
                                               Content="Use grayscale instead of colors"
                                               HorizontalAlignment="Left"
@@ -2059,7 +2061,7 @@
                             <GroupBox x:Name="exportOptionsGroupBox"
                                       Header="Export options"
                                       Grid.Column="1"
-                                      HorizontalAlignment="Stretch">
+                                      Width="174">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -2115,20 +2117,11 @@
                             </GroupBox>
                         </Grid>
 
-                        <!--<StackPanel Orientation="Horizontal"
-                                Grid.Column="0"
-                                Grid.Row="2"
-                                Grid.ColumnSpan="2">-->
-                        <Grid Grid.Column="0"
-                              Grid.Row="2"
-                              Grid.ColumnSpan="2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0"
-                                        Orientation="Vertical">
+                        <StackPanel Orientation="Horizontal"
+                                    Grid.Column="0"
+                                    Grid.Row="2"
+                                    Grid.ColumnSpan="2">
+                            <StackPanel Orientation="Vertical">
                                 <GroupBox x:Name="dataSettingsGroupBox"
                                           Header="Data settings"
                                           IsEnabled="{Binding CLUMPPConfigurationEnabled, UpdateSourceTrigger=PropertyChanged}">
@@ -2333,7 +2326,66 @@
                                 </GroupBox>
                             </StackPanel>
 
-                            <GroupBox Grid.Column="1"
+                            <StackPanel Orientation="Vertical">
+                                <GroupBox x:Name="pregeneratedImageGroupBox"
+                                          Header="Pre-generated images"
+                                          HorizontalAlignment="Stretch"
+                                          Width="366"
+                                          Height="258">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <DockPanel Grid.Row="0"
+                                                   LastChildFill="False"
+                                                   Margin="0,0,0,5"
+                                                   HorizontalAlignment="Center">
+                                            <Button x:Name="generateButton"
+                                                    Content="Generate"
+                                                    DockPanel.Dock="Left"
+                                                    Style="{StaticResource Rounded}"
+                                                    Command="{Binding GeneratePreviewCommand}" />
+                                        </DockPanel>
+
+                                        <ScrollViewer Grid.Row="1"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Disabled">
+                                            <ItemsControl ItemsSource="{Binding PreviewImages}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Vertical" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,0,0,3"
+                                                                Padding="2"
+                                                                BorderBrush="#DDD"
+                                                                BorderThickness="1"
+                                                                CornerRadius="3">
+                                                            <StackPanel Orientation="Vertical">
+                                                                <TextBlock Text="{Binding K, StringFormat='K = {0}'}"
+                                                                           FontWeight="SemiBold"
+                                                                           Margin="0,0,0,2" />
+                                                                <Image Source="{Binding Image}"
+                                                                       Stretch="Uniform"
+                                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                                       MaxWidth="330"
+                                                                       MaxHeight="130" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </Grid>
+                                </GroupBox>
+                            </StackPanel>
+                        </StackPanel>
+                        <!--<GroupBox Grid.Column="1"
                                       x:Name="pregeneratedImageGroupBox"
                                       Header="Pre-generated image"
                                       Width="366"
@@ -2372,54 +2424,53 @@
 
                                     </Border>
                                 </Grid>
-                            </GroupBox>
-                        </Grid>
+                            </GroupBox>-->
 
 
                         <!--</StackPanel>-->
 
-                        <DockPanel LastChildFill="False"
-                                   Grid.Column="0"
-                                   Grid.Row="3"
-                                   Grid.ColumnSpan="2">
-                            <StackPanel Orientation="Horizontal"
-                                        DockPanel.Dock="Left">
-                                <Label x:Name="distructStartKLabel"
-                                       Content="'K' from"
-                                       Height="23" />
-                                <xctk:IntegerUpDown x:Name="distructStartKIntUpDown"
-                                                    Value="{Binding KFrom, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}"
-                                                    Maximum="{Binding PredefinedCLUMPPKEnd, Mode=OneWay}"
-                                                    Minimum="{Binding PredefinedCLUMPPKStart, Mode=OneWay}" />
-                                <Label x:Name="distructToLabel"
-                                       Content="to"
-                                       Height="23" />
-                                <xctk:IntegerUpDown x:Name="distructEndKIntUpDown"
-                                                    Value="{Binding KTo, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}"
-                                                    Maximum="{Binding PredefinedCLUMPPKEnd, Mode=OneWay}"
-                                                    Minimum="{Binding PredefinedCLUMPPKStart, Mode=OneWay}" />
-                            </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Left"
+                                    Grid.Column="0"
+                                    Grid.Row="3">
+                            <Label x:Name="distructStartKLabel"
+                                   Content="'K' from"
+                                   Height="23" />
+                            <xctk:IntegerUpDown x:Name="distructStartKIntUpDown"
+                                                Value="{Binding KFrom, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}"
+                                                Maximum="{Binding PredefinedCLUMPPKEnd, Mode=OneWay}"
+                                                Minimum="{Binding PredefinedCLUMPPKStart, Mode=OneWay}" />
+                            <Label x:Name="distructToLabel"
+                                   Content="to"
+                                   Height="23" />
+                            <xctk:IntegerUpDown x:Name="distructEndKIntUpDown"
+                                                Value="{Binding KTo, ValidatesOnNotifyDataErrors=True, UpdateSourceTrigger=PropertyChanged}"
+                                                Maximum="{Binding PredefinedCLUMPPKEnd, Mode=OneWay}"
+                                                Minimum="{Binding PredefinedCLUMPPKStart, Mode=OneWay}" />
+                        </StackPanel>
 
-                            <StackPanel Orientation="Horizontal"
-                                        DockPanel.Dock="Right">
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="0,0,0,0">
 
-                                <Button x:Name="saveDistructOptionsButton"
-                                        Content="Save"
-                                        Margin="0,0,58,0"
-                                        Style="{StaticResource Rounded}"
-                                        Command="{Binding SaveChangesAsyncCommand}" />
-                                <Button x:Name="startDistructExecutionButton"
-                                        Content="Start"
-                                        Margin="0,0,5,0"
-                                        Style="{StaticResource Rounded}"
-                                        Command="{Binding StartDistructAsyncCommand}" />
-                                <Button x:Name="stopDistructExecutionButton"
-                                        Content="Stop"
-                                        Margin="0,0,0,0"
-                                        Style="{StaticResource Rounded}"
-                                        Command="{Binding StopDistructCommand}" />
-                            </StackPanel>
-                        </DockPanel>
+                            <Button x:Name="saveDistructOptionsButton"
+                                    Content="Save"
+                                    Margin="0,0,58,0"
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding SaveChangesAsyncCommand}" />
+                            <Button x:Name="startDistructExecutionButton"
+                                    Content="Start"
+                                    Margin="0,0,5,0"
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding StartDistructAsyncCommand}" />
+                            <Button x:Name="stopDistructExecutionButton"
+                                    Content="Stop"
+                                    Margin="0,0,0,0"
+                                    Style="{StaticResource Rounded}"
+                                    Command="{Binding StopDistructCommand}" />
+                        </StackPanel>
                     </Grid>
                 </ScrollViewer>
             </TabItem>

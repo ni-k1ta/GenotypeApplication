@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using GenotypeApplication.Constants;
+using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -100,13 +101,19 @@ namespace GenotypeApplication.MVVM.Converters
             ["color127"] = Color.FromRgb(254, 254, 84),
             ["color128"] = Color.FromRgb(246, 205, 69),
             ["color129"] = Color.FromRgb(240, 157, 56),
-            ["color130"] = Color.FromRgb(236, 112, 45),
+            ["color130"] = Color.FromRgb(236, 112, 45)
         };
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is string name && ColorMap.TryGetValue(name, out var color))
-                return new SolidColorBrush(color);
+            if (value is string name)
+            {
+                if (ColorMap.TryGetValue(name, out var color))
+                    return new SolidColorBrush(color);
+
+                if (ColorBrewerRgb.TryGetColor(name, out var cbColor))
+                    return new SolidColorBrush(cbColor);
+            }
             return Brushes.Transparent;
         }
 

@@ -238,7 +238,7 @@ namespace GenotypeApplication.View_models
             }
             catch (Exception ex)
             {
-                _messageService.ShowError($"An error occurred while running Structure Harvester for set {setName}. {ex.Message}. See logs for details.");
+                _messageService.ShowError($"An error occurred while running Structure Harvester for set {setName}. {ex.Message} See logs for details.");
                 StructureHarvesterProgressText = $"[{setName}] Stopped by error.";
             }
             finally
@@ -249,7 +249,8 @@ namespace GenotypeApplication.View_models
         private bool CanStartStructureHarvester()
         {
             return CurrentSet != null &&
-                !_structureHarvesterInteractionService.IsRunning;
+                   !_structureHarvesterInteractionService.IsRunning &&
+                   (WorkflowState.CanChangeActiveSet != null && WorkflowState.CanChangeActiveSet());
         }
 
         private async Task LoadChartsAsync()

@@ -11,6 +11,7 @@ using GenotypeApplication.Services.Set;
 using GenotypeApplication.View_models.External_programs_tabs;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Configuration;
 using System.IO;
 using System.Windows.Input;
 
@@ -412,7 +413,9 @@ namespace GenotypeApplication.View_models
 
         protected override async Task LoadSelectedSetParametersAsync(SetModel? set)
         {
-            if (set == null || !set.IsCLUMPPProcessed)
+            if (set == null ||
+                !_directoryService.IsDirectoryExist(Path.Combine(_fullProjectFolderPath, set.Name, CLUMPPConstants.CLUMPP_FOLDER_NAME)) ||
+                _directoryService.IsDirectoryEmpty(Path.Combine(_fullProjectFolderPath, set.Name, CLUMPPConstants.CLUMPP_FOLDER_NAME)))
             {
                 WorkflowState.CLUMPPConfigurationModelsList.Clear();
                 ConfigurationName = string.Empty;
@@ -546,6 +549,10 @@ namespace GenotypeApplication.View_models
         {
             var (configuration, isPop, popCount, isIndv, indvCount) = GetConfigurationParameters();
 
+            var forFairComparison = _changesTracker.GetSnapshot();
+            configuration.C = forFairComparison?.C ?? configuration.C;
+            configuration.DATATYPE = forFairComparison?.DATATYPE ?? configuration.DATATYPE;
+
             if (CurrentSet == null ||
                 HasErrors ||
                 (!_changesTracker.HasChanges(configuration) && _savedDataTypeParameters == (isPop, popCount, isIndv, indvCount)) ||
@@ -639,14 +646,18 @@ namespace GenotypeApplication.View_models
         }
         private bool CanSaveChanges()
         {
-            var (configurationParameters, isPops, popCount, isIndv, indvCount) = GetConfigurationParameters();
+            var (configuration, isPops, popCount, isIndv, indvCount) = GetConfigurationParameters();
+
+            var forFairComparison = _changesTracker.GetSnapshot();
+            configuration.C = forFairComparison?.C ?? configuration.C;
+            configuration.DATATYPE = forFairComparison?.DATATYPE ?? configuration.DATATYPE;
 
             return CurrentSet != null &&
                    !HasErrors &&
-                   !string.IsNullOrWhiteSpace(configurationParameters.ParametersName) &&
-                   (_changesTracker.HasChanges(configurationParameters) || _savedDataTypeParameters != (isPops, popCount, isIndv, indvCount)) &&
+                   !string.IsNullOrWhiteSpace(configuration.ParametersName) &&
+                   (_changesTracker.HasChanges(configuration) || _savedDataTypeParameters != (isPops, popCount, isIndv, indvCount)) &&
                    ((isIndv && indvCount != 0) || (isPops && popCount != 0)) &&
-                   configurationParameters.R != 0;
+                   configuration.R != 0;
         }
         private async Task CreateNewConfigurationAsync(CLUMPPConfigurationModel configurationModel, string fullCurrentSetFolderPath, bool isPop, int popCount, bool isIndv, int indvCount)
         {
@@ -655,6 +666,8 @@ namespace GenotypeApplication.View_models
                 _clumppInteractionService.PrepareCLUMPPDirectory(fullCurrentSetFolderPath);
 
                 await _clumppInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, configurationModel, isPop, popCount, isIndv, indvCount);
+
+                CurrentCLUMPPConfigurationModel = null;
 
                 WorkflowState.AddNewCLUMPPConfiguration(configurationModel);
                 SetField(ref _currentCLUMPPConfigurationModel, configurationModel, null);
@@ -713,6 +726,7 @@ namespace GenotypeApplication.View_models
                         await _clumppInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, configurationModel, isPop, popCount, isIndv, indvCount);
                     }
                 }
+                _messageService.ShowInformation($"Configuration \"{configurationModel.ParametersName}\" was successfully updated.");
                 return true;
             }
             catch (Exception) { throw; }
@@ -764,18 +778,19 @@ namespace GenotypeApplication.View_models
                 WorkflowState.MarkProcessedAndRefreshStage(currentSet, ProcessingStage);
                 await _setConfigurationService.SaveConfigFileAsync(fullCurrentSetFolderPath, currentSet);
 
-                bool hasPopResults = _clumppInteractionService.HasPopResults(fullCurrentSetFolderPath, configurationName);
 
-                WorkflowState.MarkCLUMPPConfigurationProcessed(CurrentCLUMPPConfigurationModel, hasPopResults);
+                var (hasPopResults, hasIndvResults) = _clumppInteractionService.GetResultsType(fullCurrentSetFolderPath, configurationName);
+
+                WorkflowState.MarkCLUMPPConfigurationProcessed(CurrentCLUMPPConfigurationModel, hasPopResults, hasIndvResults);
 
                 CLUMPPProgress = 100;
-                CLUMPPProgressText = $"[{setName}|{_configurationName}] Completed";
+                CLUMPPProgressText = $"[{setName}|{configurationName}] Completed";
 
                 _userSure = false;
             }
             catch (OperationCanceledException)
             {
-                CLUMPPProgressText = $"[{setName}|{_configurationName}] Stopped at {CLUMPPProgress:F0}%";
+                CLUMPPProgressText = $"[{setName}|{configurationName}] Stopped at {CLUMPPProgress:F0}%";
             }
             catch (Exception ex)
             {
@@ -787,6 +802,10 @@ namespace GenotypeApplication.View_models
             {
                 StopCLUMPPCommand.NotifyCanExecuteChanged();
                 IsRunning = false;
+                if (CLUMPPStopped)
+                {
+                    _clumppInteractionService.DeleteResults(fullCurrentSetFolderPath, configurationName);
+                }
             }
         }
         private bool CanStartCLUMPP()
@@ -800,7 +819,8 @@ namespace GenotypeApplication.View_models
                    ((IsPop && IsPop == _savedDataTypeParameters.savedIsPop) ||
                     (IsIndv && IsIndv == _savedDataTypeParameters.savedisIndv)) &&
                     KFrom > 0 &&
-                    KTo > 0;
+                    KTo > 0 &&
+                   (WorkflowState.CanChangeActiveSet != null && WorkflowState.CanChangeActiveSet());
         }
 
         private void StopCLUMPP()

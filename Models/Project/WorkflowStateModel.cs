@@ -20,6 +20,7 @@ namespace GenotypeApplication.Models.Project
 
         // Функция проверки — устанавливается снаружи
         public Func<bool>? CanChangeActiveSet { get; set; }
+        public Func<bool>? CanChangeActiveConfiguration { get; set; }
 
         public ObservableCollection<SetModel> SetModelsList => _setModelsList;
         public SetModel? CurrentSet
@@ -47,7 +48,6 @@ namespace GenotypeApplication.Models.Project
             }
         }
 
-        // Событие для уведомления UI о блокировке
         public event Action? ActiveSetChangeBlocked;
 
         public event Action<SetModel?>? CurrentSetChanged;
@@ -95,7 +95,6 @@ namespace GenotypeApplication.Models.Project
                 SetModelsList.Add(set);
             }
 
-            //сначала добавляем всё, потом устанавливаем текущий — чтобы фильтры уже имели данные к моменту уведомления
             StateRefreshed?.Invoke();
 
             if (markedAsCurrent != null) CurrentSet = markedAsCurrent;
@@ -114,6 +113,12 @@ namespace GenotypeApplication.Models.Project
             get => _currentCLUMPPConfigurationModel;
             set
             {
+                if (CanChangeActiveConfiguration != null && !CanChangeActiveConfiguration())
+                {
+                    ActiveSetChangeBlocked?.Invoke();
+                    return;
+                }
+
                 SetField(ref _currentCLUMPPConfigurationModel, value);
                 CurrentCLUMPPConfigurationChanged?.Invoke(_currentCLUMPPConfigurationModel);
             }
@@ -121,10 +126,11 @@ namespace GenotypeApplication.Models.Project
 
         public event Action<CLUMPPConfigurationModel?>? CurrentCLUMPPConfigurationChanged;
         public event Action? CLUMPPConfigurationListRefreshed;
-        public void MarkCLUMPPConfigurationProcessed(CLUMPPConfigurationModel configuration, bool hasPopResults)
+        public void MarkCLUMPPConfigurationProcessed(CLUMPPConfigurationModel configuration, bool hasPopResults, bool hasIndvResults)
         {
             configuration.IsProcessed = true;
             configuration.HasPopResults = hasPopResults;
+            configuration.HasIndvResults = hasIndvResults;
 
             CLUMPPConfigurationListRefreshed?.Invoke();
             CurrentCLUMPPConfigurationChanged?.Invoke(configuration);

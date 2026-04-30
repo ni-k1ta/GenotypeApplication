@@ -74,7 +74,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             Directory.CreateDirectory(fullConfigurationFolderPath);
 
             if (!string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_ATOP) ||
-                !string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_BELOW) || 
+                !string.IsNullOrWhiteSpace(configurationModel.INFILE_LABEL_BELOW) ||
                 !string.IsNullOrWhiteSpace(clustPermFilePath))
             {
                 var fullOptionalFolderPath = Path.Combine(fullConfigurationFolderPath, DISTRUCT_OPTIONAL_FOLDER_NAME);
@@ -385,11 +385,11 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                Debug.WriteLine($"Started [K={job.K}] PID={process.Id}");
+                //Debug.WriteLine($"Started [K={job.K}] PID={process.Id}");
 
                 await process.WaitForExitAsync(ct);
 
-                Debug.WriteLine($"Finished [K={job.K}] ExitCode={process.ExitCode}");
+                //Debug.WriteLine($"Finished [K={job.K}] ExitCode={process.ExitCode}");
 
                 var (completed, total) = reportProgress();
 
@@ -427,7 +427,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             foreach (var item in clusterColors.Where(i => i.ClusterIndex <= k))
             {
                 if (isGrayscale)
-                    sb.AppendLine($"{item.ClusterIndex} {item.GrayscaleValue:F3}");
+                    sb.AppendLine($"{item.ClusterIndex} {item.GrayscaleValue.ToString("F3", CultureInfo.InvariantCulture)}");
                 else
                     sb.AppendLine($"{item.ClusterIndex} {item.ColorName}");
             }
@@ -437,39 +437,103 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             return clustPermFilePath;
         }
 
-        public async Task<BitmapImage> GeneratePreviewForKAsync(string fullSetFolderPath, string clumppConfigurationName, string configurationName, int k, string clustPermFilePath, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale)
+        public async Task GeneratePreviewsForRangeAsync(
+        string fullSetFolderPath,
+        string clumppConfigurationName,
+        string configurationName,
+        int kFrom,
+        int kTo,
+        string clustPermFilePath,
+        ObservableCollection<ClusterColorItem> clusterColors,
+        bool isGrayscale,
+        IProgress<PreviewItem> progress,
+        CancellationToken cancellationToken)
         {
+            if (kFrom > kTo)
+                throw new ArgumentException($"kFrom ({kFrom}) must be <= kTo ({kTo}).");
+
             if (!string.IsNullOrWhiteSpace(clustPermFilePath) && !File.Exists(clustPermFilePath))
                 throw new FileNotFoundException("ClustPerm file was not found.", clustPermFilePath);
 
-            var fullCLUMPPResultsFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME);
-            bool hasCLUMPPResults = _directoryService.IsDirectoryExist(fullCLUMPPResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullCLUMPPResultsFolderPath);
+            var fullCLUMPPResultsFolderPath = Path.Combine(
+                fullSetFolderPath, CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME);
+            bool hasCLUMPPResults = _directoryService.IsDirectoryExist(fullCLUMPPResultsFolderPath)
+                                    && !_directoryService.IsDirectoryEmpty(fullCLUMPPResultsFolderPath);
             if (!hasCLUMPPResults)
                 throw new FileNotFoundException("CLUMPP results were not found.");
 
-            var fullConfigurationCLUMPPFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName);
+            var fullConfigurationCLUMPPFolderPath = Path.Combine(
+                fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName);
             var fullConfigurationFolderPath = Path.Combine(fullConfigurationCLUMPPFolderPath, configurationName);
             var fullResultsFolderPath = Path.Combine(fullConfigurationFolderPath, "tmp");
             Directory.CreateDirectory(fullResultsFolderPath);
 
             var fullDistructExecutableFilePath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, DISTRUCT_EXECUTABLE_FILE_NAME);
+            if (!File.Exists(fullDistructExecutableFilePath))
+                throw new FileNotFoundException("Distruct executable file not found.", fullDistructExecutableFilePath);
 
+            string ghostscriptPath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, "gswin64c.exe");
+            if (!File.Exists(ghostscriptPath))
+                throw new FileNotFoundException("Ghostscript executable file not found.", ghostscriptPath);
+
+            try
+            {
+                for (int k = kFrom; k <= kTo; k++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var item = await RunSinglePreviewAsync(
+                        k,
+                        configurationName,
+                        clumppConfigurationName,
+                        clustPermFilePath,
+                        clusterColors,
+                        isGrayscale,
+                        fullConfigurationFolderPath,
+                        fullResultsFolderPath,
+                        fullDistructExecutableFilePath,
+                        ghostscriptPath,
+                        cancellationToken);
+
+                    progress?.Report(item);
+                }
+            }
+            finally
+            {
+                _directoryService.DeleteDirectory(fullResultsFolderPath);
+            }
+        }
+
+        private async Task<PreviewItem> RunSinglePreviewAsync(
+        int k,
+        string configurationName,
+        string clumppConfigurationName,
+        string clustPermFilePath,
+        ObservableCollection<ClusterColorItem> clusterColors,
+        bool isGrayscale,
+        string fullConfigurationFolderPath,
+        string fullResultsFolderPath,
+        string fullDistructExecutableFilePath,
+        string ghostscriptPath,
+        CancellationToken cancellationToken)
+        {
             var job = new DistructJob(
-                    k,
-                    configurationName,
-                    Path.Combine("..", "..", "..", CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME, $"K{k}.popq"),
-                    Path.Combine("..", "..", "..", CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME, $"K{k}.indq"),
-                    Path.Combine("tmp", $"K{k}.ps")
-                    );
+                k,
+                configurationName,
+                Path.Combine("..", "..", "..", CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME, $"K{k}.popq"),
+                Path.Combine("..", "..", "..", CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME, $"K{k}.indq"),
+                Path.Combine("tmp", $"K{k}.ps")
+            );
 
             Process? process = null;
 
             try
             {
-                if (string.IsNullOrEmpty(clustPermFilePath))
+                var effectiveClustPermPath = clustPermFilePath;
+                if (string.IsNullOrEmpty(effectiveClustPermPath))
                 {
-                    clustPermFilePath = CreateClustPermFile(clusterColors, job.K, isGrayscale, fullResultsFolderPath);
-                    clustPermFilePath = Path.Combine("tmp", Path.GetFileName(clustPermFilePath));
+                    var createdPath = CreateClustPermFile(clusterColors, job.K, isGrayscale, fullResultsFolderPath);
+                    effectiveClustPermPath = Path.Combine("tmp", Path.GetFileName(createdPath));
                 }
 
                 var arguments =
@@ -478,10 +542,9 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     $" -p {job.InputFilePopqPath}" +
                     $" -i {job.InputFileIndvqPath}" +
                     $" -o {job.OutFilePath}" +
-
-                    (string.IsNullOrWhiteSpace(clustPermFilePath) ?
-                        string.Empty :
-                        $" -c \"{clustPermFilePath}\"");
+                    (string.IsNullOrWhiteSpace(effectiveClustPermPath)
+                        ? string.Empty
+                        : $" -c \"{effectiveClustPermPath}\"");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -490,21 +553,23 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     WorkingDirectory = fullConfigurationFolderPath,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    RedirectStandardOutput = false,
-                    RedirectStandardError = false
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
                 };
 
                 process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-
                 process.Start();
-                await process.WaitForExitAsync(App.GlobalCts.Token);
+                string stdout = process.StandardOutput.ReadToEnd();
+                string stderr = process.StandardError.ReadToEnd();
+                await process.WaitForExitAsync(cancellationToken);
 
-
-                string ghostscriptPath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, "gswin64c.exe");
-                if (!File.Exists(ghostscriptPath)) { throw new FileNotFoundException("Ghostscript executable file not found.", ghostscriptPath); }
+                Debug.WriteLine($"Exit code: {process.ExitCode}");
+                Debug.WriteLine($"STDOUT: {stdout}");
+                Debug.WriteLine($"STDERR: {stderr}");
 
                 string inputFilePath = Path.Combine(fullResultsFolderPath, $"K{job.K}.ps");
-                if (!File.Exists(inputFilePath)) throw new FileNotFoundException("Input file not found.", inputFilePath);
+                if (!File.Exists(inputFilePath))
+                    throw new FileNotFoundException("Input file not found.", inputFilePath);
 
                 string outputFileBaseName = Path.GetFileNameWithoutExtension(inputFilePath);
 
@@ -523,42 +588,157 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     $"-sOutputFile=\"{outputFilePath}\"",
                     $"-dDEVICEWIDTHPOINTS={bbox.Width}",
                     $"-dDEVICEHEIGHTPOINTS={bbox.Height}",
-                    "-dFIXEDMEDIA"
+                    "-dFIXEDMEDIA",
+                    "-r300",
+                    $"\"{inputFilePath}\""
                 };
 
-                args.Add($"-r{300}");
-                args.Add($"\"{inputFilePath}\"");
                 var ghostlibArgs = string.Join(" ", args);
-
-                try
-                {
-                    await RunGhostscriptAsync(ghostscriptPath, ghostlibArgs);
-                }
-                catch (Exception) { throw; }
+                await RunGhostscriptAsync(ghostscriptPath, ghostlibArgs);
 
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                 bitmap.UriSource = new Uri(outputFilePath);
                 bitmap.EndInit();
-                bitmap.Freeze(); 
-                return bitmap;
+                bitmap.Freeze();
+
+                return new PreviewItem { K = k, Image = bitmap };
             }
             catch (OperationCanceledException) when (process is { HasExited: false })
             {
-
                 try { process.Kill(entireProcessTree: true); }
-                catch (Exception) { throw; }
-
+                catch { /* ignore kill errors */ }
                 throw;
             }
-            catch (Exception) { throw; }
             finally
             {
                 process?.Dispose();
-                _directoryService.DeleteDirectory(fullResultsFolderPath);
             }
         }
+        //public async Task<BitmapImage> GeneratePreviewForKAsync(string fullSetFolderPath, string clumppConfigurationName, string configurationName, int k, string clustPermFilePath, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale)
+        //{
+        //    if (!string.IsNullOrWhiteSpace(clustPermFilePath) && !File.Exists(clustPermFilePath))
+        //        throw new FileNotFoundException("ClustPerm file was not found.", clustPermFilePath);
+
+        //    var fullCLUMPPResultsFolderPath = Path.Combine(fullSetFolderPath, CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME);
+        //    bool hasCLUMPPResults = _directoryService.IsDirectoryExist(fullCLUMPPResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullCLUMPPResultsFolderPath);
+        //    if (!hasCLUMPPResults)
+        //        throw new FileNotFoundException("CLUMPP results were not found.");
+
+        //    var fullConfigurationCLUMPPFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName);
+        //    var fullConfigurationFolderPath = Path.Combine(fullConfigurationCLUMPPFolderPath, configurationName);
+        //    var fullResultsFolderPath = Path.Combine(fullConfigurationFolderPath, "tmp");
+        //    Directory.CreateDirectory(fullResultsFolderPath);
+
+        //    var fullDistructExecutableFilePath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, DISTRUCT_EXECUTABLE_FILE_NAME);
+
+        //    var job = new DistructJob(
+        //            k,
+        //            configurationName,
+        //            Path.Combine("..", "..", "..", CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME, $"K{k}.popq"),
+        //            Path.Combine("..", "..", "..", CLUMPP_FOLDER_NAME, clumppConfigurationName, CLUMPP_RESULTS_FOLDER_NAME, $"K{k}.indq"),
+        //            Path.Combine("tmp", $"K{k}.ps")
+        //            );
+
+        //    Process? process = null;
+
+        //    try
+        //    {
+        //        if (string.IsNullOrEmpty(clustPermFilePath))
+        //        {
+        //            clustPermFilePath = CreateClustPermFile(clusterColors, job.K, isGrayscale, fullResultsFolderPath);
+        //            clustPermFilePath = Path.Combine("tmp", Path.GetFileName(clustPermFilePath));
+        //        }
+
+        //        var arguments =
+        //            $"-d {job.ParametersFileName}" +
+        //            $" -K {job.K}" +
+        //            $" -p {job.InputFilePopqPath}" +
+        //            $" -i {job.InputFileIndvqPath}" +
+        //            $" -o {job.OutFilePath}" +
+
+        //            (string.IsNullOrWhiteSpace(clustPermFilePath) ?
+        //                string.Empty :
+        //                $" -c \"{clustPermFilePath}\"");
+
+        //        var startInfo = new ProcessStartInfo
+        //        {
+        //            FileName = fullDistructExecutableFilePath,
+        //            Arguments = arguments,
+        //            WorkingDirectory = fullConfigurationFolderPath,
+        //            UseShellExecute = false,
+        //            CreateNoWindow = true,
+        //            RedirectStandardOutput = false,
+        //            RedirectStandardError = false
+        //        };
+
+        //        process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+
+        //        process.Start();
+        //        await process.WaitForExitAsync(App.GlobalCts.Token);
+
+
+        //        string ghostscriptPath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, "gswin64c.exe");
+        //        if (!File.Exists(ghostscriptPath)) { throw new FileNotFoundException("Ghostscript executable file not found.", ghostscriptPath); }
+
+        //        string inputFilePath = Path.Combine(fullResultsFolderPath, $"K{job.K}.ps");
+        //        if (!File.Exists(inputFilePath)) throw new FileNotFoundException("Input file not found.", inputFilePath);
+
+        //        string outputFileBaseName = Path.GetFileNameWithoutExtension(inputFilePath);
+
+        //        var bbox = await GetBoundingBoxAsync(ghostscriptPath, inputFilePath);
+
+        //        var settings = FormatMap.Get(DistructConstants.OutputFormat.Png);
+        //        var fileName = $"{outputFileBaseName}{settings.Extension}";
+        //        var outputFilePath = Path.Combine(fullResultsFolderPath, fileName);
+
+        //        var args = new List<string>
+        //        {
+        //            "-dNOPAUSE",
+        //            "-dBATCH",
+        //            "-dSAFER",
+        //            $"-sDEVICE={settings.Device}",
+        //            $"-sOutputFile=\"{outputFilePath}\"",
+        //            $"-dDEVICEWIDTHPOINTS={bbox.Width}",
+        //            $"-dDEVICEHEIGHTPOINTS={bbox.Height}",
+        //            "-dFIXEDMEDIA"
+        //        };
+
+        //        args.Add($"-r{300}");
+        //        args.Add($"\"{inputFilePath}\"");
+        //        var ghostlibArgs = string.Join(" ", args);
+
+        //        try
+        //        {
+        //            await RunGhostscriptAsync(ghostscriptPath, ghostlibArgs);
+        //        }
+        //        catch (Exception) { throw; }
+
+        //        var bitmap = new BitmapImage();
+        //        bitmap.BeginInit();
+        //        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        //        bitmap.UriSource = new Uri(outputFilePath);
+        //        bitmap.EndInit();
+        //        bitmap.Freeze(); 
+        //        return bitmap;
+        //    }
+        //    catch (OperationCanceledException) when (process is { HasExited: false })
+        //    {
+
+        //        try { process.Kill(entireProcessTree: true); }
+        //        catch (Exception) { throw; }
+
+        //        throw;
+        //    }
+        //    catch (Exception) { throw; }
+        //    finally
+        //    {
+        //        process?.Dispose();
+        //        _directoryService.DeleteDirectory(fullResultsFolderPath);
+        //    }
+        //}
 
         public async Task RenameConfiguration(string fullCurrentSetFolderPath, string clumppConfigurationName, string oldConfigurationName, string newConfigurationName)
         {
@@ -777,6 +957,19 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             {
                 throw new Exception(
                     $"Ghostscript завершился с ошибкой (код {exitCode}): {errorOutput}");
+            }
+        }
+
+        public void DeleteResults(string fullSetFolderPath, string clumppConfigurationName, string configurationName)
+        {
+            var fullResultsFolderPath = Path.Combine(fullSetFolderPath, DISTRUCT_FOLDER_NAME, clumppConfigurationName, configurationName, DISTRUCT_RESULTS_FOLDER_NAME);
+            if (_directoryService.IsDirectoryExist(fullResultsFolderPath) && !_directoryService.IsDirectoryEmpty(fullResultsFolderPath))
+            {
+                foreach (var file in Directory.GetFiles(fullResultsFolderPath))
+                {
+                    try { File.Delete(file); }
+                    catch { /* ignore delete errors */ }
+                }
             }
         }
     }

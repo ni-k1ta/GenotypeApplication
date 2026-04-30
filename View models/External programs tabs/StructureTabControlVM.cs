@@ -981,6 +981,7 @@ namespace GenotypeApplication.View_models
                         await _structureInteractionService.PrepareParameterFiles(fullNewSetFolderPath, dataFileFormatModel, newMainParameters, newExtraParameters);
                     }
                 }
+                _messageService.ShowInformation($"Set \"{newSetName}\" was successfully updated.");
                 return true;
             }
             catch (Exception) { throw; }
@@ -1035,6 +1036,8 @@ namespace GenotypeApplication.View_models
             {
                 StopStructureCommand.NotifyCanExecuteChanged();
                 IsRunning = false;
+                if (StructureStopped)
+                    _structureInteractionService.DeleteResults(fullCurrentSetFolderPath);
             }
         }
         private bool CanStartStructure()
@@ -1046,7 +1049,8 @@ namespace GenotypeApplication.View_models
                    !HasErrorsFor(nameof(KTo)) &&
                    KFrom > 0 &&
                    KTo > 0 &&
-                   Iterations > 0;
+                   Iterations > 0 &&
+                   (WorkflowState.CanChangeActiveSet != null && WorkflowState.CanChangeActiveSet());
         }
 
         private void StopStructure()
