@@ -11,7 +11,7 @@ namespace GenotypeApplication.Models.Project
         private SetModel? _currentSet;
         private ObservableCollection<SetModel> _setModelsList = new();
 
-        private ProjectExplorerViewModel _projectExplorer;
+        public ProjectExplorerViewModel _projectExplorer;
 
         public WorkflowStateModel(ProjectExplorerViewModel projectExplorer)
         {

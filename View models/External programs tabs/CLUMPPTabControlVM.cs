@@ -13,6 +13,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Configuration;
 using System.IO;
+using System.Reflection;
 using System.Windows.Input;
 
 namespace GenotypeApplication.View_models
@@ -552,6 +553,9 @@ namespace GenotypeApplication.View_models
             var forFairComparison = _changesTracker.GetSnapshot();
             configuration.C = forFairComparison?.C ?? configuration.C;
             configuration.DATATYPE = forFairComparison?.DATATYPE ?? configuration.DATATYPE;
+            configuration.HasIndvResults = forFairComparison?.HasIndvResults ?? configuration.HasIndvResults;
+            configuration.HasPopResults = forFairComparison?.HasPopResults ?? configuration.HasPopResults;
+            configuration.IsProcessed = forFairComparison?.IsProcessed ?? configuration.IsProcessed;
 
             if (CurrentSet == null ||
                 HasErrors ||
@@ -651,6 +655,9 @@ namespace GenotypeApplication.View_models
             var forFairComparison = _changesTracker.GetSnapshot();
             configuration.C = forFairComparison?.C ?? configuration.C;
             configuration.DATATYPE = forFairComparison?.DATATYPE ?? configuration.DATATYPE;
+            configuration.HasIndvResults = forFairComparison?.HasIndvResults ?? configuration.HasIndvResults;
+            configuration.HasPopResults = forFairComparison?.HasPopResults ?? configuration.HasPopResults;
+            configuration.IsProcessed = forFairComparison?.IsProcessed ?? configuration.IsProcessed;
 
             return CurrentSet != null &&
                    !HasErrors &&
@@ -678,7 +685,7 @@ namespace GenotypeApplication.View_models
             }
             catch (Exception) { throw; }
         }
-        private async Task<bool> UpdateExistingConfigurationAsync(CLUMPPConfigurationModel configurationModel, string fullCurrentSetFolderPath, bool isPop, int popCount, bool isIndv, int indvCount)
+        private async Task<bool> UpdateExistingConfigurationAsync(CLUMPPConfigurationModel configuration, string fullCurrentSetFolderPath, bool isPop, int popCount, bool isIndv, int indvCount)
         {
             try
             {
@@ -691,14 +698,27 @@ namespace GenotypeApplication.View_models
                     return false;
                 }
 
-                if (CurrentCLUMPPConfigurationModel.ParametersName != configurationModel.ParametersName)
-                {
-                    CurrentCLUMPPConfigurationModel.ParametersName = configurationModel.ParametersName;
+                var forFairComparison = _changesTracker.GetSnapshot();
 
-                    await _clumppInteractionService.RenameConfiguration(fullCurrentSetFolderPath, CurrentCLUMPPConfigurationModel.ParametersName, configurationModel.ParametersName);
+                if (CurrentCLUMPPConfigurationModel.ParametersName != configuration.ParametersName)
+                {
+                    await _clumppInteractionService.RenameConfiguration(fullCurrentSetFolderPath, CurrentCLUMPPConfigurationModel.ParametersName, configuration.ParametersName);
+
+                    CurrentCLUMPPConfigurationModel.ParametersName = configuration.ParametersName;
+                    ConfigurationName = configuration.ParametersName;
+                    forFairComparison?.ParametersName = CurrentCLUMPPConfigurationModel.ParametersName;
                 }
 
-                if (_changesTracker.HasChanges(configurationModel) || _savedDataTypeParameters != (isPop, PopsCount, isIndv, IndvsCount))
+                configuration.C = forFairComparison?.C ?? configuration.C;
+                configuration.DATATYPE = forFairComparison?.DATATYPE ?? configuration.DATATYPE;
+                configuration.HasIndvResults = forFairComparison?.HasIndvResults ?? configuration.HasIndvResults;
+                configuration.HasPopResults = forFairComparison?.HasPopResults ?? configuration.HasPopResults;
+                configuration.IsProcessed = forFairComparison?.IsProcessed ?? configuration.IsProcessed;
+
+                ParametersChangesTracker<CLUMPPConfigurationModel> parametersChangesTracker = new ParametersChangesTracker<CLUMPPConfigurationModel>();
+                parametersChangesTracker.TakeModelSnapshot(forFairComparison ?? new CLUMPPConfigurationModel());
+                
+                if (parametersChangesTracker.HasChanges(configuration) || _savedDataTypeParameters != (isPop, PopsCount, isIndv, IndvsCount))
                 {
                     if (CurrentCLUMPPConfigurationModel.IsProcessed)
                     {
@@ -723,10 +743,10 @@ namespace GenotypeApplication.View_models
                     }
                     else
                     {
-                        await _clumppInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, configurationModel, isPop, popCount, isIndv, indvCount);
+                        await _clumppInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, configuration, isPop, popCount, isIndv, indvCount);
                     }
                 }
-                _messageService.ShowInformation($"Configuration \"{configurationModel.ParametersName}\" was successfully updated.");
+                _messageService.ShowInformation($"Configuration \"{configuration.ParametersName}\" was successfully updated.");
                 return true;
             }
             catch (Exception) { throw; }

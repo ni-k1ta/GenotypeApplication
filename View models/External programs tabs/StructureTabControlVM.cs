@@ -930,11 +930,26 @@ namespace GenotypeApplication.View_models
 
                 if (CurrentSet.Name != newSetName)
                 {
+                    var parts = dataFileFullPath.Split(Path.DirectorySeparatorChar);
+                    for (int i = 0; i < parts.Length; i++)
+                    {
+                        if (parts[i] == CurrentSet.Name)
+                        {
+                            parts[i] = newSetName;
+                            break;
+                        }
+                    }
+                    dataFileFullPath = Path.Combine(parts);
+                    DataFileFullPath = dataFileFullPath;
+                    _savedDataFileFullPath = dataFileFullPath;
+
                     CurrentSet.Name = newSetName;
 
                     _setConfigurationService.Rename(fullSavedSetFolderPath, fullNewSetFolderPath);
 
                     await _setConfigurationService.UpdateConfigFileAsync(fullSavedSetFolderPath, fullNewSetFolderPath, CurrentSet);
+
+                    WorkflowState._projectExplorer.SetName = newSetName;
                 }
 
                 bool isParametersChanged = _mainParametersChangesTracker.HasChanges(newMainParameters) ||

@@ -368,6 +368,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <ComboBox x:Name="parameterSetsComboBox"
+                                          Width="100"
                                           Grid.Column="0"
                                           Margin="5,0,10,0"
                                           ItemsSource="{Binding SetModelsComboBoxList}"
@@ -1191,6 +1192,7 @@
                                               HorizontalAlignment="Left"
                                               VerticalAlignment="Bottom"
                                               Grid.Column="0"
+                                              Width="100"
                                               ItemsSource="{Binding FilteredSetModelsList}"
                                               SelectedItem="{Binding CurrentSet, UpdateSourceTrigger=PropertyChanged}"
                                               DisplayMemberPath="Name"
@@ -1242,6 +1244,7 @@
                                 </Grid.RowDefinitions>
 
                                 <ComboBox x:Name="processedSetsComboBox"
+                                          Width="100"
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Bottom"
                                           Grid.Column="0"
@@ -1369,6 +1372,7 @@
                                     <GroupBox x:Name="structureHarvesterOutputSetsSelectionGroupBox"
                                               Header="Select Structure Harvester output set">
                                         <ComboBox x:Name="structureHarvesterOutputSetsComboBox"
+                                                  Width="100"
                                                   HorizontalAlignment="Left"
                                                   ItemsSource="{Binding FilteredSetModelsList}"
                                                   SelectedItem="{Binding CurrentSet, UpdateSourceTrigger=PropertyChanged}"
@@ -1474,6 +1478,7 @@
                                           Height="62.88">
                                     <StackPanel Orientation="Horizontal">
                                         <ComboBox x:Name="clumppParameterFilesComboBox"
+                                                  Width="100"
                                                   ItemsSource="{Binding ConfigurationParametersComboBoxList}"
                                                   SelectedItem="{Binding SelectedComboBoxConfigurationParameters, UpdateSourceTrigger=PropertyChanged}"
                                                   DisplayMemberPath="ParametersName"
@@ -1765,6 +1770,7 @@
                                     <GroupBox Header="Output set"
                                               Padding="2">
                                         <ComboBox x:Name="CLUMPPOutputSetsComboBox"
+                                                  Width="100"
                                                   ItemsSource="{Binding FilteredSetModelsList}"
                                                   SelectedItem="{Binding CurrentSet, UpdateSourceTrigger=PropertyChanged}"
                                                   DisplayMemberPath="Name"
@@ -1774,6 +1780,7 @@
                                     <GroupBox Header="Output configuration"
                                               Padding="2">
                                         <ComboBox x:Name="CLUMPPOutputConfigurationsComboBox"
+                                                  Width="100"
                                                   ItemsSource="{Binding FilteredCLUMPPConfigurationModelsList}"
                                                   SelectedItem="{Binding CurrentCLUMPPConfigurationModel, UpdateSourceTrigger=PropertyChanged}"
                                                   DisplayMemberPath="ParametersName"
@@ -1788,6 +1795,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <ComboBox x:Name="distructParameterFilesComboBox"
                                               ItemsSource="{Binding ConfigurationParametersItems}"
+                                              Width="100"
                                               SelectedItem="{Binding SelectedConfigurationParameters, UpdateSourceTrigger=PropertyChanged}"
                                               DisplayMemberPath="ParametersName"
                                               IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBool}, UpdateSourceTrigger=PropertyChanged}" />

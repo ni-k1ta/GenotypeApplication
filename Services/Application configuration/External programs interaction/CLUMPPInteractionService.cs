@@ -566,6 +566,14 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 _fileService.DeleteFile(fullOldIndvParametersFilePath);
             }
+
+            string fullDistructPath = Path.Combine(fullCurrentSetFolderPath, DistructConstants.DISTRUCT_FOLDER_NAME, oldConfigurationName);
+
+            if (Directory.Exists(fullDistructPath))
+            {
+                string fullNewDistructPath = Path.Combine(fullCurrentSetFolderPath, DistructConstants.DISTRUCT_FOLDER_NAME, newConfigurationName);
+                Directory.Move(fullDistructPath, fullNewDistructPath);
+            }
         }
 
         public void DeleteResults(string fullCurrentSetFolderPath, string configurationName)

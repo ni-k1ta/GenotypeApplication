@@ -32,7 +32,8 @@
             <ComboBox ItemsSource="{Binding AvailableSchemes}"
                       SelectedItem="{Binding SelectedScheme}"
                       DisplayMemberPath="Family"
-                      Width="100" />
+                      Width="100" 
+                      Margin="2,0,0,0"/>
         </GroupBox>
 
         <GroupBox Header="Cluster order (order defines bottom-to-top display)"
