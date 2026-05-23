@@ -24,7 +24,7 @@ namespace GenotypeApplication.Services.Project
             return _recentProjects;
         }
 
-        public void AddProject(ProjectParametersModel projectModel)
+        public void AddProject(ProjectConfigurationModel projectModel)
         {
             try
             {
@@ -33,7 +33,7 @@ namespace GenotypeApplication.Services.Project
             catch (Exception) { throw; }
         }
 
-        public void UpdateProject(ProjectParametersModel oldProjectModel, ProjectParametersModel newProjectModel)
+        public void UpdateProject(ProjectConfigurationModel oldProjectModel, ProjectConfigurationModel newProjectModel)
         {
             try
             {
@@ -42,7 +42,7 @@ namespace GenotypeApplication.Services.Project
             catch (Exception) { throw; }
         }
 
-        private void AddOrUpdateProject(ProjectParametersModel projectModel, ProjectParametersModel? searchModel = null)
+        private void AddOrUpdateProject(ProjectConfigurationModel projectModel, ProjectConfigurationModel? searchModel = null)
         {
             searchModel ??= projectModel;
 

@@ -43,26 +43,39 @@ namespace GenotypeApplication.Services.Data_file_scanners
             int columnLength = column.Length;
             if (columnLength == 0) return false;
 
-            var validIntegers = new List<int>(columnLength);
+            var popFlagValues = new List<int>(columnLength);
 
             foreach (var columnValue in column)
             {
                 if (int.TryParse(columnValue, out int intValue))
                 {
                     if (intValue != 0 && intValue != 1) return false;
-                    validIntegers.Add(intValue);
+                    popFlagValues.Add(intValue);
                 }
                 else return false;
             }
 
-            if (validIntegers.Count == 0) return false;
+            if (popFlagValues.Count == 0) return false;
 
-            int scanned = validIntegers.Count;
-            int onesCount = validIntegers.Count(v => v == 1);
+            int scanned = popFlagValues.Count;
+            int onesCount = popFlagValues.Count(v => v == 1);
             int zerosCount = scanned - onesCount;
             double onesRatio = (double)onesCount / scanned;
 
             if (onesRatio < _minOnesRatio) return false;
+
+            if (format.OneRowPerInd == false && format.Ploidy >= 2)
+            {
+                return HasSamePatternAsPopData(popFlagValues, dataDetectionModel);
+            }
+
+            return true;
+        }
+
+        private bool HasSamePatternAsPopData(List<int> values, DataDetectionModel dataDetectionModel)
+        {
+            var data = dataDetectionModel.Data;
+            var format = dataDetectionModel.Format;
 
             int popDataColumnIndex = format.Label ? 1 : 0;
             int popDataStartRowIndex = (format.MarkerNames ? 1 : 0) + (format.RecessiveAlleles ? 1 : 0) + (format.MapDistances ? 1 : 0);
@@ -78,17 +91,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
                 if (int.TryParse(v, out var n)) popDataValues.Add(n);
             }
 
-            if (format.OneRowPerInd == false && format.Ploidy >= 2)
-            {
-                if (!HasSamePatternAsPopData(validIntegers, popDataValues, format)) return false;
-            }
-
-            return true;
-        }
-
-        private bool HasSamePatternAsPopData(List<int> values, List<int> compareValues, DataFileFormatModel format)
-        {
-            if (values.Count < 2 || compareValues.Count < 2) return false;
+            if (values.Count < 2 || popDataValues.Count < 2) return false;
 
             int currentSize = 1;
 
@@ -96,7 +99,7 @@ namespace GenotypeApplication.Services.Data_file_scanners
             {
                 if ((currentSize < format.Ploidy))
                 {
-                    if ((compareValues[i] == compareValues[i - 1]) && (values[i] == values[i - 1])) currentSize++;
+                    if ((popDataValues[i] == popDataValues[i - 1]) && (values[i] == values[i - 1])) currentSize++;
                     else return false;
                 }
                 else currentSize = 1;

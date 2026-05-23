@@ -652,7 +652,7 @@ namespace GenotypeApplication.View_models
         #endregion
 
 
-        private static readonly SetModel _createNewSetPlaceholder = new() { Name = "Create new set" };
+        private static readonly SetModel _createNewSetPlaceholder = new() { Name = "Create new" };
         public ObservableCollection<SetModel> SetModelsComboBoxList { get; } = new();
 
         public SetModel? SelectedComboBoxSet

@@ -12,9 +12,9 @@ using System.Windows.Input;
 
 namespace GenotypeApplication.View_models
 {
-    public class ProjectParametersVM : ViewModelErrors, IWindowAware
+    public class ProjectConfigurationVM : ViewModelErrors, IWindowAware
     {
-        private ProjectParametersModel _projectModel;
+        private ProjectConfigurationModel _projectModel;
 
         private readonly IDirectoryService _directoryService;
         private readonly IFileService _fileService;
@@ -50,7 +50,7 @@ namespace GenotypeApplication.View_models
         private bool _isNewProject;
         private bool _isSaving;
 
-        public ProjectParametersVM(IDirectoryService directoryService, IFileService fileService, IDialogService dialogService, IMessageService messageService, RecentProjectsService recentProjectsService, IValidator<string> nameTextValidator, IValidator<string> pathTextValidator, IWindowService windowService)
+        public ProjectConfigurationVM(IDirectoryService directoryService, IFileService fileService, IDialogService dialogService, IMessageService messageService, RecentProjectsService recentProjectsService, IValidator<string> nameTextValidator, IValidator<string> pathTextValidator, IWindowService windowService)
         {
             _projectModel = new();
 
@@ -477,7 +477,7 @@ namespace GenotypeApplication.View_models
 
             try
             {
-                var projectModel = ProjectParametersModel.Create(projectName, projectPath, isParallelEnabled, coresCount);
+                var projectModel = ProjectConfigurationModel.Create(projectName, projectPath, isParallelEnabled, coresCount);
                 await _projectService.CreateAsync(projectModel);
 
                 _projectModel = projectModel;
@@ -505,7 +505,7 @@ namespace GenotypeApplication.View_models
         }
         private async Task<bool> UpdateProjectAsync(string projectName, string projectPath, bool isParallelEnabled, int coresCount)
         {
-            ProjectParametersModel oldProjectModel = new(_projectModel);
+            ProjectConfigurationModel oldProjectModel = new(_projectModel);
 
             if (oldProjectModel.Name != projectName ||
                (_projectService.IsProjectExist(Path.Combine(oldProjectModel.Path, oldProjectModel.Name)) && oldProjectModel.Path != projectPath))

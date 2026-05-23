@@ -30,7 +30,7 @@ namespace GenotypeApplication.Models.Project
 #endif
         }
 
-        public static RecentProjectModel FromProjectParametersModel(ProjectParametersModel project)
+        public static RecentProjectModel FromProjectParametersModel(ProjectConfigurationModel project)
         {
             return new RecentProjectModel
             {

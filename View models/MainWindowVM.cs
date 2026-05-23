@@ -23,7 +23,7 @@ namespace GenotypeApplication.View_models
         private readonly IValidator<string> _parameterNameValidator;
         private readonly IValidator<(int kStart, int kEnd, int startLimited, int endLimited)> _kRangeValidator;
 
-        private ProjectParametersModel _projectModel;
+        private ProjectConfigurationModel _projectModel;
         private readonly string _projectFolderFullPath;
 
         private WeakReference<Window>? _currentWindowRef;
@@ -32,7 +32,7 @@ namespace GenotypeApplication.View_models
 
         private ProjectExplorerViewModel _projectExplorer;
 
-        public MainWindowVM(ProjectParametersModel projectModel, string fullProjectFolderPath, int coresCount, IDirectoryService directoryService, IFileService fileService, IDialogService dialogService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, IWindowService windowService)
+        public MainWindowVM(ProjectConfigurationModel projectModel, string fullProjectFolderPath, int coresCount, IDirectoryService directoryService, IFileService fileService, IDialogService dialogService, IMessageService messageService, IValidator<string> pathValidator, IValidator<string> parameterNameValidator, IWindowService windowService)
         {
             _projectExplorer = new() { ProjectPath = fullProjectFolderPath };
             _setService = new SetConfigurationService();

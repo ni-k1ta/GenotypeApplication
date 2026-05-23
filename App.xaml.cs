@@ -70,9 +70,9 @@ namespace GenotypeApplication
 
             RecentProjectsService recentProjectsService = new RecentProjectsService();
 
-            var projectParametersViewModel = new ProjectParametersVM(directoryService, fileService, dialogService, messageService, recentProjectsService, new NameTextValidator(), new PathTextValidator(), windowService);
+            var projectParametersViewModel = new ProjectConfigurationVM(directoryService, fileService, dialogService, messageService, recentProjectsService, new NameTextValidator(), new PathTextValidator(), windowService);
 
-            projectParametersViewModel.SetCurrentWindow(windowService.ShowWindow<ProjectConfigurationWindow, ProjectParametersVM>(projectParametersViewModel));
+            projectParametersViewModel.SetCurrentWindow(windowService.ShowWindow<ProjectConfigurationWindow, ProjectConfigurationVM>(projectParametersViewModel));
         }
 
         public static CancellationTokenSource GlobalCts { get; private set; } = new();

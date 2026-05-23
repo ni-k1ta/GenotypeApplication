@@ -5,20 +5,14 @@ using System.IO;
 
 namespace GenotypeApplication.Services.Project
 {
-    public class ProjectService
+    public class ProjectService(IDirectoryService directoryService, IFileService fileService)
     {
         private readonly string PROJECT_FILE_EXTENSION = AppConstants.PROJECT_FILE_EXTENSION;
 
-        private readonly IDirectoryService _directoryService;
-        private readonly IFileService _fileService;
+        private readonly IDirectoryService _directoryService = directoryService;
+        private readonly IFileService _fileService = fileService;
 
-        public ProjectService(IDirectoryService directoryService, IFileService fileService)
-        {
-            _directoryService = directoryService;
-            _fileService = fileService;
-        }
-
-        public async Task CreateAsync(ProjectParametersModel projectModel)
+        public async Task CreateAsync(ProjectConfigurationModel projectModel)
         {
             ArgumentNullException.ThrowIfNull(projectModel);
 
@@ -28,7 +22,7 @@ namespace GenotypeApplication.Services.Project
             await SaveAsync(projectModel);
         }
 
-        public async Task<ProjectParametersModel> LoadAsync(string fullProjectPath)
+        public async Task<ProjectConfigurationModel> LoadAsync(string fullProjectPath)
         {
             try
             {
@@ -39,7 +33,7 @@ namespace GenotypeApplication.Services.Project
 
                 string fullProjectConfigFilePath = Path.Combine(fullProjectPath, projectConfigFileName);
 
-                return await _fileService.ReadJsonAsync<ProjectParametersModel>(fullProjectConfigFilePath);
+                return await _fileService.ReadJsonAsync<ProjectConfigurationModel>(fullProjectConfigFilePath);
             }
             catch (FileNotFoundException fnfe)
             {
@@ -55,7 +49,7 @@ namespace GenotypeApplication.Services.Project
             }
         }
 
-        public async Task SaveAsync(ProjectParametersModel projectModel)
+        public async Task SaveAsync(ProjectConfigurationModel projectModel)
         {
             string projectConfigFileName = Path.ChangeExtension(projectModel.Name, PROJECT_FILE_EXTENSION);
 
@@ -64,7 +58,7 @@ namespace GenotypeApplication.Services.Project
             await _fileService.WriteJsonAsync(projectModel, fullProjectConfigFilePath);
         }
 
-        public void Actualize(ProjectParametersModel newProjectModel, ProjectParametersModel oldProjectModel)
+        public void Actualize(ProjectConfigurationModel newProjectModel, ProjectConfigurationModel oldProjectModel)
         {
             ArgumentNullException.ThrowIfNull(newProjectModel);
             ArgumentNullException.ThrowIfNull(oldProjectModel);

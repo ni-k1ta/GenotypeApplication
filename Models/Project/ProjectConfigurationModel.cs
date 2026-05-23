@@ -1,6 +1,6 @@
 ﻿namespace GenotypeApplication.Models.Project
 {
-    public class ProjectParametersModel
+    public class ProjectConfigurationModel
     {
         public string Name { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
@@ -10,9 +10,9 @@
         public DateTime CreatedAt { get; set; }
         public DateTime LastModified { get; set; }
 
-        public ProjectParametersModel() { }
+        public ProjectConfigurationModel() { }
 
-        public ProjectParametersModel(ProjectParametersModel other)
+        public ProjectConfigurationModel(ProjectConfigurationModel other)
         {
             if (other == null)
                 throw new ArgumentNullException(nameof(other));
@@ -25,13 +25,13 @@
             LastModified = other.LastModified;
         }
 
-        public static ProjectParametersModel Create(string name, string path, bool isParallelEnabled, int coresCount)
+        public static ProjectConfigurationModel Create(string name, string path, bool isParallelEnabled, int coresCount)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Project name can't be empty string!");
             if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("Project path can't be empty string!");
             if (coresCount < 1 || coresCount > Environment.ProcessorCount) throw new ArgumentException($"The parallel project execution configuration cannot contain a number of cores beyond the available number of cores (current value: {coresCount}).");
 
-            return new ProjectParametersModel
+            return new ProjectConfigurationModel
             {
                 Name = name,
                 Path = path,
