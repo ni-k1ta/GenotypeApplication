@@ -246,6 +246,8 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var fullDistructExecutableFilePath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, DISTRUCT_EXECUTABLE_FILE_NAME);
             if (!File.Exists(fullDistructExecutableFilePath)) throw new FileNotFoundException();
 
+            _logger.RecoverOrphanedUnits();
+
             var jobs = BuildJobs(
                       kFrom, kTo,
                       configurationName,
@@ -270,6 +272,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             {
                 var tasks = jobs.Select(job => RunSingleProcessAsync(
                 job,
+                _logger.ForUnit($"K={job.K}"),
                 fullDistructExecutableFilePath,
                 fullConfigurationFolderPath,
                 clustPermFilePath,
@@ -306,12 +309,18 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             }
             finally
             {
+                var orderedKeys = new List<string>();
+                for (int k = kFrom; k <= kTo; k++)
+                        orderedKeys.Add($"K={k}");
+
+                _logger.AssembleUnitLogs(orderedKeys);
+
                 IsRunning = false;
                 _cts.Dispose();
                 _cts = null;
             }
         }
-        private async Task RunSingleProcessAsync(DistructJob job, string executablePath, string workingDirectory, string clustPermFilePath, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, SemaphoreSlim semaphore, CancellationToken ct, Func<(int completed, int total)> reportProgress)
+        private async Task RunSingleProcessAsync(DistructJob job, ProgramLogger unitLogger, string executablePath, string workingDirectory, string clustPermFilePath, ObservableCollection<ClusterColorItem> clusterColors, bool isGrayscale, SemaphoreSlim semaphore, CancellationToken ct, Func<(int completed, int total)> reportProgress)
         {
             await semaphore.WaitAsync(ct);
 
@@ -365,12 +374,12 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     if (e.Data.StartsWith("Warning", StringComparison.OrdinalIgnoreCase))
                     {
                         if (e.Data.Contains("could not open file  of permutations and colors. Not to", StringComparison.OrdinalIgnoreCase))
-                            _logger.Info($"[K={job.K}] {e.Data}");
-                        else _logger.Warning($"[K={job.K}] {e.Data}");
+                            unitLogger.Info($"[K={job.K}] {e.Data}");
+                        else unitLogger.Warning($"[K={job.K}] {e.Data}");
                     }
                     else
                     {
-                        _logger.Info($"[K={job.K}] {e.Data}");
+                        unitLogger.Info($"[K={job.K}] {e.Data}");
                     }
                 };
 
@@ -378,7 +387,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 {
                     if (string.IsNullOrWhiteSpace(e.Data)) return;
 
-                    _logger.Error($"[K={job.K}] {e.Data}");
+                    unitLogger.Error($"[K={job.K}] {e.Data}");
                 };
 
                 process.Start();
@@ -405,7 +414,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                    _logger.Error($"Failed to kill process: K={job.K}: {ex.Message}");
+                    unitLogger.Error($"Failed to kill process: K={job.K}: {ex.Message}");
                 }
 
                 throw;

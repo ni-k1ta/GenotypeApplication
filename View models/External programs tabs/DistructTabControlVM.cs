@@ -1111,6 +1111,14 @@ namespace GenotypeApplication.View_models
                     await _distructInteractionService.PrepareConfiguration(fullCurrentSetFolderPath, clumppConfigurationName, configuration, INFILE_CLUST_PERM);
                 }
 
+                var item = _savedConfigurationParametersItems.FirstOrDefault(x => x.ParametersName == _savedConfigurationName);
+                if (item != null)
+                {
+                    item.ParametersName = configuration.ParametersName;
+                    RebuildConfigurationParametersItems();
+                    SelectedConfigurationParameters = item;
+                }
+
                 _messageService.ShowInformation($"Configuration \"{configuration.ParametersName}\" was successfully updated.");
                 return true;
             }

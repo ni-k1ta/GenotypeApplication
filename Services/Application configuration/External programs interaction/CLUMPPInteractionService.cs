@@ -267,6 +267,8 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             var fullCLUMPPExecutableFilePath = Path.Combine(EXTERNAL_PROGRAMS_FOLDER_PATH, CLUMPP_EXECUTABLE_FILE_NAME);
             if (!File.Exists(fullCLUMPPExecutableFilePath)) throw new FileNotFoundException();
 
+            _logger.RecoverOrphanedUnits();
+
             var jobs = BuildJobs(
                        kFrom, kTo, isPop, isIndv,
                        configurationName);
@@ -304,6 +306,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             {
                 var tasks = jobs.Select(job => RunSingleProcessAsync(
                 job,
+                _logger.ForUnit($"K={job.K}"),
                 fullCLUMPPExecutableFilePath,
                 fullConfigurationFolderPath,
                 semaphore,
@@ -334,13 +337,20 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             catch (Exception) { throw; }
             finally
             {
+                var orderedKeys = new List<string>();
+                for (int k = kFrom; k <= kTo; k++)
+                        orderedKeys.Add($"K={k}");
+
+                _logger.AssembleUnitLogs(orderedKeys);
+
+
                 IsRunning = false;
                 _cts.Dispose();
                 _cts = null;
             }
         }
 
-        private async Task RunSingleProcessAsync(CLUMPPJob job, string executablePath, string workingDirectory, SemaphoreSlim semaphore, CancellationToken ct, Func<(int completed, int total)> reportProgress)
+        private async Task RunSingleProcessAsync(CLUMPPJob job, ProgramLogger unitLogger, string executablePath, string workingDirectory, SemaphoreSlim semaphore, CancellationToken ct, Func<(int completed, int total)> reportProgress)
         {
             await semaphore.WaitAsync(ct);
 
@@ -384,11 +394,11 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                     if (e.Data.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.Error($"[K={job.K}] {e.Data}");
+                        unitLogger.Error($"[K={job.K}] {e.Data}");
                     }
                     else
                     {
-                        _logger.Info($"[K={job.K}] {e.Data}");
+                        unitLogger.Info($"[K={job.K}] {e.Data}");
                     }
 
                     if (e.Data.StartsWith("The highest value of H", StringComparison.OrdinalIgnoreCase)
@@ -448,7 +458,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 {
                     if (string.IsNullOrWhiteSpace(e.Data)) return;
 
-                    _logger.Error($"[K={job.K}] {e.Data}");
+                    unitLogger.Error($"[K={job.K}] {e.Data}");
                 };
 
                 process.Start();
@@ -479,7 +489,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error($"[K={job.K}] Can't write H/G value: {ex.Message}");
+                        unitLogger.Error($"[K={job.K}] Can't write H/G value: {ex.Message}");
                     }
                 }
 
@@ -496,7 +506,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                    _logger.Error($"Failed to kill process: K={job.K}: {ex.Message}");
+                    unitLogger.Error($"Failed to kill process: K={job.K}: {ex.Message}");
                 }
 
                 throw;

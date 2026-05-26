@@ -770,17 +770,17 @@ namespace GenotypeApplication.View_models
             }
             catch (DirectoryNotFoundException dnfe)
             {
-                _messageService.ShowError($"Failed to load Structure parameters. {dnfe.Message}");
+                _messageService.ShowError($"Error loading Structure parameters for set \"{setName}\": {dnfe.Message}");
                 _wasSaved = false;
             }
             catch (FileNotFoundException fnfe)
             {
-                _messageService.ShowError($"Failed to load Structure parameters. {fnfe.Message}");
+                _messageService.ShowError($"Error loading Structure parameters for set \"{setName}\": {fnfe.Message}");
                 _wasSaved = false;
             }
             catch (Exception ex)
             {
-                _messageService.ShowError($"Failed to load Structure parameters. {ex.Message}");
+                _messageService.ShowError($"Error loading Structure parameters for set \"{setName}\": {ex.Message}");
                 _wasSaved = false;
             }
         }

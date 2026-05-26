@@ -6,6 +6,7 @@ using GenotypeApplication.Services.Set;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using static System.Windows.Forms.AxHost;
 
 namespace GenotypeApplication.Services.Application_configuration.External_program_interaction
 {
@@ -179,6 +180,8 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
             var fullStructureOutFilePath = Path.Combine(fullResultsFolderPath, STRUCTURE_OUTPUT_FILE_DEFAULT_NAME);
 
+            _logger.RecoverOrphanedUnits();
+
             var units = new List<(int k, int iteration)>();
             for (int k = kFrom; k <= kTo; k++)
                 for (int i = 1; i <= iterations; i++)
@@ -203,6 +206,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 var tasks = units.Select(unit => RunSingleProcessAsync(
                 unit.k,
                 unit.iteration,
+                _logger.ForUnit($"K={unit.k}, i={unit.iteration}"),
                 fullStructureExecutableFilePath,
                 fullStructureFolderPath,
                 fullStructureOutFilePath,
@@ -238,6 +242,13 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
             catch (Exception) { throw; }
             finally
             {
+                var orderedKeys = new List<string>();
+                for (int k = kFrom; k <= kTo; k++)
+                    for (int i = 1; i <= iterations; i++)
+                        orderedKeys.Add($"K={k}, i={i}");
+
+                _logger.AssembleUnitLogs(orderedKeys);
+
                 IsRunning = false;
                 _cts.Dispose();
                 _cts = null;
@@ -246,6 +257,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
         private async Task RunSingleProcessAsync(
         int k,
         int iteration,
+        ProgramLogger unitLogger,
         string executablePath,
         string workingDirectory,
         string outFilePath,
@@ -280,7 +292,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 {
                     if (string.IsNullOrWhiteSpace(e.Data)) return;
 
-                    _logger.Info($"[K={k}, i={iteration}] {e.Data}");
+                    unitLogger.Info($"[K={k}, i={iteration}] {e.Data}");
 
                     double unitValue = e.Data switch
                     {
@@ -303,7 +315,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 {
                     if (string.IsNullOrWhiteSpace(e.Data)) return;
 
-                    _logger.Error($"[K={k}, i={iteration}] {e.Data}");
+                    unitLogger.Error($"[K={k}, i={iteration}] {e.Data}");
                 };
 
                 process.Start();
@@ -315,7 +327,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 if (process.ExitCode != 0)
                 {
                     _cts?.Cancel();
-                    _logger.Error($"Error on [K={k}, i={iteration}] step. ExitCode={process.ExitCode}. Execution has been stopped.");
+                    unitLogger.Error($"Error on [K={k}, i={iteration}] step. ExitCode={process.ExitCode}. Execution has been stopped.");
                 }
 
                 var (completed, total) = reportProgress();
@@ -331,7 +343,7 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
                 try { process.Kill(entireProcessTree: true); }
                 catch (Exception ex)
                 {
-                    _logger.Error($"Failed to kill Structure process: K={k}, Iteration={iteration} {ex.Message}");
+                    unitLogger.Error($"Failed to kill Structure process: K={k}, Iteration={iteration} {ex.Message}");
                 }
 
                 throw;

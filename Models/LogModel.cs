@@ -1,9 +1,4 @@
 ﻿using GenotypeApplication.Constants;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GenotypeApplication.Models
 {
@@ -28,6 +23,6 @@ namespace GenotypeApplication.Models
 
         // для UI — с источником
         public string ToDisplayString
-            => $"[{Timestamp:HH:mm:ss}] [{Source}] [{Level}] {Message}";
+            => $"[{Timestamp:yyyy-MM-dd HH:mm:ss}] [{Source}] [{Level}] {Message}";
     }
 }
