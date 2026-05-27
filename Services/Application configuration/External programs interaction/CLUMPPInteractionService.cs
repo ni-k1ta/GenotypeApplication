@@ -103,6 +103,9 @@ namespace GenotypeApplication.Services.Application_configuration.External_progra
 
                 foreach (var configurationFolder in Directory.EnumerateDirectories(fullCLUMPPFolderPath))
                 {
+                    if (string.Equals(Path.GetFileName(configurationFolder), ".units", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     var configurationName = Path.GetFileName(configurationFolder);
 
                     var (configurationModel, _, _, _, _) = await LoadConfiguration(fullSetFolderPath, configurationName);

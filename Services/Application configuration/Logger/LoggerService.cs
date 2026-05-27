@@ -12,10 +12,12 @@ namespace GenotypeApplication.Services.Application_configuration.Logger
     public class LoggerService
     {
         private readonly object _fileLock = new();
-        private readonly ConcurrentDictionary<string, StreamWriter> _unitWriters = new();
+        //private readonly ConcurrentDictionary<string, StreamWriter> _unitWriters = new();
         private readonly object _pendingLock = new();
         private readonly List<LogModel> _pendingEntries = new();
         private readonly DispatcherTimer _flushTimer;
+
+        private readonly ConcurrentDictionary<string, Lazy<StreamWriter>> _unitWriters = new();
 
         public ObservableCollection<LogModel> Entries { get; } = new();
 
@@ -75,12 +77,13 @@ namespace GenotypeApplication.Services.Application_configuration.Logger
 
         private StreamWriter GetOrCreateUnitWriter(SetProcessingStage stage, string unitKey)
         {
-            return _unitWriters.GetOrAdd(unitKey, key =>
+            var lazy = _unitWriters.GetOrAdd(unitKey, key => new Lazy<StreamWriter>(() =>
             {
                 var path = Path.Combine(GetUnitTempDir(stage), SanitizeKey(key) + ".log");
-                var sw = new StreamWriter(path, append: true) { AutoFlush = true };
-                return sw;
-            });
+                return new StreamWriter(path, append: true) { AutoFlush = true };
+            }, LazyThreadSafetyMode.ExecutionAndPublication));
+
+            return lazy.Value;
         }
 
         public void AssembleUnitLogs(SetProcessingStage stage, IEnumerable<string> orderedUnitKeys)
@@ -100,9 +103,12 @@ namespace GenotypeApplication.Services.Application_configuration.Logger
                 // 1. закрываем все открытые writer'ы, чтобы файлы освободились
                 foreach (var key in _unitWriters.Keys.ToList())
                 {
-                    if (_unitWriters.TryRemove(key, out var w))
+                    if (_unitWriters.TryRemove(key, out var lazy))
                     {
-                        try { w.Dispose(); } catch { /* лог-в-лог не пишем, чтобы не зациклиться */ }
+                        if (lazy.IsValueCreated)
+                        {
+                            try { lazy.Value.Dispose(); } catch { }
+                        }
                     }
                 }
 
